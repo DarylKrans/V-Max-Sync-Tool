@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -28,6 +30,7 @@ namespace V_Max_Tool
 
         void Parse_Nib_Data()
         {
+            //byte[] dec = new byte[0];
             Invoke(new Action(() =>
             {
                 Import_Progress_Bar.Value = 0;
@@ -65,10 +68,13 @@ namespace V_Max_Tool
                 }
                 for (int i = 0; i < tracks; i++) tt[i]?.Join();
             }
+            var buff = new MemoryStream();
+            var wrt = new BinaryWriter(buff);
             int t;
             var color = Color.Black;
             for (int i = 0; i < tracks; i++)
             {
+                if (halftracks) ht += .5; else ht += 1;
                 if (manualRender) Get_Fmt(i); // NDS.cbm[track] = Get_Data_Format(NDS.Track_Data[track]);
                 if (NDS.cbm[i] == 0)
                 {
@@ -170,11 +176,14 @@ namespace V_Max_Tool
                         Track_Info.Items.Add(" ");
                     }));
                 }
+                /// --------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+
                 if (NDS.cbm[i] == 5)
                 {
+                    byte[] dec;
                     vpl++;
                     f = new string[0];
-                    (NDG.Track_Data[i], NDS.D_Start[i], NDS.D_End[i], NDS.Track_Length[i], NDS.Header_Len[i], NDS.sectors[i], NDS.cbm_sector[i], f) = Get_Vorpal_Track_Length(NDS.Track_Data[i], i);
+                    (NDG.Track_Data[i], NDS.D_Start[i], NDS.D_End[i], NDS.Track_Length[i], NDS.Header_Len[i], NDS.sectors[i], NDS.cbm_sector[i], f, dec) = Get_Vorpal_Track_Length(NDS.Track_Data[i], i);
                     if (tracks > 42) t = i / 2 + 1; else t = i + 1;
                     Invoke(new Action(() =>
                     {
@@ -187,7 +196,8 @@ namespace V_Max_Tool
                         Track_Info.Items.Add(new LineColor { Color = Color.Black, Text = $"Track Length : ({(NDS.D_End[i] - NDS.D_Start[i] >> 3)}) Sectors ({NDS.sectors[i]})" });
                         Track_Info.Items.Add(" ");
                     }));
-
+                    //wrt.Write($"\n\nTrack {ht} Protection {secF[NDS.cbm[i]]}\n\n");
+                    wrt.Write(dec);
                 }
 
                 if (NDS.D_Start[i] == 0 && NDS.D_End[i] == 0 && NDS.Track_Length[i] == 0)
@@ -204,7 +214,9 @@ namespace V_Max_Tool
                     }
                     else { NDS.Track_Length[i] = 0; }
                 }
-                if (halftracks) ht += .5; else ht += 1;
+                //if (halftracks) ht += .5; else ht += 1;
+                //wrt.Write($"\n\nTrack {ht} Protection {secF[NDS.cbm[i]]}\n\n");
+                //wrt.Write(dec);
                 color = Color.Black;
                 Invoke(new Action(() =>
                 {
@@ -228,6 +240,9 @@ namespace V_Max_Tool
             }
             Invoke(new Action(() =>
             {
+                if (NDS.cbm.Any(s => s == 5)) File.WriteAllBytes($@"c:\test\{fname} (vorpal decoded)", buff.ToArray());
+                buff.Close();
+                wrt.Close();
                 Track_Info.EndUpdate();
                 if (NDS.cbm.Any(s => s == 4)) f_load.Visible = true; else f_load.Visible = false;
                 if (NDS.cbm.Any(s => s == 2))
@@ -506,8 +521,17 @@ namespace V_Max_Tool
 
             void Process_Vorpal(int trk)
             {
-                byte[] temp = new byte[NDG.Track_Data[trk].Length];
-                Array.Copy(NDG.Track_Data[trk], 0, temp, 0, NDG.Track_Data[trk].Length);
+                /// Test Area /// <-- Adding sync to track start made things worse.
+                var s = 1; //1
+                //if (NDS.sectors[trk] == 47) s = 4; 
+                byte[] temp = new byte[NDG.Track_Data[trk].Length]; // + s - 1];
+                //if (s > 1)
+                //{
+                //    temp[0] = 0xff; temp[1] = 0xff; temp[2] = 0x55; temp[3] = 0x56;
+                //}
+                /// --------- ///
+                Array.Copy(NDG.Track_Data[trk], 0, temp, 0 + (s - 1), NDG.Track_Data[trk].Length);
+                //Array.Copy(NDG.Track_Data[trk], 4, temp, 4, NDG.Track_Data[trk].Length - 5);
                 Set_Dest_Arrays(temp, trk);
                 if (NDS.cbm.Any(ss => ss == 5)) fnappend = vorp;
             }

@@ -72,6 +72,21 @@ namespace V_Max_Tool
                 0xff, 0x09, 0x0a, 0x0b, 0xff, 0x0d, 0x0e, 0xff
             };
 
+        private readonly byte[] VPL_decode_low =
+            {
+                0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff,
+                0x0f, 0x00, 0x01, 0x02, 0x05, 0x03, 0x04, 0x05,
+                0xff, 0xff, 0x06, 0x07, 0x0a, 0x08, 0x09, 0x0a,
+                0xff, 0x0b, 0x0c, 0x0d, 0xff, 0x0e, 0x0f, 0xff,
+            };
+
+        private readonly byte[] VPL_decode_high =
+            {
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0xf0, 0xff,
+                0xf0, 0x00, 0x10, 0x20, 0x50, 0x30, 0x40, 0x50,
+                0xff, 0xff, 0x60, 0x70, 0xa0, 0x80, 0x90, 0xa0,
+                0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
+            };
 
         void Reset_to_Defaults()
         {
@@ -385,6 +400,36 @@ namespace V_Max_Tool
                 gcr[4 + (i * 5)] |= GCR_encode[(plain[3 + (i * 4)]) & 0x0f];
             }
             return gcr;
+        }
+
+        byte[] Decode_VPL(byte[] gcr)
+        {
+            byte hnib;
+            byte lnib;
+            byte[] plain = new byte[(gcr.Length / 5) * 4];
+            for (int i = 0; i < gcr.Length / 5; i++)
+            {
+                hnib = VPL_decode_high[gcr[(i * 5) + 0] >> 3];
+                lnib = VPL_decode_low[((gcr[(i * 5) + 0] << 2) | (gcr[(i * 5) + 1] >> 6)) & 0x1f];
+                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 0] = hnib |= lnib;
+                else plain[(i * 4) + 0] = 0x00;
+
+                hnib = VPL_decode_high[(gcr[(i * 5) + 1] >> 1) & 0x1f];
+                lnib = VPL_decode_low[((gcr[(i * 5) + 1] << 4) | (gcr[(i * 5) + 2] >> 4)) & 0x1f];
+                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 1] = hnib |= lnib;
+                else plain[(i * 4) + 1] = 0x00;
+
+                hnib = VPL_decode_high[((gcr[(i * 5) + 2] << 1) | (gcr[(i * 5) + 3] >> 7)) & 0x1f];
+                lnib = VPL_decode_low[(gcr[(i * 5) + 3] >> 2) & 0x1f];
+                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 2] = hnib |= lnib;
+                else plain[(i * 4) + 2] = 0x00;
+
+                hnib = VPL_decode_high[((gcr[(i * 5) + 3] << 3) | (gcr[(i * 5) + 4] >> 5)) & 0x1f];
+                lnib = VPL_decode_low[gcr[(i * 5) + 4] & 0x1f];
+                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 3] = hnib |= lnib;
+                else plain[(i * 4) + 3] = 0x00;
+            }
+            return plain;
         }
 
         //(byte, int) Find_Longest_Sync(byte[] data)
