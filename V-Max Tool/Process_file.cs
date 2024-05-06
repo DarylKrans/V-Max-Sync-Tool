@@ -180,10 +180,11 @@ namespace V_Max_Tool
 
                 if (NDS.cbm[i] == 5)
                 {
-                    byte[] dec;
+                    //byte[] dec;
                     vpl++;
                     f = new string[0];
-                    (NDG.Track_Data[i], NDS.D_Start[i], NDS.D_End[i], NDS.Track_Length[i], NDS.Header_Len[i], NDS.sectors[i], NDS.cbm_sector[i], f, dec) = Get_Vorpal_Track_Length(NDS.Track_Data[i], i);
+                    //(NDG.Track_Data[i], NDS.D_Start[i], NDS.D_End[i], NDS.Track_Length[i], NDS.Header_Len[i], NDS.sectors[i], NDS.cbm_sector[i], f, dec) = Get_Vorpal_Track_Length(NDS.Track_Data[i], i);
+                    (NDG.Track_Data[i], NDS.D_Start[i], NDS.D_End[i], NDS.Track_Length[i], NDS.Header_Len[i], NDS.sectors[i], NDS.cbm_sector[i], f) = Get_Vorpal_Track_Length(NDS.Track_Data[i], i);
                     if (tracks > 42) t = i / 2 + 1; else t = i + 1;
                     Invoke(new Action(() =>
                     {
@@ -196,7 +197,7 @@ namespace V_Max_Tool
                         Track_Info.Items.Add(new LineColor { Color = Color.Black, Text = $"Track Length : ({(NDS.D_End[i] - NDS.D_Start[i] >> 3)}) Sectors ({NDS.sectors[i]})" });
                         Track_Info.Items.Add(" ");
                     }));
-                    //wrt.Write($"\n\nTrack {ht} Protection {secF[NDS.cbm[i]]}\n\n");
+                    byte[] dec = Decode_Vorpal_Track(NDG.Track_Data[i], i);
                     wrt.Write(dec);
                 }
 

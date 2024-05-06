@@ -19,8 +19,74 @@ namespace V_Max_Tool
         readonly BitArray leadIn_std = new BitArray(10);
         readonly BitArray leadIn_alt = new BitArray(10);
         readonly int com = 16;
-        
-        (byte[], int, int, int, int, int, int[], string[], byte[]) Get_Vorpal_Track_Length(byte[] data, int trk = -1)
+
+        byte[] Decode_Vorpal_Track(byte[] data, int trk = -1)
+        {
+            int snc_cnt = 0;
+            int interleve = 3;
+            int s = 0;
+            int current = 0;
+            int sectors = 0;
+            int psec = 0;
+            var buff = new MemoryStream();
+            var wrt = new BinaryWriter(buff);
+            BitArray sec_data = new BitArray(160 * 8);
+            BitArray source = new BitArray(Flip_Endian(data));
+            for (int k = 0; k < source.Length; k++)
+            {
+                if (source[k]) snc_cnt++;
+                if (!source[k])
+                {
+                    if (snc_cnt == 8)
+                    {
+                        if (k + sec_data.Count < source.Count) k += sec_data.Count;
+                        else break;
+                        sectors++;
+                    }
+                    snc_cnt = 0;
+                }
+            }
+            byte[][] sec_dat = new byte[sectors][];
+            for (int k = 0; k < source.Length; k++)
+            {
+                if (source[k]) snc_cnt++;
+                if (!source[k])
+                {
+                    if (snc_cnt == 8)
+                    {
+                        var dep = k + 7;
+                        if (psec <= sectors)
+                        {
+                            try
+                            {
+                                for (int i = 0; i < sec_data.Count; i++)
+                                {
+                                    sec_data[i] = source[dep + i];
+                                }
+                                sec_dat[psec] = Decode_VPL(Flip_Endian(Bit2Byte(sec_data)));
+                                k += sec_data.Count;
+                                psec++;
+                            }
+                            catch { }
+                        }
+                    }
+                    snc_cnt = 0;
+                }
+            }
+            for (int i = 0; i < sec_dat.Length; i++)
+            {
+                wrt.Write(sec_dat[current]);
+                current += interleve;
+                if (current > sectors - 1)
+                {
+                    s++;
+                    current = 0 + s;
+                }
+            }
+            return buff.ToArray();
+        }
+
+        (byte[], int, int, int, int, int, int[], string[]) Get_Vorpal_Track_Length(byte[] data, int trk = -1)
         {
             int sec_size = 0;
             if (trk < 0) trk = 0;
@@ -40,10 +106,6 @@ namespace V_Max_Tool
             int track_lead_in = 0;
             int sectors = 0;
             int snc_cnt = 0;
-            BitArray sec_dat = new BitArray(180 * 8);
-            BitArray sec_Chksum = new BitArray(8);
-            BitArray sector_ID = new BitArray(8);
-            byte[] checksum = new byte[1];
             List<string> sec_header = new List<string>();
             List<string> sec_hdr = new List<string>();
             List<int> sec_pos = new List<int>();
@@ -51,10 +113,6 @@ namespace V_Max_Tool
             List<string> hdr = new List<string>();
             BitArray source = new BitArray(Flip_Endian(data));
             BitArray lead_in = new BitArray(leadIn_std.Length);
-            BitArray sec_data = new BitArray(160 * 8);
-            var buff = new MemoryStream();
-            var wrt = new BinaryWriter(buff);
-            byte[] csm = new byte[1];
             for (int k = 0; k < source.Length; k++)
             {
                 if (source[k]) snc_cnt++;
@@ -62,44 +120,16 @@ namespace V_Max_Tool
                 {
                     if (snc_cnt == 8)
                     {
-                        var dep = k + 7;
-                        try
-                        {
-                            for (int i = 0; i < sec_data.Count; i++)
-                            {
-                                sec_data[i] = source[dep + i];
-                            }
-                            dep += sec_data.Count;
-                            for (int i = 0; i < 8; i++)
-                            {
-                                sec_Chksum[i] = source[dep + i];
-                            }
-                            dep += sec_Chksum.Count;
-                            for (int i = 0; i < 8; i++)
-                            {
-                                sector_ID[i] = source[dep + i];
-                            }
-                            byte[] sdat = Flip_Endian(Bit2Byte(sec_data));
-                            wrt.Write(Decode_VPL(sdat));
-                            csm[0] = sdat[0];  //0x00;
-                            for (int i = 0; i < sdat.Length; i++)
-                            {
-                                csm[0] ^= sdat[i];
-                            }
-                        }
-                        catch { }
-                        checksum = Flip_Endian(Bit2Byte(sec_Chksum));
                         if (k - ((com * 8) + 8) > 0)
                         {
                             // checking for [00110011 00 11111111] sector 0 marker
                             if (!lead_in_Found && (source[k - 10] == false && source[k - 9] == false)) (lead_in_Found, track_lead_in) = Get_LeadIn_Position(k);
                             byte[] sec_ID = Flip_Endian(Bit2Byte(source, k - ((com * 8) / 2), com * 8));
-                            //byte[] sec_ID = Flip_Endian(Bit2Byte(sector_ID));
                             if (!sec_header.Any(x => x == Hex_Val(sec_ID)))
                             {
                                 sec_header.Add(Hex_Val(sec_ID));
                                 sec_pos.Add(k >> 3);
-                                sec_hdr.Add($"pos {k >> 3} {Hex_Val(sec_ID)} ({sec_size / 8}) ({sec_size}) {Hex_Val(checksum)} {Hex_Val(csm)} {Byte_to_Binary(checksum)}");
+                                sec_hdr.Add($"pos {k >> 3} {Hex_Val(sec_ID)} ({sec_size / 8}) ({sec_size})");
                                 sec_size = 0;
                                 if (!start_found)
                                 {
@@ -119,13 +149,11 @@ namespace V_Max_Tool
                             sectors = sec_header.Count;
                             if (!single_rotation && end_found) break;
                         }
-                        //k += 1200;
                     }
                     snc_cnt = 0;
                 }
                 sec_size++;
             }
-            //File.WriteAllBytes($@"c:\test\t{trk}", buff.ToArray());
             int spl = 0;
             track_len = (data_end - data_start) + 1;
             if (single_rotation) tdata = Flip_Endian(Bit2Byte(source, data_start, track_len));
@@ -141,7 +169,7 @@ namespace V_Max_Tool
                 }
                 tdata = Flip_Endian(Bit2Byte(temp));
             }
-            return (tdata, data_start, data_end, track_len, track_lead_in, sectors, sec_pos.ToArray(), sec_hdr.ToArray(), buff.ToArray());
+            return (tdata, data_start, data_end, track_len, track_lead_in, sectors, sec_pos.ToArray(), sec_hdr.ToArray());
 
             (bool, int) Get_LeadIn_Position(int position)
             {
