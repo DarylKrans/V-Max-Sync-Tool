@@ -531,7 +531,7 @@ namespace V_Max_Tool
         {
             Create_Blank_Disk();
         }//
-        private void linkLabel1_LinkClicked(object sender, System.Windows.Forms.LinkLabelLinkClickedEventArgs e)
+        private void LinkLabel1_LinkClicked(object sender, System.Windows.Forms.LinkLabelLinkClickedEventArgs e)
         {
             this.linkLabel1.LinkVisited = true;
             System.Diagnostics.Process.Start("https://github.com/DarylKrans/V-Max-Sync-Tool");

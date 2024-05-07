@@ -11,11 +11,8 @@ namespace V_Max_Tool
     public partial class Form1 : Form
     {
 
-        //readonly byte[] trk_start_reg = new byte[] { 0x35, 0x4d, 0x53, 0x54, 0xd5 };
-        //readonly byte[] trk_start_alt = new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55 };
         readonly byte[] vpl_s0 = new byte[] { 0x33, 0x3F, 0xD5 };
         readonly byte[] vpl_s1 = new byte[] { 0x35, 0x4d, 0x53 };
-        //readonly byte[] trk_end_0 = new byte[] { 0xb5, 0xb5, 0xbd };
         readonly BitArray leadIn_std = new BitArray(10);
         readonly BitArray leadIn_alt = new BitArray(10);
         readonly int com = 16;
@@ -44,6 +41,7 @@ namespace V_Max_Tool
 
         byte[] Rebuild_Vorpal(byte[] data, int trk = -1)
         {
+            if (trk == -1) trk = 0;
             int snc_cnt = 0;
             int cur_sec = 0;
             int tlen = data.Length;
@@ -65,8 +63,7 @@ namespace V_Max_Tool
             for (int k = 0; k < source.Length - comp.Count; k++)
             {
                 for (int j = 0; j < cmp.Count; j++) cmp[j] = source[k + j];
-                bool a = ((BitArray)cmp.Clone()).Xor(comp).OfType<bool>().All(e => !e);
-                if (a) { tstart = k; break; }
+                if (((BitArray)cmp.Clone()).Xor(comp).OfType<bool>().All(e => !e)) { tstart = k; break; }
             }
             for (int k = tstart; k < source.Length; k++)
             {
@@ -87,63 +84,67 @@ namespace V_Max_Tool
             }
             int offset = (otmp.Length - (tend - tstart)) / 2;
             //Invoke(new Action(() => this.Text = $"{tstart} {tend} {sectors} {cur_sec} {offset}")) ;
-            //for (int i = tstart; i < tend; i++) otmp[i] = source[i];
+            //Thread.Sleep(400);
             for (int i = 0; i < tend - tstart; i++) otmp[offset + i] = source[tstart + i];
             temp = Flip_Endian(Bit2Byte(otmp));
             return temp;
         }
 
-        byte[] Decode_Vorpal_Track(byte[] data, int trk = -1)
-        {
-            int snc_cnt = 0;
-            int interleve = 3;
-            int s = 0;
-            int current = 0;
-            int psec = 0;
-            var buff = new MemoryStream();
-            var wrt = new BinaryWriter(buff);
-            BitArray sec_data = new BitArray(160 * 8);
-            BitArray source = new BitArray(Flip_Endian(data));
-            int sectors = Get_VPL_Sectors(source);
-            byte[][] sec_dat = new byte[sectors][];
-            for (int k = 0; k < source.Length; k++)
-            {
-                if (source[k]) snc_cnt++;
-                if (!source[k])
-                {
-                    if (snc_cnt == 8)
-                    {
-                        var dep = k + 7;
-                        if (psec <= sectors)
-                        {
-                            try
-                            {
-                                for (int i = 0; i < sec_data.Count; i++)
-                                {
-                                    sec_data[i] = source[dep + i];
-                                }
-                                sec_dat[psec] = Decode_VPL(Flip_Endian(Bit2Byte(sec_data)));
-                                k += sec_data.Count;
-                                psec++;
-                            }
-                            catch { }
-                        }
-                    }
-                    snc_cnt = 0;
-                }
-            }
-            for (int i = 0; i < sec_dat.Length; i++)
-            {
-                wrt.Write(sec_dat[current]);
-                current += interleve;
-                if (current > sectors - 1)
-                {
-                    s++;
-                    current = 0 + s;
-                }
-            }
-            return buff.ToArray();
-        }
+        //byte[] Decode_Vorpal_Track(byte[] data, int trk = -1)
+        //{
+        //    if (trk == -1) trk = 0;
+        //    int snc_cnt = 0;
+        //    int interleve = 3;
+        //    int s = 0;
+        //    int current = 0;
+        //    int psec = 0;
+        //    var buff = new MemoryStream();
+        //    var wrt = new BinaryWriter(buff);
+        //    BitArray sec_data = new BitArray(160 * 8);
+        //    BitArray source = new BitArray(Flip_Endian(data));
+        //    int sectors = Get_VPL_Sectors(source);
+        //    byte[][] sec_dat = new byte[sectors][];
+        //    for (int k = 0; k < source.Length; k++)
+        //    {
+        //        if (source[k]) snc_cnt++;
+        //        if (!source[k])
+        //        {
+        //            if (snc_cnt == 8)
+        //            {
+        //                var dep = k + 7;
+        //                if (psec <= sectors)
+        //                {
+        //                    try
+        //                    {
+        //                        for (int i = 0; i < sec_data.Count; i++)
+        //                        {
+        //                            sec_data[i] = source[dep + i];
+        //                        }
+        //                        sec_dat[psec] = Decode_VPL(Flip_Endian(Bit2Byte(sec_data)));
+        //                        k += sec_data.Count;
+        //                        psec++;
+        //                    }
+        //                    catch { }
+        //                }
+        //            }
+        //            snc_cnt = 0;
+        //        }
+        //    }
+        //    for (int i = 0; i < sec_dat.Length; i++)
+        //    {
+        //        wrt.Write(sec_dat[current]);
+        //        current += interleve;
+        //        if (current > sectors - 1)
+        //        {
+        //            s++;
+        //            current = 0 + s;
+        //        }
+        //    }
+        //    return buff.ToArray();
+        //
+        //    // Turn this into a self contained routine later.
+        //
+        //}
 
         (byte[], int, int, int, int, int, int[], string[]) Get_Vorpal_Track_Length(byte[] data, int trk = -1)
         {

@@ -30,7 +30,6 @@ namespace V_Max_Tool
 
         void Parse_Nib_Data()
         {
-            //byte[] dec = new byte[0];
             Invoke(new Action(() =>
             {
                 Import_Progress_Bar.Value = 0;
@@ -68,8 +67,7 @@ namespace V_Max_Tool
                 }
                 for (int i = 0; i < tracks; i++) tt[i]?.Join();
             }
-            var buff = new MemoryStream();
-            var wrt = new BinaryWriter(buff);
+            //manualRender = true;
             int t;
             var color = Color.Black;
             for (int i = 0; i < tracks; i++)
@@ -180,10 +178,8 @@ namespace V_Max_Tool
 
                 if (NDS.cbm[i] == 5)
                 {
-                    //byte[] dec;
                     vpl++;
                     f = new string[0];
-                    //(NDG.Track_Data[i], NDS.D_Start[i], NDS.D_End[i], NDS.Track_Length[i], NDS.Header_Len[i], NDS.sectors[i], NDS.cbm_sector[i], f, dec) = Get_Vorpal_Track_Length(NDS.Track_Data[i], i);
                     (NDG.Track_Data[i], NDS.D_Start[i], NDS.D_End[i], NDS.Track_Length[i], NDS.Header_Len[i], NDS.sectors[i], NDS.cbm_sector[i], f) = Get_Vorpal_Track_Length(NDS.Track_Data[i], i);
                     if (tracks > 42) t = i / 2 + 1; else t = i + 1;
                     Invoke(new Action(() =>
@@ -198,8 +194,6 @@ namespace V_Max_Tool
                         Track_Info.Items.Add(" ");
                     }));
                     NDG.Track_Data[i] = Rebuild_Vorpal(NDG.Track_Data[i]);
-                    byte[] dec = Decode_Vorpal_Track(NDG.Track_Data[i], i);
-                    wrt.Write(dec);
                 }
 
                 if (NDS.D_Start[i] == 0 && NDS.D_End[i] == 0 && NDS.Track_Length[i] == 0)
@@ -216,9 +210,6 @@ namespace V_Max_Tool
                     }
                     else { NDS.Track_Length[i] = 0; }
                 }
-                //if (halftracks) ht += .5; else ht += 1;
-                //wrt.Write($"\n\nTrack {ht} Protection {secF[NDS.cbm[i]]}\n\n");
-                //wrt.Write(dec);
                 color = Color.Black;
                 Invoke(new Action(() =>
                 {
@@ -242,14 +233,6 @@ namespace V_Max_Tool
             }
             Invoke(new Action(() =>
             {
-                if (NDS.cbm.Any(s => s == 5))
-                {
-                    File.WriteAllBytes($@"c:\test\{fname} (vorpal decoded)", buff.ToArray());
-                    //byte[] tmp = Rebuild_Vorpal(NDG.Track_Data[0]);
-                    //File.WriteAllBytes($@"c:\test\test.bin", tmp);
-                }
-                buff.Close();
-                wrt.Close();
                 Track_Info.EndUpdate();
                 if (NDS.cbm.Any(s => s == 4)) f_load.Visible = true; else f_load.Visible = false;
                 if (NDS.cbm.Any(s => s == 2))
@@ -630,7 +613,12 @@ namespace V_Max_Tool
                 if (Hex_Val(d).Contains(v2))
                 {
                     if ((d[0] == 0x64 || d[0] == 0x4e))
+                    {
+                        /// --------------------------      Remove this if errors occur ------------------------------------
+                        if (NDS.cbm.Any(s => s == 5)) return 5;
+                        /// ------------------------------------------------------------------------------------------------
                         return 2;
+                    }
                 }
                 if ((Hex_Val(d)).Contains(v3)) return 3; // { vm3s++; if (vm3s > 1) return 3; }  //return 3;
                 if (d[0] == sz[0])

@@ -583,7 +583,7 @@ namespace V_Max_Tool
             Debug_Button.Visible = debug;
             Other_opts.Visible = false;
             opt = true;
-            this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
+            this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LinkLabel1_LinkClicked);
             bool flip = false;
             for (int i = 0; i < leadIn_std.Length; i++)
             {
