@@ -10,7 +10,7 @@ namespace V_Max_Tool
     public partial class Form1 : Form
     {
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.70 (beta)";
+        private readonly string ver = " v0.9.72 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
