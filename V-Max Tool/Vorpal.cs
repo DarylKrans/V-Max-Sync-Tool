@@ -20,18 +20,11 @@ namespace V_Max_Tool
         readonly BitArray leadIn_alt = new BitArray(10);
         readonly int com = 16;
 
-        byte[] Decode_Vorpal_Track(byte[] data, int trk = -1)
+        int Get_VPL_Sectors(BitArray source)
         {
             int snc_cnt = 0;
-            int interleve = 3;
-            int s = 0;
-            int current = 0;
             int sectors = 0;
-            int psec = 0;
-            var buff = new MemoryStream();
-            var wrt = new BinaryWriter(buff);
-            BitArray sec_data = new BitArray(160 * 8);
-            BitArray source = new BitArray(Flip_Endian(data));
+            int skip = 160 * 8;
             for (int k = 0; k < source.Length; k++)
             {
                 if (source[k]) snc_cnt++;
@@ -39,13 +32,79 @@ namespace V_Max_Tool
                 {
                     if (snc_cnt == 8)
                     {
-                        if (k + sec_data.Count < source.Count) k += sec_data.Count;
+                        if (k + skip < source.Count) k += skip;
                         else break;
                         sectors++;
                     }
                     snc_cnt = 0;
                 }
             }
+            return sectors;
+        }
+
+        byte[] Rebuild_Vorpal(byte[] data, int trk = -1)
+        {
+            int snc_cnt = 0;
+            int cur_sec = 0;
+            int tlen = data.Length;
+            int tstart = 0;
+            int tend = 0;
+            byte[] temp = new byte[tlen];
+            BitArray source = new BitArray(Flip_Endian(data));
+            BitArray comp = new BitArray(Flip_Endian(vpl_s0));
+            BitArray cmp = new BitArray(vpl_s0.Length * 8);
+            int sectors = Get_VPL_Sectors(source);
+            byte[] ssp = { 0x33 };
+            byte[] lead_in = new byte[] { 0xaa, 0x6a, 0x9a, 0xa6, 0xa9 };
+            byte lead_out = 0xb5;
+            byte stop = 0xbd;
+            for (int i = temp.Length - 400; i < temp.Length; i++) temp[i] = lead_out;
+            temp[temp.Length - 1] = stop;
+            for (int i = 0; i < 100; i++) Array.Copy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
+            BitArray otmp = new BitArray(Flip_Endian(temp));
+            for (int k = 0; k < source.Length - comp.Count; k++)
+            {
+                for (int j = 0; j < cmp.Count; j++) cmp[j] = source[k + j];
+                bool a = ((BitArray)cmp.Clone()).Xor(comp).OfType<bool>().All(e => !e);
+                if (a) { tstart = k; break; }
+            }
+            for (int k = tstart; k < source.Length; k++)
+            {
+                if (source[k]) snc_cnt++;
+                if (!source[k])
+                {
+                    if (snc_cnt == 8)
+                    {
+                        cur_sec++;
+                        if (cur_sec == sectors)
+                        {
+                            tend = k + 7 + (165 * 8);
+                            break;
+                        }
+                    }
+                    snc_cnt = 0;
+                }
+            }
+            int offset = (otmp.Length - (tend - tstart)) / 2;
+            //Invoke(new Action(() => this.Text = $"{tstart} {tend} {sectors} {cur_sec} {offset}")) ;
+            //for (int i = tstart; i < tend; i++) otmp[i] = source[i];
+            for (int i = 0; i < tend - tstart; i++) otmp[offset + i] = source[tstart + i];
+            temp = Flip_Endian(Bit2Byte(otmp));
+            return temp;
+        }
+
+        byte[] Decode_Vorpal_Track(byte[] data, int trk = -1)
+        {
+            int snc_cnt = 0;
+            int interleve = 3;
+            int s = 0;
+            int current = 0;
+            int psec = 0;
+            var buff = new MemoryStream();
+            var wrt = new BinaryWriter(buff);
+            BitArray sec_data = new BitArray(160 * 8);
+            BitArray source = new BitArray(Flip_Endian(data));
+            int sectors = Get_VPL_Sectors(source);
             byte[][] sec_dat = new byte[sectors][];
             for (int k = 0; k < source.Length; k++)
             {

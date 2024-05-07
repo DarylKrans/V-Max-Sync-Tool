@@ -197,6 +197,7 @@ namespace V_Max_Tool
                         Track_Info.Items.Add(new LineColor { Color = Color.Black, Text = $"Track Length : ({(NDS.D_End[i] - NDS.D_Start[i] >> 3)}) Sectors ({NDS.sectors[i]})" });
                         Track_Info.Items.Add(" ");
                     }));
+                    NDG.Track_Data[i] = Rebuild_Vorpal(NDG.Track_Data[i]);
                     byte[] dec = Decode_Vorpal_Track(NDG.Track_Data[i], i);
                     wrt.Write(dec);
                 }
@@ -241,7 +242,12 @@ namespace V_Max_Tool
             }
             Invoke(new Action(() =>
             {
-                if (NDS.cbm.Any(s => s == 5)) File.WriteAllBytes($@"c:\test\{fname} (vorpal decoded)", buff.ToArray());
+                if (NDS.cbm.Any(s => s == 5))
+                {
+                    File.WriteAllBytes($@"c:\test\{fname} (vorpal decoded)", buff.ToArray());
+                    //byte[] tmp = Rebuild_Vorpal(NDG.Track_Data[0]);
+                    //File.WriteAllBytes($@"c:\test\test.bin", tmp);
+                }
                 buff.Close();
                 wrt.Close();
                 Track_Info.EndUpdate();
