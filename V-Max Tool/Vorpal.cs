@@ -1,11 +1,8 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
-using System.IO;
-using System.Reflection;
-using System.Threading;
-using System;
 namespace V_Max_Tool
 {
     public partial class Form1 : Form
@@ -41,13 +38,15 @@ namespace V_Max_Tool
 
         byte[] Rebuild_Vorpal(byte[] data, int trk = -1)
         {
-            if (trk == -1) trk = 0;
+            byte[] temp = new byte[0];
+            //if (trk == -1) trk = 0;
+            int d = 0;
             int snc_cnt = 0;
             int cur_sec = 0;
             int tlen = data.Length;
+            if (VPL_shrink.Checked) d = Get_Density(tlen);
             int tstart = 0;
             int tend = 0;
-            byte[] temp = new byte[tlen];
             BitArray source = new BitArray(Flip_Endian(data));
             BitArray comp = new BitArray(Flip_Endian(vpl_s0));
             BitArray cmp = new BitArray(vpl_s0.Length * 8);
@@ -56,9 +55,13 @@ namespace V_Max_Tool
             byte[] lead_in = new byte[] { 0xaa, 0x6a, 0x9a, 0xa6, 0xa9 };
             byte lead_out = 0xb5;
             byte stop = 0xbd;
-            for (int i = temp.Length - 400; i < temp.Length; i++) temp[i] = lead_out;
-            temp[temp.Length - 1] = stop;
-            for (int i = 0; i < 100; i++) Array.Copy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
+            temp = new byte[tlen];
+            if (!VPL_only_sectors.Checked)
+            {
+                for (int i = temp.Length - 400; i < temp.Length; i++) temp[i] = lead_out;
+                temp[temp.Length - 1] = stop;
+                for (int i = 0; i < 100; i++) Array.Copy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
+            }
             BitArray otmp = new BitArray(Flip_Endian(temp));
             for (int k = 0; k < source.Length - comp.Count; k++)
             {
@@ -83,9 +86,40 @@ namespace V_Max_Tool
                 }
             }
             int offset = (otmp.Length - (tend - tstart)) / 2;
+            var len = (tend - tstart) / 8;
+            if (VPL_lead.Checked) offset = Convert.ToInt32(Lead_In.Value) * 8;
+            if (VPL_only_sectors.Checked)
+            {
+                offset = 0;
+                temp = new byte[len + 1];
+                otmp = new BitArray(Flip_Endian(temp));
+            }
+            if (VPL_shrink.Checked)
+            {
+                offset = 5 * 8;
+                if (len + 10 < density[d])
+                { 
+                    len = density[d] - 11; 
+                    offset = ((density[d] * 8) - (tend - tstart)) / 2; 
+                }
+                temp = new byte[len + 11];
+
+                for (int i = temp.Length - 400; i < temp.Length; i++) temp[i] = lead_out;
+                temp[temp.Length - 1] = stop;
+                for (int i = 0; i < 100; i++) Array.Copy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
+                temp[temp.Length - 1] = stop;
+
+                //Array.Copy(lead_in, 0, temp, 0, lead_in.Length);
+                //for (int i = temp.Length - 10; i < temp.Length; i++) temp[i] = lead_out;
+                otmp = new BitArray(Flip_Endian(temp));
+            }
             //Invoke(new Action(() => this.Text = $"{tstart} {tend} {sectors} {cur_sec} {offset}")) ;
             //Thread.Sleep(400);
-            for (int i = 0; i < tend - tstart; i++) otmp[offset + i] = source[tstart + i];
+            try
+            {
+                for (int i = 0; i < tend - tstart; i++) otmp[offset + i] = source[tstart + i];
+            } 
+            catch { }
             temp = Flip_Endian(Bit2Byte(otmp));
             return temp;
         }

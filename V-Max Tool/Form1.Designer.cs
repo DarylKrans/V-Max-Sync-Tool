@@ -48,7 +48,7 @@
             this.VM_Ver = new System.Windows.Forms.Label();
             this.Reg_info = new System.Windows.Forms.Panel();
             this.Debug_Button = new System.Windows.Forms.Button();
-            this.VMax_Tracks = new System.Windows.Forms.Label();
+            this.Protected_Tracks = new System.Windows.Forms.Label();
             this.CBM_Tracks = new System.Windows.Forms.Label();
             this.Loader_Track = new System.Windows.Forms.Label();
             this.Save_Disk = new System.Windows.Forms.Button();
@@ -64,6 +64,13 @@
             this.V3_hlen = new System.Windows.Forms.NumericUpDown();
             this.V3_Auto_Adj = new System.Windows.Forms.CheckBox();
             this.V3_Custom = new System.Windows.Forms.CheckBox();
+            this.Vpl_adv = new System.Windows.Forms.TabPage();
+            this.VPL_shrink = new System.Windows.Forms.CheckBox();
+            this.VPL_only_sectors = new System.Windows.Forms.CheckBox();
+            this.Lead_In = new System.Windows.Forms.NumericUpDown();
+            this.VPL_lead = new System.Windows.Forms.CheckBox();
+            this.VPL_rb = new System.Windows.Forms.CheckBox();
+            this.VP_Export = new System.Windows.Forms.Button();
             this.Adv_ctrl = new System.Windows.Forms.TabControl();
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.M_render = new System.Windows.Forms.Button();
@@ -118,6 +125,8 @@
             this.Adv_V2_Opts.SuspendLayout();
             this.Adv_V3_Opts.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.V3_hlen)).BeginInit();
+            this.Vpl_adv.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.Lead_In)).BeginInit();
             this.Adv_ctrl.SuspendLayout();
             this.tabPage2.SuspendLayout();
             this.Img_opts.SuspendLayout();
@@ -229,6 +238,7 @@
             this.Tabs.Controls.Add(this.Main);
             this.Tabs.Controls.Add(this.Adv_V2_Opts);
             this.Tabs.Controls.Add(this.Adv_V3_Opts);
+            this.Tabs.Controls.Add(this.Vpl_adv);
             this.Tabs.Location = new System.Drawing.Point(12, 10);
             this.Tabs.Name = "Tabs";
             this.Tabs.SelectedIndex = 0;
@@ -343,7 +353,7 @@
             // 
             this.Reg_info.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.Reg_info.Controls.Add(this.Debug_Button);
-            this.Reg_info.Controls.Add(this.VMax_Tracks);
+            this.Reg_info.Controls.Add(this.Protected_Tracks);
             this.Reg_info.Controls.Add(this.CBM_Tracks);
             this.Reg_info.Controls.Add(this.Loader_Track);
             this.Reg_info.Location = new System.Drawing.Point(23, 61);
@@ -361,14 +371,14 @@
             this.Debug_Button.UseVisualStyleBackColor = true;
             this.Debug_Button.Click += new System.EventHandler(this.Button1_Click);
             // 
-            // VMax_Tracks
+            // Protected_Tracks
             // 
-            this.VMax_Tracks.AutoSize = true;
-            this.VMax_Tracks.Location = new System.Drawing.Point(5, 66);
-            this.VMax_Tracks.Name = "VMax_Tracks";
-            this.VMax_Tracks.Size = new System.Drawing.Size(138, 25);
-            this.VMax_Tracks.TabIndex = 23;
-            this.VMax_Tracks.Text = "VMax Tracks";
+            this.Protected_Tracks.AutoSize = true;
+            this.Protected_Tracks.Location = new System.Drawing.Point(5, 66);
+            this.Protected_Tracks.Name = "Protected_Tracks";
+            this.Protected_Tracks.Size = new System.Drawing.Size(138, 25);
+            this.Protected_Tracks.TabIndex = 23;
+            this.Protected_Tracks.Text = "VMax Tracks";
             // 
             // CBM_Tracks
             // 
@@ -550,6 +560,100 @@
             this.V3_Custom.Text = "Use custom header length";
             this.V3_Custom.UseVisualStyleBackColor = true;
             this.V3_Custom.CheckedChanged += new System.EventHandler(this.V3_Custom_CheckedChanged);
+            // 
+            // Vpl_adv
+            // 
+            this.Vpl_adv.BackColor = System.Drawing.Color.Gainsboro;
+            this.Vpl_adv.Controls.Add(this.VPL_shrink);
+            this.Vpl_adv.Controls.Add(this.VPL_only_sectors);
+            this.Vpl_adv.Controls.Add(this.Lead_In);
+            this.Vpl_adv.Controls.Add(this.VPL_lead);
+            this.Vpl_adv.Controls.Add(this.VPL_rb);
+            this.Vpl_adv.Controls.Add(this.VP_Export);
+            this.Vpl_adv.Location = new System.Drawing.Point(4, 37);
+            this.Vpl_adv.Name = "Vpl_adv";
+            this.Vpl_adv.Padding = new System.Windows.Forms.Padding(3);
+            this.Vpl_adv.Size = new System.Drawing.Size(908, 183);
+            this.Vpl_adv.TabIndex = 3;
+            this.Vpl_adv.Text = "Vorpal Advanced";
+            // 
+            // VPL_shrink
+            // 
+            this.VPL_shrink.AutoSize = true;
+            this.VPL_shrink.Location = new System.Drawing.Point(10, 77);
+            this.VPL_shrink.Name = "VPL_shrink";
+            this.VPL_shrink.Size = new System.Drawing.Size(384, 29);
+            this.VPL_shrink.TabIndex = 66;
+            this.VPL_shrink.Text = "Shorten Tracks (shorter lead-in/out)";
+            this.VPL_shrink.UseVisualStyleBackColor = true;
+            this.VPL_shrink.CheckedChanged += new System.EventHandler(this.VPL_shrink_CheckedChanged);
+            // 
+            // VPL_only_sectors
+            // 
+            this.VPL_only_sectors.AutoSize = true;
+            this.VPL_only_sectors.Location = new System.Drawing.Point(10, 112);
+            this.VPL_only_sectors.Name = "VPL_only_sectors";
+            this.VPL_only_sectors.Size = new System.Drawing.Size(373, 29);
+            this.VPL_only_sectors.TabIndex = 65;
+            this.VPL_only_sectors.Text = "No Lead-in/out (EXPERIMENTAL!)";
+            this.VPL_only_sectors.UseVisualStyleBackColor = true;
+            this.VPL_only_sectors.CheckedChanged += new System.EventHandler(this.VPL_only_sectors_CheckedChanged);
+            // 
+            // Lead_In
+            // 
+            this.Lead_In.Location = new System.Drawing.Point(365, 42);
+            this.Lead_In.Maximum = new decimal(new int[] {
+            75,
+            0,
+            0,
+            0});
+            this.Lead_In.Minimum = new decimal(new int[] {
+            5,
+            0,
+            0,
+            0});
+            this.Lead_In.Name = "Lead_In";
+            this.Lead_In.Size = new System.Drawing.Size(88, 31);
+            this.Lead_In.TabIndex = 64;
+            this.Lead_In.Value = new decimal(new int[] {
+            5,
+            0,
+            0,
+            0});
+            this.Lead_In.ValueChanged += new System.EventHandler(this.Lead_In_ValueChanged);
+            // 
+            // VPL_lead
+            // 
+            this.VPL_lead.AutoSize = true;
+            this.VPL_lead.Location = new System.Drawing.Point(10, 42);
+            this.VPL_lead.Name = "VPL_lead";
+            this.VPL_lead.Size = new System.Drawing.Size(349, 29);
+            this.VPL_lead.TabIndex = 63;
+            this.VPL_lead.Text = "Adjust Lead-In Length (in bytes)";
+            this.VPL_lead.UseVisualStyleBackColor = true;
+            this.VPL_lead.CheckedChanged += new System.EventHandler(this.VPL_lead_CheckedChanged);
+            // 
+            // VPL_rb
+            // 
+            this.VPL_rb.AutoSize = true;
+            this.VPL_rb.Location = new System.Drawing.Point(10, 7);
+            this.VPL_rb.Name = "VPL_rb";
+            this.VPL_rb.Size = new System.Drawing.Size(188, 29);
+            this.VPL_rb.TabIndex = 62;
+            this.VPL_rb.Text = "Rebuild Tracks";
+            this.VPL_rb.UseVisualStyleBackColor = true;
+            this.VPL_rb.CheckedChanged += new System.EventHandler(this.VPL_rb_CheckedChanged);
+            // 
+            // VP_Export
+            // 
+            this.VP_Export.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.VP_Export.Location = new System.Drawing.Point(797, 7);
+            this.VP_Export.Name = "VP_Export";
+            this.VP_Export.Size = new System.Drawing.Size(104, 43);
+            this.VP_Export.TabIndex = 61;
+            this.VP_Export.Text = "Export";
+            this.VP_Export.UseVisualStyleBackColor = true;
+            this.VP_Export.Click += new System.EventHandler(this.Make);
             // 
             // Adv_ctrl
             // 
@@ -1104,6 +1208,9 @@
             this.Adv_V3_Opts.ResumeLayout(false);
             this.Adv_V3_Opts.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.V3_hlen)).EndInit();
+            this.Vpl_adv.ResumeLayout(false);
+            this.Vpl_adv.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.Lead_In)).EndInit();
             this.Adv_ctrl.ResumeLayout(false);
             this.tabPage2.ResumeLayout(false);
             this.tabPage2.PerformLayout();
@@ -1191,7 +1298,7 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.PictureBox Drag_pic;
         private System.Windows.Forms.Panel Reg_info;
-        private System.Windows.Forms.Label VMax_Tracks;
+        private System.Windows.Forms.Label Protected_Tracks;
         private System.Windows.Forms.Label CBM_Tracks;
         private System.Windows.Forms.Label Loader_Track;
         private System.Windows.Forms.Panel VBS_info;
@@ -1207,6 +1314,13 @@
         private System.Windows.Forms.Button V3_Export;
         private System.Windows.Forms.LinkLabel linkLabel1;
         private Gbox Import_File;
+        private System.Windows.Forms.TabPage Vpl_adv;
+        private System.Windows.Forms.Button VP_Export;
+        private System.Windows.Forms.CheckBox VPL_lead;
+        private System.Windows.Forms.CheckBox VPL_rb;
+        private System.Windows.Forms.NumericUpDown Lead_In;
+        private System.Windows.Forms.CheckBox VPL_only_sectors;
+        private System.Windows.Forms.CheckBox VPL_shrink;
     }
 }
 

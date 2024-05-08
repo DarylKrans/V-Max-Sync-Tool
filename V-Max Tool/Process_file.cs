@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Drawing;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -193,7 +191,7 @@ namespace V_Max_Tool
                         Track_Info.Items.Add(new LineColor { Color = Color.Black, Text = $"Track Length : ({(NDS.D_End[i] - NDS.D_Start[i] >> 3)}) Sectors ({NDS.sectors[i]})" });
                         Track_Info.Items.Add(" ");
                     }));
-                    NDG.Track_Data[i] = Rebuild_Vorpal(NDG.Track_Data[i]);
+                    //NDG.Track_Data[i] = Rebuild_Vorpal(NDG.Track_Data[i]);
                 }
 
                 if (NDS.D_Start[i] == 0 && NDS.D_End[i] == 0 && NDS.Track_Length[i] == 0)
@@ -235,23 +233,12 @@ namespace V_Max_Tool
             {
                 Track_Info.EndUpdate();
                 if (NDS.cbm.Any(s => s == 4)) f_load.Visible = true; else f_load.Visible = false;
-                if (NDS.cbm.Any(s => s == 2))
-                {
-                    if (!Tabs.TabPages.Contains(Adv_V2_Opts)) Tabs.Controls.Add(Adv_V2_Opts);
-                }
-                else Tabs.Controls.Remove(Adv_V2_Opts);
-                if (NDS.cbm.Any(s => s == 3))
-                {
-                    if (!Tabs.TabPages.Contains(Adv_V3_Opts)) Tabs.Controls.Add(Adv_V3_Opts);
-                }
-                else Tabs.Controls.Remove(Adv_V3_Opts);
-                if (Tabs.TabPages.Contains(Adv_V3_Opts) || Tabs.TabPages.Contains(Adv_V2_Opts)) Adj_cbm.Visible = false; else Adj_cbm.Visible = true;
-                VBS_info.Visible = Reg_info.Visible = Other_opts.Visible = true;
+                Check_Adv_Opts();
                 if (ldr) Loader_Track.Text = "Loader Track : Yes"; else Loader_Track.Text = "Loader Track : No";
                 CBM_Tracks.Text = $"CBM tracks : {cbm}";
-                if (vmx > 0) VMax_Tracks.Text = $"V-Max tracks : {vmx}";
-                if (vpl > 0) VMax_Tracks.Text = $"Vorpal tracks : {vpl}";
-                VMax_Tracks.Visible = (vmx > 0 || vpl > 0);
+                if (vmx > 0) Protected_Tracks.Text = $"V-Max tracks : {vmx}";
+                if (vpl > 0) Protected_Tracks.Text = $"Vorpal tracks : {vpl}";
+                Protected_Tracks.Visible = (vmx > 0 || vpl > 0);
                 if (tracks > 42)
                 {
                     halftracks = true;
@@ -280,7 +267,7 @@ namespace V_Max_Tool
             }));
 
             void Get_Fmt(int trk)
-            { 
+            {
                 NDS.cbm[trk] = Get_Data_Format(NDS.Track_Data[trk]);
                 a--;
                 if (!manualRender)
@@ -369,7 +356,7 @@ namespace V_Max_Tool
                     {
                         temp = Adjust_Sync_CBM(NDS.Track_Data[trk], exp_snc, min_snc, ign_snc, NDS.D_Start[trk], NDS.D_End[trk], NDS.Sector_Zero[trk], NDS.Track_Length[trk], trk);
                         //if ((V2_Auto_Adj.Checked || V3_Auto_Adj.Checked || Adj_cbm.Checked)) // && (NDS.cbm.Any(s => s == 2) || NDS.cbm.Any(s => s == 3)))
-                        if ((V2_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V2_Opts)) || (V3_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V3_Opts)) || Adj_cbm.Checked) 
+                        if ((V2_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V2_Opts)) || (V3_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V3_Opts)) || Adj_cbm.Checked)
                         {
                             d = Get_Density(NDS.Track_Length[trk] >> 3);
                             temp = Rebuild_CBM(NDS.Track_Data[trk], NDS.sectors[trk], NDS.Disk_ID[trk], d, trk);
@@ -511,19 +498,14 @@ namespace V_Max_Tool
 
             void Process_Vorpal(int trk)
             {
-                /// Test Area /// <-- Adding sync to track start made things worse.
-                var s = 1; //1
-                //if (NDS.sectors[trk] == 47) s = 4; 
                 byte[] temp = new byte[NDG.Track_Data[trk].Length]; // + s - 1];
-                //if (s > 1)
-                //{
-                //    temp[0] = 0xff; temp[1] = 0xff; temp[2] = 0x55; temp[3] = 0x56;
-                //}
-                /// --------- ///
-                Array.Copy(NDG.Track_Data[trk], 0, temp, 0 + (s - 1), NDG.Track_Data[trk].Length);
-                //Array.Copy(NDG.Track_Data[trk], 4, temp, 4, NDG.Track_Data[trk].Length - 5);
+                Array.Copy(NDG.Track_Data[trk], 0, temp, 0, NDG.Track_Data[trk].Length);
+                if (VPL_rb.Checked) temp = Rebuild_Vorpal(temp, trk);
                 Set_Dest_Arrays(temp, trk);
-                if (NDS.cbm.Any(ss => ss == 5)) fnappend = vorp;
+                if (NDS.cbm.Any(ss => ss == 5))
+                {
+                    if (VPL_rb.Checked) fnappend = mod; else fnappend = vorp; 
+                }
             }
 
             void Shrink_Loader(int trk)

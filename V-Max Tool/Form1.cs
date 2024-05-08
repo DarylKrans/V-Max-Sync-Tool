@@ -27,7 +27,6 @@ namespace V_Max_Tool
         public Form1()
         {
             InitializeComponent();
-            //this.Text += ver;
             this.Text = $"Re-Master V-Max/Vorpal Utility {ver}";
             Init();
             Set_ListBox_Items(true, true);
@@ -156,6 +155,56 @@ namespace V_Max_Tool
             out_rpm.Items.Clear();
             if (Adj_cbm.Checked && !V3_Auto_Adj.Checked) p = false;
             Process_Nib_Data(true, p, v); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
+        }
+
+        void Vorpal_Rebuild()
+        {
+            if (VPL_rb.Checked)
+            {
+                for (int t = 0; t < tracks; t++)
+                {
+                    if (NDG.Track_Data[t] != null)
+                    {
+                        if (NDS.cbm[t] == 5)
+                        {
+                            if (Original.OT[t].Length == 0)
+                            {
+                                Original.OT[t] = new byte[NDG.Track_Data[t].Length];
+                                Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int t = 0; t < tracks; t++)
+                {
+                    if (NDG.Track_Data[t] != null)
+                    {
+                        if (NDS.cbm[t] == 5) // && NDS.sectors[t] < 16))
+                        {
+                            if (Original.OT[t].Length != 0)
+                            {
+                                NDG.Track_Data[t] = new byte[Original.OT[t].Length];
+                                Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
+                                Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
+                                Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, NDA.Track_Data[t].Length - Original.OT[t].Length);
+                            }
+                            NDG.Track_Length[t] = NDG.Track_Data[t].Length;
+                            NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
+                        }
+                    }
+                }
+            }
+
+            out_track.Items.Clear();
+            out_size.Items.Clear();
+            out_dif.Items.Clear();
+            Out_density.Items.Clear();
+            out_rpm.Items.Clear();
+            Process_Nib_Data(true, false, false); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
+
         }
 
         void Process_New_Image(string file)
@@ -295,7 +344,7 @@ namespace V_Max_Tool
                     {
                         Invoke(new Action(() =>
                         {
-                            
+
                             Process_Nib_Data(true, false, true);
                             Set_ListBox_Items(false, false);
                             Get_Disk_Directory();
@@ -537,5 +586,67 @@ namespace V_Max_Tool
             System.Diagnostics.Process.Start("https://github.com/DarylKrans/V-Max-Sync-Tool");
         }
 
+        private void VPL_lead_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!opt)
+            {
+                opt = true;
+                Lead_In.Enabled = VPL_lead.Checked;
+                if (VPL_lead.Checked)
+                {
+                    VPL_rb.Checked = true;
+                    VPL_only_sectors.Checked = VPL_shrink.Checked = false;
+                }
+                opt = false;
+                Vorpal_Rebuild();
+            }
+        }
+
+        private void VPL_rb_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!opt)
+            {
+                opt = true;
+                if (!VPL_rb.Checked) { VPL_lead.Checked = Lead_In.Enabled = VPL_only_sectors.Checked = VPL_shrink.Checked = false; }
+                opt = false;
+                Vorpal_Rebuild();
+            }
+        }
+
+        private void Lead_In_ValueChanged(object sender, EventArgs e)
+        {
+            if (!opt)
+            {
+                Vorpal_Rebuild();
+            }
+        }
+
+        private void VPL_only_sectors_CheckedChanged(object sender, EventArgs e)
+        {
+            if(!opt)
+            {
+                opt = true;
+                if (VPL_only_sectors.Checked)
+                {
+                    Lead_In.Enabled = VPL_lead.Checked = VPL_shrink.Checked = false;
+                    VPL_rb.Checked = true;
+                }
+                opt = false;
+                Vorpal_Rebuild();
+            }
+        }
+
+        private void VPL_shrink_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!opt)
+            {
+                opt = true;
+                if (!VPL_rb.Checked) VPL_rb.Checked = true;
+                Lead_In.Enabled = VPL_lead.Checked = VPL_only_sectors.Checked = false;
+                opt = false;
+                Vorpal_Rebuild();
+            }
+            else VPL_shrink.Checked = false;
+        }
     }
 }

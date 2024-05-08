@@ -72,10 +72,10 @@ namespace V_Max_Tool
                 0xff, 0x09, 0x0a, 0x0b, 0xff, 0x0d, 0x0e, 0xff
             };
 
-                // 0    1     2     3     4     5    6     7
-                // 8    9     0a    0b    0c    0d   0e    0f
-                // 10   11    12    13    14    15   16    17
-                // 18   19    1a    1b    1c    1d   1e    1f
+        // 0    1     2     3     4     5    6     7
+        // 8    9     0a    0b    0c    0d   0e    0f
+        // 10   11    12    13    14    15   16    17
+        // 18   19    1a    1b    1c    1d   1e    1f
         private readonly byte[] VPL_decode_low =
            {
                 0xff, 0xff, 0xff, 0xff, 0xff, 0x06, 0x0f, 0xff,
@@ -100,6 +100,7 @@ namespace V_Max_Tool
             Import_File.Visible = f_load.Visible = false;
             Tabs.Controls.Remove(Adv_V3_Opts);
             Tabs.Controls.Remove(Adv_V2_Opts);
+            Tabs.Controls.Remove(Vpl_adv);
             Img_style.Enabled = Img_View.Enabled = Img_opts.Enabled = Save_Circle_btn.Visible = M_render.Visible = Adv_ctrl.Enabled = false;
             VBS_info.Visible = Reg_info.Visible = false;
             Other_opts.Visible = false;
@@ -118,6 +119,43 @@ namespace V_Max_Tool
             Dir_screen.Select(2, 23);
             Dir_screen.SelectionBackColor = c64_text;
             Dir_screen.SelectionColor = C64_screen;
+        }
+
+        void Check_Adv_Opts()
+        {
+            if (NDS.cbm.Any(s => s == 2))
+            {
+                if (!Tabs.TabPages.Contains(Adv_V2_Opts))
+                {
+                    Tabs.Controls.Add(Adv_V2_Opts);
+                }
+                Tabs.Controls.Remove(Vpl_adv);
+                Tabs.Controls.Remove(Adv_V3_Opts);
+            }
+            else Tabs.Controls.Remove(Adv_V2_Opts);
+            if (NDS.cbm.Any(s => s == 3))
+            {
+                if (!Tabs.TabPages.Contains(Adv_V3_Opts))
+                {
+                    Tabs.Controls.Add(Adv_V3_Opts);
+                }
+                Tabs.Controls.Remove(Adv_V2_Opts);
+                Tabs.Controls.Remove(Vpl_adv);
+            }
+            else Tabs.Controls.Remove(Adv_V3_Opts);
+            if (NDS.cbm.Any(s => s == 5))
+            {
+                if (!Tabs.TabPages.Contains(Vpl_adv))
+                {
+                    Tabs.Controls.Add(Vpl_adv);
+                }
+                Tabs.Controls.Remove(Adv_V2_Opts);
+                Tabs.Controls.Remove(Adv_V3_Opts);
+            }
+            else Tabs.Controls.Remove(Vpl_adv);
+            if (NDS.cbm.Any(s => s > 1)) Adj_cbm.Visible = false; else Adj_cbm.Visible = true;
+            //if (Tabs.TabPages.Contains(Adv_V3_Opts) || Tabs.TabPages.Contains(Adv_V2_Opts) || Tabs.TabPages.Contains(Vpl_adv)) Adj_cbm.Visible = false; else Adj_cbm.Visible = true;
+            VBS_info.Visible = Reg_info.Visible = Other_opts.Visible = true;
         }
 
         void Check_CPU_Speed()
@@ -634,8 +672,11 @@ namespace V_Max_Tool
             f_load.Visible = false;
             Tabs.Controls.Remove(Adv_V2_Opts);
             Tabs.Controls.Remove(Adv_V3_Opts);
+            Tabs.Controls.Remove(Vpl_adv);
             V3_hlen.Enabled = false;
             V2_hlen.Enabled = false;
+            Lead_In.Enabled = VPL_lead.Checked;
+            Lead_In.Value = 50;
             v2exp.Text = v3exp.Text = $"\u2190 Experimental";
             v2adv.Text = v3adv.Text = $"\u2193        Advanced users ONLY!        \u2193";
             vm2_ver[0] = new string[] { "A5-A5", "A4-A5", "A5-A7", "A5-A6", "A9-AD", "AC-A9", "AD-AB", "A9-AE", "A5-AD", "AC-A5", "AD-A7", "A5-AE", "A5-A9",
