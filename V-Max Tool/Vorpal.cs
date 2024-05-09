@@ -65,7 +65,7 @@ namespace V_Max_Tool
         {
             int snc_cnt = 0;
             int sectors = 0;
-            int skip = 160 * 8;
+            int skip = 160 * 8; // Sets the # of bits to skip when a sector sync is found
             for (int k = 0; k < source.Length; k++)
             {
                 if (source[k]) snc_cnt++;
@@ -149,8 +149,6 @@ namespace V_Max_Tool
                 Write_Lead(100, 400);
                 otmp = new BitArray(Flip_Endian(temp));
             }
-            //Invoke(new Action(() => this.Text = $"{tstart} {tend} {sectors} {cur_sec} {offset}")) ;
-            //Thread.Sleep(400);
             try
             {
                 for (int i = 0; i < tend - tstart; i++) otmp[offset + i] = source[tstart + i];
@@ -220,9 +218,7 @@ namespace V_Max_Tool
                 }
             }
             return buff.ToArray();
-
             // Turn this into a self contained routine later.
-
         }
 
         (byte[], int, int, int, int, int, int[], string[]) Get_Vorpal_Track_Length(byte[] data, int trk = -1)
@@ -249,7 +245,6 @@ namespace V_Max_Tool
             List<string> sec_hdr = new List<string>();
             List<int> sec_pos = new List<int>();
             byte[] tdata = new byte[0];
-            List<string> hdr = new List<string>();
             BitArray source = new BitArray(Flip_Endian(data));
             BitArray lead_in = new BitArray(leadIn_std.Length);
             for (int k = 0; k < source.Length; k++)
@@ -365,7 +360,6 @@ namespace V_Max_Tool
                 leadF = true;
                 return (leadF, leadin);
             }
-
         }
     }
 }
