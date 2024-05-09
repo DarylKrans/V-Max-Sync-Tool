@@ -42,6 +42,7 @@ namespace V_Max_Tool
         byte[] Rebuild_CBM(byte[] data, int sectors, byte[] Disk_ID, int t_density, int trk)
         {
             if (tracks > 42) trk = (trk / 2) + 1; else trk += 1;
+
             int sector_len = 10 + 325 + 10;
             int gap_len = 25;
             int gap_sync = 0;

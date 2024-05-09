@@ -192,6 +192,17 @@ namespace V_Max_Tool
                         Track_Info.Items.Add(" ");
                     }));
                     //NDG.Track_Data[i] = Rebuild_Vorpal(NDG.Track_Data[i]);
+                    if (NDG.Track_Data[i] != null)
+                    {
+                        if (NDS.cbm[i] == 5)
+                        {
+                            if (Original.OT[i].Length == 0)
+                            {
+                                Original.OT[i] = new byte[NDG.Track_Data[i].Length];
+                                Array.Copy(NDG.Track_Data[i], 0, Original.OT[i], 0, NDG.Track_Data[i].Length);
+                            }
+                        }
+                    }
                 }
 
                 if (NDS.D_Start[i] == 0 && NDS.D_End[i] == 0 && NDS.Track_Length[i] == 0)
@@ -345,6 +356,8 @@ namespace V_Max_Tool
 
             void Process_CBM(int trk)
             {
+                var track = trk;
+                if(tracks > 42) track = (trk / 2) + 1; else track += 1;
                 int exp_snc = 40;   // expected sync length.  (sync will be adjusted to this value if it is >= minimum value (or) =< ignore value
                 int min_snc = 16;   // minimum sync length to signal this is a sync marker that needs adjusting
                 int ign_snc = 80;   // ignore sync if it is >= to value
@@ -355,12 +368,11 @@ namespace V_Max_Tool
                     try
                     {
                         temp = Adjust_Sync_CBM(NDS.Track_Data[trk], exp_snc, min_snc, ign_snc, NDS.D_Start[trk], NDS.D_End[trk], NDS.Sector_Zero[trk], NDS.Track_Length[trk], trk);
-                        //if ((V2_Auto_Adj.Checked || V3_Auto_Adj.Checked || Adj_cbm.Checked)) // && (NDS.cbm.Any(s => s == 2) || NDS.cbm.Any(s => s == 3)))
-                        if ((V2_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V2_Opts)) || (V3_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V3_Opts)) || Adj_cbm.Checked)
+                        if ((V2_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V2_Opts)) || (V3_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V3_Opts)) || Adj_cbm.Checked || (VPL_shrink.Checked && track != 18))
                         {
-                            d = Get_Density(NDS.Track_Length[trk] >> 3);
-                            temp = Rebuild_CBM(NDS.Track_Data[trk], NDS.sectors[trk], NDS.Disk_ID[trk], d, trk);
-                            Set_Dest_Arrays(temp, trk);
+                                d = Get_Density(NDS.Track_Length[trk] >> 3);
+                                temp = Rebuild_CBM(NDS.Track_Data[trk], NDS.sectors[trk], NDS.Disk_ID[trk], d, trk);
+                                Set_Dest_Arrays(temp, trk);
                         }
                         Set_Dest_Arrays(temp, trk);
                         (NDA.D_Start[trk], NDA.D_End[trk], NDA.Sector_Zero[trk], NDA.Track_Length[trk], f, NDA.sectors[trk], NDS.cbm_sector[trk], NDA.Total_Sync[trk], NDS.Disk_ID[trk]) = Find_Sector_Zero(NDA.Track_Data[trk], false);
@@ -504,7 +516,7 @@ namespace V_Max_Tool
                 Set_Dest_Arrays(temp, trk);
                 if (NDS.cbm.Any(ss => ss == 5))
                 {
-                    if (VPL_rb.Checked) fnappend = mod; else fnappend = vorp; 
+                    if (VPL_rb.Checked) fnappend = mod; else fnappend = vorp;
                 }
             }
 

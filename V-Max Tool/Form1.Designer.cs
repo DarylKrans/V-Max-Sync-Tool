@@ -38,6 +38,9 @@
             this.V2_Auto_Adj = new System.Windows.Forms.CheckBox();
             this.Tabs = new System.Windows.Forms.TabControl();
             this.Main = new System.Windows.Forms.TabPage();
+            this.Import_File = new V_Max_Tool.Gbox();
+            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
+            this.label5 = new System.Windows.Forms.Label();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.Other_opts = new System.Windows.Forms.Panel();
             this.Disk_Dir = new System.Windows.Forms.RadioButton();
@@ -113,12 +116,10 @@
             this.sl = new System.Windows.Forms.ListBox();
             this.ss = new System.Windows.Forms.ListBox();
             this.sf = new System.Windows.Forms.ListBox();
-            this.Import_File = new V_Max_Tool.Gbox();
-            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
-            this.label5 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.V2_hlen)).BeginInit();
             this.Tabs.SuspendLayout();
             this.Main.SuspendLayout();
+            this.Import_File.SuspendLayout();
             this.Other_opts.SuspendLayout();
             this.VBS_info.SuspendLayout();
             this.Reg_info.SuspendLayout();
@@ -137,7 +138,6 @@
             this.tabPage1.SuspendLayout();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).BeginInit();
-            this.Import_File.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -263,6 +263,38 @@
             this.Main.Size = new System.Drawing.Size(908, 183);
             this.Main.TabIndex = 0;
             this.Main.Text = "File Info";
+            // 
+            // Import_File
+            // 
+            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
+            this.Import_File.BorderColor = System.Drawing.Color.Black;
+            this.Import_File.Controls.Add(this.Import_Progress_Bar);
+            this.Import_File.Controls.Add(this.label5);
+            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
+            this.Import_File.Location = new System.Drawing.Point(16, 61);
+            this.Import_File.Name = "Import_File";
+            this.Import_File.Size = new System.Drawing.Size(870, 102);
+            this.Import_File.TabIndex = 59;
+            this.Import_File.TabStop = false;
+            this.Import_File.Text = "Parsing Image Data";
+            // 
+            // Import_Progress_Bar
+            // 
+            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
+            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
+            this.Import_Progress_Bar.Size = new System.Drawing.Size(858, 26);
+            this.Import_Progress_Bar.TabIndex = 39;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Location = new System.Drawing.Point(6, 68);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(137, 25);
+            this.label5.TabIndex = 38;
+            this.label5.Text = "Processing...";
             // 
             // linkLabel1
             // 
@@ -580,18 +612,18 @@
             // VPL_shrink
             // 
             this.VPL_shrink.AutoSize = true;
-            this.VPL_shrink.Location = new System.Drawing.Point(10, 77);
+            this.VPL_shrink.Location = new System.Drawing.Point(10, 9);
             this.VPL_shrink.Name = "VPL_shrink";
-            this.VPL_shrink.Size = new System.Drawing.Size(384, 29);
+            this.VPL_shrink.Size = new System.Drawing.Size(645, 29);
             this.VPL_shrink.TabIndex = 66;
-            this.VPL_shrink.Text = "Shorten Tracks (shorter lead-in/out)";
+            this.VPL_shrink.Text = "Auto Adjust Tracks to fit Density (note: some tracks may not fit)";
             this.VPL_shrink.UseVisualStyleBackColor = true;
             this.VPL_shrink.CheckedChanged += new System.EventHandler(this.VPL_shrink_CheckedChanged);
             // 
             // VPL_only_sectors
             // 
             this.VPL_only_sectors.AutoSize = true;
-            this.VPL_only_sectors.Location = new System.Drawing.Point(10, 112);
+            this.VPL_only_sectors.Location = new System.Drawing.Point(10, 116);
             this.VPL_only_sectors.Name = "VPL_only_sectors";
             this.VPL_only_sectors.Size = new System.Drawing.Size(373, 29);
             this.VPL_only_sectors.TabIndex = 65;
@@ -601,7 +633,7 @@
             // 
             // Lead_In
             // 
-            this.Lead_In.Location = new System.Drawing.Point(365, 42);
+            this.Lead_In.Location = new System.Drawing.Point(365, 79);
             this.Lead_In.Maximum = new decimal(new int[] {
             75,
             0,
@@ -625,7 +657,7 @@
             // VPL_lead
             // 
             this.VPL_lead.AutoSize = true;
-            this.VPL_lead.Location = new System.Drawing.Point(10, 42);
+            this.VPL_lead.Location = new System.Drawing.Point(10, 79);
             this.VPL_lead.Name = "VPL_lead";
             this.VPL_lead.Size = new System.Drawing.Size(349, 29);
             this.VPL_lead.TabIndex = 63;
@@ -636,11 +668,11 @@
             // VPL_rb
             // 
             this.VPL_rb.AutoSize = true;
-            this.VPL_rb.Location = new System.Drawing.Point(10, 7);
+            this.VPL_rb.Location = new System.Drawing.Point(10, 44);
             this.VPL_rb.Name = "VPL_rb";
-            this.VPL_rb.Size = new System.Drawing.Size(188, 29);
+            this.VPL_rb.Size = new System.Drawing.Size(391, 29);
             this.VPL_rb.TabIndex = 62;
-            this.VPL_rb.Text = "Rebuild Tracks";
+            this.VPL_rb.Text = "Rebuild Tracks (Vorpal Tracks Only)";
             this.VPL_rb.UseVisualStyleBackColor = true;
             this.VPL_rb.CheckedChanged += new System.EventHandler(this.VPL_rb_CheckedChanged);
             // 
@@ -1149,38 +1181,6 @@
             this.sf.Size = new System.Drawing.Size(115, 1002);
             this.sf.TabIndex = 26;
             // 
-            // Import_File
-            // 
-            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
-            this.Import_File.BorderColor = System.Drawing.Color.Black;
-            this.Import_File.Controls.Add(this.Import_Progress_Bar);
-            this.Import_File.Controls.Add(this.label5);
-            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(16, 61);
-            this.Import_File.Name = "Import_File";
-            this.Import_File.Size = new System.Drawing.Size(870, 102);
-            this.Import_File.TabIndex = 59;
-            this.Import_File.TabStop = false;
-            this.Import_File.Text = "Parsing Image Data";
-            // 
-            // Import_Progress_Bar
-            // 
-            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
-            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
-            this.Import_Progress_Bar.Size = new System.Drawing.Size(858, 26);
-            this.Import_Progress_Bar.TabIndex = 39;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(6, 68);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(137, 25);
-            this.label5.TabIndex = 38;
-            this.label5.Text = "Processing...";
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
@@ -1197,6 +1197,8 @@
             this.Tabs.ResumeLayout(false);
             this.Main.ResumeLayout(false);
             this.Main.PerformLayout();
+            this.Import_File.ResumeLayout(false);
+            this.Import_File.PerformLayout();
             this.Other_opts.ResumeLayout(false);
             this.Other_opts.PerformLayout();
             this.VBS_info.ResumeLayout(false);
@@ -1227,8 +1229,6 @@
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).EndInit();
-            this.Import_File.ResumeLayout(false);
-            this.Import_File.PerformLayout();
             this.ResumeLayout(false);
 
         }

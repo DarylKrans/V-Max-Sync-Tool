@@ -157,55 +157,6 @@ namespace V_Max_Tool
             Process_Nib_Data(true, p, v); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
         }
 
-        void Vorpal_Rebuild()
-        {
-            if (VPL_rb.Checked)
-            {
-                for (int t = 0; t < tracks; t++)
-                {
-                    if (NDG.Track_Data[t] != null)
-                    {
-                        if (NDS.cbm[t] == 5)
-                        {
-                            if (Original.OT[t].Length == 0)
-                            {
-                                Original.OT[t] = new byte[NDG.Track_Data[t].Length];
-                                Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int t = 0; t < tracks; t++)
-                {
-                    if (NDG.Track_Data[t] != null)
-                    {
-                        if (NDS.cbm[t] == 5) // && NDS.sectors[t] < 16))
-                        {
-                            if (Original.OT[t].Length != 0)
-                            {
-                                NDG.Track_Data[t] = new byte[Original.OT[t].Length];
-                                Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
-                                Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
-                                Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, NDA.Track_Data[t].Length - Original.OT[t].Length);
-                            }
-                            NDG.Track_Length[t] = NDG.Track_Data[t].Length;
-                            NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
-                        }
-                    }
-                }
-            }
-
-            out_track.Items.Clear();
-            out_size.Items.Clear();
-            out_dif.Items.Clear();
-            Out_density.Items.Clear();
-            out_rpm.Items.Clear();
-            Process_Nib_Data(true, false, false); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
-
-        }
 
         void Process_New_Image(string file)
         {
@@ -623,7 +574,7 @@ namespace V_Max_Tool
 
         private void VPL_only_sectors_CheckedChanged(object sender, EventArgs e)
         {
-            if(!opt)
+            if (!opt)
             {
                 opt = true;
                 if (VPL_only_sectors.Checked)
