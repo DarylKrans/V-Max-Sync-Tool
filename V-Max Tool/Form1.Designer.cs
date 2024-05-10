@@ -68,7 +68,7 @@
             this.V3_Auto_Adj = new System.Windows.Forms.CheckBox();
             this.V3_Custom = new System.Windows.Forms.CheckBox();
             this.Vpl_adv = new System.Windows.Forms.TabPage();
-            this.VPL_shrink = new System.Windows.Forms.CheckBox();
+            this.VPL_auto_adj = new System.Windows.Forms.CheckBox();
             this.VPL_only_sectors = new System.Windows.Forms.CheckBox();
             this.Lead_In = new System.Windows.Forms.NumericUpDown();
             this.VPL_lead = new System.Windows.Forms.CheckBox();
@@ -100,6 +100,15 @@
             this.Src_view = new System.Windows.Forms.RadioButton();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.Track_Info = new System.Windows.Forms.ListBox();
+            this.Data_View = new System.Windows.Forms.TabPage();
+            this.Data_Box = new System.Windows.Forms.RichTextBox();
+            this.Disp_Data = new System.Windows.Forms.Button();
+            this.D_separate = new System.Windows.Forms.GroupBox();
+            this.Data_Sep = new System.Windows.Forms.ComboBox();
+            this.label6 = new System.Windows.Forms.Label();
+            this.D_type = new System.Windows.Forms.GroupBox();
+            this.DV_dec = new System.Windows.Forms.RadioButton();
+            this.DV_gcr = new System.Windows.Forms.RadioButton();
             this.Save_Dialog = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
             this.Dir_screen = new System.Windows.Forms.RichTextBox();
@@ -136,6 +145,9 @@
             this.Img_style.SuspendLayout();
             this.Img_View.SuspendLayout();
             this.tabPage1.SuspendLayout();
+            this.Data_View.SuspendLayout();
+            this.D_separate.SuspendLayout();
+            this.D_type.SuspendLayout();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).BeginInit();
             this.SuspendLayout();
@@ -272,9 +284,9 @@
             this.Import_File.Controls.Add(this.label5);
             this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(16, 61);
+            this.Import_File.Location = new System.Drawing.Point(23, 50);
             this.Import_File.Name = "Import_File";
-            this.Import_File.Size = new System.Drawing.Size(870, 102);
+            this.Import_File.Size = new System.Drawing.Size(863, 108);
             this.Import_File.TabIndex = 59;
             this.Import_File.TabStop = false;
             this.Import_File.Text = "Parsing Image Data";
@@ -283,7 +295,7 @@
             // 
             this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
             this.Import_Progress_Bar.Name = "Import_Progress_Bar";
-            this.Import_Progress_Bar.Size = new System.Drawing.Size(858, 26);
+            this.Import_Progress_Bar.Size = new System.Drawing.Size(845, 28);
             this.Import_Progress_Bar.TabIndex = 39;
             // 
             // label5
@@ -596,7 +608,7 @@
             // Vpl_adv
             // 
             this.Vpl_adv.BackColor = System.Drawing.Color.Gainsboro;
-            this.Vpl_adv.Controls.Add(this.VPL_shrink);
+            this.Vpl_adv.Controls.Add(this.VPL_auto_adj);
             this.Vpl_adv.Controls.Add(this.VPL_only_sectors);
             this.Vpl_adv.Controls.Add(this.Lead_In);
             this.Vpl_adv.Controls.Add(this.VPL_lead);
@@ -609,16 +621,16 @@
             this.Vpl_adv.TabIndex = 3;
             this.Vpl_adv.Text = "Vorpal Advanced";
             // 
-            // VPL_shrink
+            // VPL_auto_adj
             // 
-            this.VPL_shrink.AutoSize = true;
-            this.VPL_shrink.Location = new System.Drawing.Point(10, 9);
-            this.VPL_shrink.Name = "VPL_shrink";
-            this.VPL_shrink.Size = new System.Drawing.Size(645, 29);
-            this.VPL_shrink.TabIndex = 66;
-            this.VPL_shrink.Text = "Auto Adjust Tracks to fit Density (note: some tracks may not fit)";
-            this.VPL_shrink.UseVisualStyleBackColor = true;
-            this.VPL_shrink.CheckedChanged += new System.EventHandler(this.VPL_shrink_CheckedChanged);
+            this.VPL_auto_adj.AutoSize = true;
+            this.VPL_auto_adj.Location = new System.Drawing.Point(10, 9);
+            this.VPL_auto_adj.Name = "VPL_auto_adj";
+            this.VPL_auto_adj.Size = new System.Drawing.Size(645, 29);
+            this.VPL_auto_adj.TabIndex = 66;
+            this.VPL_auto_adj.Text = "Auto Adjust Tracks to fit Density (note: some tracks may not fit)";
+            this.VPL_auto_adj.UseVisualStyleBackColor = true;
+            this.VPL_auto_adj.CheckedChanged += new System.EventHandler(this.VPL_Auto_CheckedChanged);
             // 
             // VPL_only_sectors
             // 
@@ -692,6 +704,7 @@
             this.Adv_ctrl.Appearance = System.Windows.Forms.TabAppearance.Buttons;
             this.Adv_ctrl.Controls.Add(this.tabPage2);
             this.Adv_ctrl.Controls.Add(this.tabPage1);
+            this.Adv_ctrl.Controls.Add(this.Data_View);
             this.Adv_ctrl.Location = new System.Drawing.Point(930, 10);
             this.Adv_ctrl.Name = "Adv_ctrl";
             this.Adv_ctrl.SelectedIndex = 0;
@@ -992,6 +1005,103 @@
             this.Track_Info.Size = new System.Drawing.Size(1139, 1280);
             this.Track_Info.TabIndex = 11;
             // 
+            // Data_View
+            // 
+            this.Data_View.Controls.Add(this.Data_Box);
+            this.Data_View.Controls.Add(this.Disp_Data);
+            this.Data_View.Controls.Add(this.D_separate);
+            this.Data_View.Controls.Add(this.D_type);
+            this.Data_View.Location = new System.Drawing.Point(4, 37);
+            this.Data_View.Name = "Data_View";
+            this.Data_View.Padding = new System.Windows.Forms.Padding(3);
+            this.Data_View.Size = new System.Drawing.Size(1145, 1307);
+            this.Data_View.TabIndex = 3;
+            this.Data_View.Text = "Data View";
+            this.Data_View.UseVisualStyleBackColor = true;
+            // 
+            // Data_Box
+            // 
+            this.Data_Box.DetectUrls = false;
+            this.Data_Box.Font = new System.Drawing.Font("C64 Pro Mono", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Data_Box.Location = new System.Drawing.Point(6, 144);
+            this.Data_Box.Name = "Data_Box";
+            this.Data_Box.ReadOnly = true;
+            this.Data_Box.Size = new System.Drawing.Size(1133, 1157);
+            this.Data_Box.TabIndex = 4;
+            this.Data_Box.Text = "";
+            // 
+            // Disp_Data
+            // 
+            this.Disp_Data.Location = new System.Drawing.Point(999, 13);
+            this.Disp_Data.Name = "Disp_Data";
+            this.Disp_Data.Size = new System.Drawing.Size(125, 41);
+            this.Disp_Data.TabIndex = 3;
+            this.Disp_Data.Text = "Start";
+            this.Disp_Data.UseVisualStyleBackColor = true;
+            this.Disp_Data.Click += new System.EventHandler(this.Disp_Data_Click);
+            // 
+            // D_separate
+            // 
+            this.D_separate.Controls.Add(this.Data_Sep);
+            this.D_separate.Controls.Add(this.label6);
+            this.D_separate.Location = new System.Drawing.Point(230, 3);
+            this.D_separate.Name = "D_separate";
+            this.D_separate.Size = new System.Drawing.Size(548, 135);
+            this.D_separate.TabIndex = 2;
+            this.D_separate.TabStop = false;
+            this.D_separate.Text = "Other Options";
+            // 
+            // Data_Sep
+            // 
+            this.Data_Sep.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Data_Sep.FormattingEnabled = true;
+            this.Data_Sep.Location = new System.Drawing.Point(191, 19);
+            this.Data_Sep.Name = "Data_Sep";
+            this.Data_Sep.Size = new System.Drawing.Size(207, 33);
+            this.Data_Sep.TabIndex = 1;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(6, 27);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(179, 25);
+            this.label6.TabIndex = 0;
+            this.label6.Text = "Separate Data by";
+            // 
+            // D_type
+            // 
+            this.D_type.Controls.Add(this.DV_dec);
+            this.D_type.Controls.Add(this.DV_gcr);
+            this.D_type.Location = new System.Drawing.Point(3, 3);
+            this.D_type.Name = "D_type";
+            this.D_type.Size = new System.Drawing.Size(221, 135);
+            this.D_type.TabIndex = 0;
+            this.D_type.TabStop = false;
+            this.D_type.Text = "Data Type";
+            // 
+            // DV_dec
+            // 
+            this.DV_dec.AutoSize = true;
+            this.DV_dec.Location = new System.Drawing.Point(6, 83);
+            this.DV_dec.Name = "DV_dec";
+            this.DV_dec.Size = new System.Drawing.Size(169, 29);
+            this.DV_dec.TabIndex = 1;
+            this.DV_dec.TabStop = true;
+            this.DV_dec.Text = "Decode GCR";
+            this.DV_dec.UseVisualStyleBackColor = true;
+            // 
+            // DV_gcr
+            // 
+            this.DV_gcr.AutoSize = true;
+            this.DV_gcr.Location = new System.Drawing.Point(6, 48);
+            this.DV_gcr.Name = "DV_gcr";
+            this.DV_gcr.Size = new System.Drawing.Size(143, 29);
+            this.DV_gcr.TabIndex = 0;
+            this.DV_gcr.TabStop = true;
+            this.DV_gcr.Text = "GCR (raw)";
+            this.DV_gcr.UseVisualStyleBackColor = true;
+            // 
             // panel1
             // 
             this.panel1.BackColor = System.Drawing.Color.Gainsboro;
@@ -1226,6 +1336,11 @@
             this.Img_View.ResumeLayout(false);
             this.Img_View.PerformLayout();
             this.tabPage1.ResumeLayout(false);
+            this.Data_View.ResumeLayout(false);
+            this.D_separate.ResumeLayout(false);
+            this.D_separate.PerformLayout();
+            this.D_type.ResumeLayout(false);
+            this.D_type.PerformLayout();
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).EndInit();
@@ -1320,7 +1435,16 @@
         private System.Windows.Forms.CheckBox VPL_rb;
         private System.Windows.Forms.NumericUpDown Lead_In;
         private System.Windows.Forms.CheckBox VPL_only_sectors;
-        private System.Windows.Forms.CheckBox VPL_shrink;
+        private System.Windows.Forms.CheckBox VPL_auto_adj;
+        private System.Windows.Forms.TabPage Data_View;
+        private System.Windows.Forms.GroupBox D_type;
+        private System.Windows.Forms.RadioButton DV_dec;
+        private System.Windows.Forms.RadioButton DV_gcr;
+        private System.Windows.Forms.GroupBox D_separate;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.ComboBox Data_Sep;
+        private System.Windows.Forms.Button Disp_Data;
+        private System.Windows.Forms.RichTextBox Data_Box;
     }
 }
 

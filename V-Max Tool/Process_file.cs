@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -357,7 +359,7 @@ namespace V_Max_Tool
             void Process_CBM(int trk)
             {
                 var track = trk;
-                if(tracks > 42) track = (trk / 2) + 1; else track += 1;
+                if (tracks > 42) track = (trk / 2) + 1; else track += 1;
                 int exp_snc = 40;   // expected sync length.  (sync will be adjusted to this value if it is >= minimum value (or) =< ignore value
                 int min_snc = 16;   // minimum sync length to signal this is a sync marker that needs adjusting
                 int ign_snc = 80;   // ignore sync if it is >= to value
@@ -365,14 +367,21 @@ namespace V_Max_Tool
                 byte[] temp = new byte[0];
                 if (cbm)
                 {
+                    bool rebuild = true;
                     try
                     {
                         temp = Adjust_Sync_CBM(NDS.Track_Data[trk], exp_snc, min_snc, ign_snc, NDS.D_Start[trk], NDS.D_End[trk], NDS.Sector_Zero[trk], NDS.Track_Length[trk], trk);
-                        if ((V2_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V2_Opts)) || (V3_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V3_Opts)) || Adj_cbm.Checked || (VPL_shrink.Checked && track != 18))
+                        if ((V2_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V2_Opts)) || (V3_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V3_Opts)) || Adj_cbm.Checked) // || VPL_auto_adj.Checked)
                         {
+                            if (track == 18 && NDS.sectors[trk] != 19) rebuild = false;
+                            if (rebuild)
+                            {
                                 d = Get_Density(NDS.Track_Length[trk] >> 3);
                                 temp = Rebuild_CBM(NDS.Track_Data[trk], NDS.sectors[trk], NDS.Disk_ID[trk], d, trk);
                                 Set_Dest_Arrays(temp, trk);
+                            }
+                            else rebuild = true;
+
                         }
                         Set_Dest_Arrays(temp, trk);
                         (NDA.D_Start[trk], NDA.D_End[trk], NDA.Sector_Zero[trk], NDA.Track_Length[trk], f, NDA.sectors[trk], NDS.cbm_sector[trk], NDA.Total_Sync[trk], NDS.Disk_ID[trk]) = Find_Sector_Zero(NDA.Track_Data[trk], false);
@@ -392,12 +401,11 @@ namespace V_Max_Tool
                         }
                     }
                 }
-                if (!(V3_Auto_Adj.Checked || V3_Custom.Checked))
+                if (!(V3_Auto_Adj.Checked || V3_Custom.Checked || VPL_rb.Checked))
                 {
                     if (Adj_cbm.Checked) fnappend = mod;
                     else fnappend = fix;
                 }
-
             }
 
             void Process_VMAX_V2(int trk)
@@ -512,11 +520,11 @@ namespace V_Max_Tool
             {
                 byte[] temp = new byte[NDG.Track_Data[trk].Length]; // + s - 1];
                 Array.Copy(NDG.Track_Data[trk], 0, temp, 0, NDG.Track_Data[trk].Length);
-                if (VPL_rb.Checked) temp = Rebuild_Vorpal(temp, trk);
+                if (VPL_rb.Checked || VPL_auto_adj.Checked) temp = Rebuild_Vorpal(temp, trk);
                 Set_Dest_Arrays(temp, trk);
                 if (NDS.cbm.Any(ss => ss == 5))
                 {
-                    if (VPL_rb.Checked) fnappend = mod; else fnappend = vorp;
+                    if (VPL_rb.Checked || Adj_cbm.Checked) fnappend = mod; else fnappend = vorp;
                 }
             }
 
@@ -668,6 +676,101 @@ namespace V_Max_Tool
                     }
                 }
                 if (l > 30) return true; else return false;
+            }
+        }
+
+        void Display_Data()
+        {
+            var buffer = new MemoryStream();
+            var write = new BinaryWriter(buffer);
+            var ds = 0;
+            bool tr = false;
+            bool se = false;
+            Invoke(new Action(() =>
+            {
+                Data_Box.Clear();
+                opt = true;
+                ds = Data_Sep.SelectedIndex;
+            }));
+            if (ds == 1) tr = true;
+            if (ds == 2) tr = se = true;
+            double trk = .5;
+            bool ht = false;
+            if (tracks > 42) ht = true;
+            for (int i = 0; i < tracks; i++)
+            { 
+
+                if (ht) trk += .5; else trk += 1;
+                if (NDS.cbm[i] == 1) Disp_CBM(i, trk);
+                if (NDS.cbm[i] == 5) Disp_VPL(i, trk);
+            }
+            Invoke(new Action(() =>
+            {
+                opt = false;
+                Disp_Data.Text = "Start";
+            }));
+            File.WriteAllBytes($@"c:\test\{fname}_Decoded.bin", buffer.ToArray());
+
+            void Disp_CBM(int t, double track)
+            {
+                bool nul = false;
+                byte[] temp;
+                if (DV_gcr.Checked)
+                {
+                    Invoke(new Action(() =>
+                    {
+                        if (tr) Data_Box.Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]}\n\n";
+                        Data_Box.Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[t]))}";
+                    }));
+                }
+                if (DV_dec.Checked)
+                {
+                    if (tr) Invoke(new Action(()=> Data_Box.Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]}\n\n"));
+                    for (int i = 0; i < NDS.sectors[t]; i++)
+                    {
+                        if (se) Invoke(new Action(() => Data_Box.Text += $"\n\nTrack ({track}) Sector ({i + 1}) Data Format: {secF[NDS.cbm[t]]}\n\n"));
+                        (temp, nul) = Decode_CBM_GCR(NDG.Track_Data[t], i, true);
+                        //byte[] temps = Fix_Stops(temp);
+                        Invoke(new Action(() => 
+                        {
+                            Data_Box.Text += Encoding.ASCII.GetString(Fix_Stops(temp)); 
+                        }));
+                        write.Write(temp);
+                    }
+                }
+            }
+
+            void Disp_VPL(int t, double track)
+            {
+                byte[] temp = new byte[0];
+                if (DV_gcr.Checked)
+                {
+                    Invoke(new Action(() =>
+                    {
+                        if (tr) Data_Box.Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]}\n\n";
+                        Data_Box.Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[t]))}";
+                    }));
+                }
+                if (DV_dec.Checked)
+                {
+                    //if (tr) Invoke(new Action(()=> Data_Box.Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]}\n\n"));
+                    if (!tr && !se) temp = Decode_Vorpal(NDG.Track_Data[t], -1, false, true);
+                    if (tr && !se) temp = Decode_Vorpal(NDG.Track_Data[t], (int)track, false, true);
+                    if (tr && se) temp = Decode_Vorpal(NDG.Track_Data[t], (int)track, true, true);
+                    //byte[] temps = Fix_Stops(temp);
+                    Invoke(new Action(() => Data_Box.Text += Encoding.ASCII.GetString(Fix_Stops(temp))));
+                    write.Write(temp);
+                }
+            }
+            
+            byte[] Fix_Stops(byte[] data)
+            {
+                byte[] fix = new byte[data.Length];
+                for (int i = 0; i < data.Length; i++)
+                {
+                    if (data[i] != 0x00 || data[i] != 0x00) fix[i] = data[i]; else fix[i] = 0x2e;
+                }
+                return fix;
             }
         }
     }

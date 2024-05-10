@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Threading;
 
 namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.72 (beta)";
+        private readonly string ver = " v0.9.73 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -23,6 +24,7 @@ namespace V_Max_Tool
         private string nib_err_msg;
         private string g64_err_msg;
         private readonly int min_t_len = 6000;
+        Thread w;
 
         public Form1()
         {
@@ -169,6 +171,7 @@ namespace V_Max_Tool
                 if (fext.ToLower() == supported[0])
                 {
                     Show_Progress_Bar();
+                    Data_Box.Clear();
                     long length = new System.IO.FileInfo(file).Length;
                     tracks = (int)(length - 256) / 8192;
                     if ((tracks * 8192) + 256 == length) l = "File Size OK!";
@@ -195,6 +198,7 @@ namespace V_Max_Tool
                 if (fext.ToLower() == supported[1])
                 {
                     Show_Progress_Bar();
+                    Data_Box.Clear();
                     Track_Info.Items.Clear();
                     Set_ListBox_Items(true, false);
                     Stream.Seek(0, SeekOrigin.Begin);
@@ -546,7 +550,7 @@ namespace V_Max_Tool
                 if (VPL_lead.Checked)
                 {
                     VPL_rb.Checked = true;
-                    VPL_only_sectors.Checked = VPL_shrink.Checked = false;
+                    VPL_only_sectors.Checked = VPL_auto_adj.Checked = false;
                 }
                 opt = false;
                 Vorpal_Rebuild();
@@ -558,7 +562,7 @@ namespace V_Max_Tool
             if (!opt)
             {
                 opt = true;
-                if (!VPL_rb.Checked) { VPL_lead.Checked = Lead_In.Enabled = VPL_only_sectors.Checked = VPL_shrink.Checked = false; }
+                if (!VPL_rb.Checked) { VPL_lead.Checked = Lead_In.Enabled = VPL_only_sectors.Checked = VPL_auto_adj.Checked = Adj_cbm.Checked = false; }
                 opt = false;
                 Vorpal_Rebuild();
             }
@@ -579,7 +583,7 @@ namespace V_Max_Tool
                 opt = true;
                 if (VPL_only_sectors.Checked)
                 {
-                    Lead_In.Enabled = VPL_lead.Checked = VPL_shrink.Checked = false;
+                    Lead_In.Enabled = VPL_lead.Checked = VPL_auto_adj.Checked = false;
                     VPL_rb.Checked = true;
                 }
                 opt = false;
@@ -587,17 +591,33 @@ namespace V_Max_Tool
             }
         }
 
-        private void VPL_shrink_CheckedChanged(object sender, EventArgs e)
+        private void VPL_Auto_CheckedChanged(object sender, EventArgs e)
         {
             if (!opt)
             {
                 opt = true;
-                if (!VPL_rb.Checked) VPL_rb.Checked = true;
-                Lead_In.Enabled = VPL_lead.Checked = VPL_only_sectors.Checked = false;
+                Adj_cbm.Checked = VPL_auto_adj.Checked; // true;
+                Lead_In.Enabled = VPL_lead.Checked = VPL_only_sectors.Checked = VPL_rb.Checked = false;
+                Update();
                 opt = false;
                 Vorpal_Rebuild();
             }
-            else VPL_shrink.Checked = false;
+        }
+
+        private void Disp_Data_Click(object sender, EventArgs e)
+        {
+            if (!opt)
+            {
+                w = new Thread(new ThreadStart(() => Display_Data()));
+                w.Start();
+                Disp_Data.Text = "Stop";
+            } else
+            {
+                w?.Abort();
+                Disp_Data.Text = "Start";
+                opt = false;
+            }
+            //Display_Data();
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 
 namespace V_Max_Tool
@@ -18,7 +19,8 @@ namespace V_Max_Tool
 
         void Vorpal_Rebuild()
         {
-            if (VPL_rb.Checked)
+            bool p = false;
+            if (VPL_rb.Checked || Adj_cbm.Checked)
             {
                 for (int t = 0; t < tracks; t++)
                 {
@@ -35,6 +37,7 @@ namespace V_Max_Tool
                     }
                 }
             }
+            if (Adj_cbm.Checked) p = true;
             for (int t = 0; t < tracks; t++)
             {
                 if (NDG.Track_Data[t] != null)
@@ -58,7 +61,7 @@ namespace V_Max_Tool
             out_dif.Items.Clear();
             Out_density.Items.Clear();
             out_rpm.Items.Clear();
-            Process_Nib_Data(true, false, false); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
+            Process_Nib_Data(p, false, false); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
         }
 
         int Get_VPL_Sectors(BitArray source)
@@ -85,6 +88,7 @@ namespace V_Max_Tool
 
         byte[] Rebuild_Vorpal(byte[] data, int trk = -1)
         {
+            int esb = 164; // # of bytes to read when last sector found
             if (trk == -1) trk -= 0;
             byte[] temp = new byte[0];
             int offset;
@@ -92,7 +96,7 @@ namespace V_Max_Tool
             int snc_cnt = 0;
             int cur_sec = 0;
             int tlen = data.Length;
-            if (VPL_shrink.Checked) d = Get_Density(tlen);
+            if (VPL_auto_adj.Checked || VPL_rb.Checked) d = Get_Density(tlen);
             int tstart = 0;
             int tend = 0;
             BitArray source = new BitArray(Flip_Endian(data));
@@ -121,7 +125,7 @@ namespace V_Max_Tool
                         cur_sec++;
                         if (cur_sec == sectors)
                         {
-                            tend = k + 7 + (165 * 8);
+                            tend = k + 7 + (esb * 8);
                             break;
                         }
                     }
@@ -137,7 +141,7 @@ namespace V_Max_Tool
                 temp = new byte[len + 1];
                 otmp = new BitArray(Flip_Endian(temp));
             }
-            if (VPL_shrink.Checked)
+            if (VPL_auto_adj.Checked) // || VPL_rb.Checked)
             {
                 offset = 5 * 8;
                 if (len + 10 < density[d])
@@ -165,7 +169,7 @@ namespace V_Max_Tool
             }
         }
 
-        byte[] Decode_Vorpal_Track(byte[] data, int trk = -1, bool sec = false, bool intrlve = false)
+        byte[] Decode_Vorpal(byte[] data, int trk = -1, bool sec = false, bool intrlve = false)
         {
             int snc_cnt = 0;
             int interleave;
@@ -175,7 +179,7 @@ namespace V_Max_Tool
             int psec = 0;
             var buff = new MemoryStream();
             var wrt = new BinaryWriter(buff);
-            if (trk >= 0) wrt.Write($"Track ({trk}) GCR Type : Vorpal\n\n");
+            if (trk >= 0) wrt.Write($"\n\nTrack ({trk}) GCR Type : Vorpal\n\n");
             BitArray sec_data = new BitArray(160 * 8);
             BitArray source = new BitArray(Flip_Endian(data));
             int sectors = Get_VPL_Sectors(source);
@@ -208,7 +212,7 @@ namespace V_Max_Tool
             }
             for (int i = 0; i < sec_dat.Length; i++)
             {
-                if (sec) wrt.Write($"\nSector ({current})\n");
+                if (sec) wrt.Write($"\n\nSector ({current})\n\n");
                 wrt.Write(sec_dat[current]);
                 current += interleave;
                 if (current > sectors - 1)

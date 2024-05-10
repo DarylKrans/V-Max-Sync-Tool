@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -108,6 +109,7 @@ namespace V_Max_Tool
             Adv_ctrl.SelectedIndex = 0;
             linkLabel1.Visible = true;
             Draw_Init_Img(def_bg_text);
+            Data_Box.Clear();
             Default_Dir_Screen();
             opt = false;
         }
@@ -153,7 +155,8 @@ namespace V_Max_Tool
                 Tabs.Controls.Remove(Adv_V3_Opts);
             }
             else Tabs.Controls.Remove(Vpl_adv);
-            if (NDS.cbm.Any(s => s > 1)) Adj_cbm.Visible = false; else Adj_cbm.Visible = true;
+            if (NDS.cbm.Any(s => s == 1)) Adj_cbm.Visible = true; else Adj_cbm.Visible = false;
+            //if (NDS.cbm.Any(s => s == 5)) Adj_cbm.Visible = false; else Adj_cbm.Visible = true;
             //if (Tabs.TabPages.Contains(Adv_V3_Opts) || Tabs.TabPages.Contains(Adv_V2_Opts) || Tabs.TabPages.Contains(Vpl_adv)) Adj_cbm.Visible = false; else Adj_cbm.Visible = true;
             VBS_info.Visible = Reg_info.Visible = Other_opts.Visible = true;
         }
@@ -662,6 +665,10 @@ namespace V_Max_Tool
             Adj_cbm.Visible = false;
             Tabs.Visible = true;
             string[] o = { "G64", "NIB", "NIB & G64" };
+            string[] d = { "None", "Tracks", "Tracks & Sectors" };
+            Data_Box.DetectUrls = false;
+            Data_Sep.DataSource = d;
+            DV_gcr.Checked = true;
             fnappend = fix;
             label1.Text = label2.Text = coords.Text = "";
             Source.Visible = Output.Visible = label4.Visible = Img_Q.Visible = Save_Circle_btn.Visible = false;
