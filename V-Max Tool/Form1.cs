@@ -544,6 +544,8 @@ namespace V_Max_Tool
         {
             this.linkLabel1.LinkVisited = true;
             System.Diagnostics.Process.Start("https://github.com/DarylKrans/V-Max-Sync-Tool");
+            //System.Diagnostics.Process.Start("https://github.com/DarylKrans/V-Max-Tool-.net4.8-");
+        
         }
 
         private void VPL_lead_CheckedChanged(object sender, EventArgs e)
@@ -614,13 +616,26 @@ namespace V_Max_Tool
             Data_Viewer();
         }
 
-        private void T_jump_ValueChanged(object sender, EventArgs e)
+        private void Jump_ValueChanged(object sender, EventArgs e)
         {
-            if (Data_Box.Text.Length >= 0)
+            View_Jump();
+        }
+
+        private void DV_gcr_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!opt)
             {
-                Data_Box.Select(jt[Convert.ToInt32(T_jump.Value)], 0);
-                Data_Box.ScrollToCaret();
+                if (((RadioButton)sender).Checked)
+                {
+                    Data_Viewer();
+                }
             }
         }
+
+        private void Data_Sep_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!opt) Data_Viewer();
+        }
+
     }
 }

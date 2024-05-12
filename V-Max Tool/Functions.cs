@@ -138,6 +138,17 @@ namespace V_Max_Tool
             }
         }
 
+        void View_Jump()
+        {
+            if (Data_Box.Text.Length >= 0)
+            {
+                Data_Box.Visible = false;
+                Data_Box.Select(jt[Convert.ToInt32(T_jump.Value)], 0);
+                Data_Box.ScrollToCaret();
+                Data_Box.Visible = true;
+            }
+        }
+
         void Check_Adv_Opts()
         {
             if (NDS.cbm.Any(s => s == 2))
@@ -658,6 +669,7 @@ namespace V_Max_Tool
             Data_Sep.DataSource = d;
             Data_Sep.SelectedIndex = 1;
             T_jump.Visible = Jump.Visible = false;
+            //T_jump.Increment = 1m / SystemInformation.MouseWheelScrollLines;
             DV_gcr.Checked = true;
             fnappend = fix;
             label1.Text = label2.Text = coords.Text = "";

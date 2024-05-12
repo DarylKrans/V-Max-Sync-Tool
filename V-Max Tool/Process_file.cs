@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace V_Max_Tool
 {
@@ -354,7 +353,7 @@ namespace V_Max_Tool
                 else { NDA.Track_Data[i] = NDS.Track_Data[i]; }
             }
             if (!opt && Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"] && !manualRender) Check_Before_Draw(false);
-            Display_Data();
+            if (!opt) Display_Data();
 
             void Process_Ndos(int trk)
             {
@@ -700,6 +699,7 @@ namespace V_Max_Tool
             string db_Text = "";
             Invoke(new Action(() =>
             {
+                Data_Box.Visible = false;
                 Data_Box.Clear();
                 opt = true;
                 ds = Data_Sep.SelectedIndex;
@@ -720,7 +720,7 @@ namespace V_Max_Tool
                         jmp++;
                         Invoke(new Action(() =>
                         {
-                            jt[(int)trk] = db_Text.Length; 
+                            jt[(int)trk] = db_Text.Length;
                             if (tr) db_Text += $"\n\nTrack ({trk})  Data Format: {secF[NDS.cbm[i]]} {NDG.Track_Data[i].Length} Bytes\n\n";
                             db_Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}";
                         }));
@@ -744,6 +744,8 @@ namespace V_Max_Tool
                 watch.Stop();
                 GC.Collect();
                 //Text = watch.Elapsed.TotalMilliseconds.ToString();
+                View_Jump();
+                Data_Box.Visible = true;
             }));
             if (DV_dec.Checked) File.WriteAllBytes($@"c:\test\{fname}_Decoded.bin", buffer.ToArray());
 
