@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-        //Thread Analyze;
         private string fname = "";
         private string fext = "";
-        //string dirname = "";
         private string fnappend = "";
         private int tracks = 0;
         private byte[] nib_header = new byte[0];
@@ -26,7 +26,8 @@ namespace V_Max_Tool
             "52-40-05-AC", "52-40-05-C8", "52-40-05-CC", "52-40-05-B8" };
         // vmax = the block header values of V-Max v2 sectors (non-CBM sectors)
         private readonly string[] secF = { "NDOS", "CBM", "V-Max v2", "V-Max v3", "Loader", "Vorpal", "Unformatted" };
-
+        private readonly int[] invalid_char = { 0, 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 95 };
+        private int[] jt = new int[42];
 
         void Parse_Nib_Data()
         {
@@ -101,13 +102,14 @@ namespace V_Max_Tool
                 }));
                 if (NDS.cbm[i] == 1)
                 {
+                    int[] junk;
                     cbm++;
                     if (tracks > 42) t = i / 2 + 1; else t = i + 1;
                     Invoke(new Action(() =>
                     {
                         Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]}" });
                     }));
-                    (NDS.D_Start[i], NDS.D_End[i], NDS.Sector_Zero[i], NDS.Track_Length[i], f, NDS.sectors[i], NDS.cbm_sector[i], NDS.Total_Sync[i], NDS.Disk_ID[i]) = Find_Sector_Zero(NDS.Track_Data[i], true);
+                    (NDS.D_Start[i], NDS.D_End[i], NDS.Sector_Zero[i], NDS.Track_Length[i], f, NDS.sectors[i], NDS.cbm_sector[i], NDS.Total_Sync[i], NDS.Disk_ID[i], junk) = Find_Sector_Zero(NDS.Track_Data[i], true);
                     Invoke(new Action(() =>
                     {
                         for (int j = 0; j < f.Length; j++)
@@ -117,6 +119,11 @@ namespace V_Max_Tool
                             Track_Info.Items.Add(new LineColor { Color = color, Text = $"{f[j]}" });
                         }
                         Track_Info.Items.Add(" ");
+                        //for (int j = 0; j < NDS.sectors[i]; j++)
+                        //{
+                        //    Track_Info.Items.Add(new LineColor { Color = color, Text = $"f{junk[j]}" });
+                        //}
+
                     }));
                     NDA.sectors[i] = NDS.sectors[i];
                 }
@@ -347,6 +354,7 @@ namespace V_Max_Tool
                 else { NDA.Track_Data[i] = NDS.Track_Data[i]; }
             }
             if (!opt && Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"] && !manualRender) Check_Before_Draw(false);
+            Display_Data();
 
             void Process_Ndos(int trk)
             {
@@ -384,8 +392,9 @@ namespace V_Max_Tool
 
                         }
                         Set_Dest_Arrays(temp, trk);
-                        (NDA.D_Start[trk], NDA.D_End[trk], NDA.Sector_Zero[trk], NDA.Track_Length[trk], f, NDA.sectors[trk], NDS.cbm_sector[trk], NDA.Total_Sync[trk], NDS.Disk_ID[trk]) = Find_Sector_Zero(NDA.Track_Data[trk], false);
+                        (NDA.D_Start[trk], NDA.D_End[trk], NDA.Sector_Zero[trk], NDA.Track_Length[trk], f, NDA.sectors[trk], NDS.cbm_sector[trk], NDA.Total_Sync[trk], NDS.Disk_ID[trk], NDS.sector_pos[trk]) = Find_Sector_Zero(NDA.Track_Data[trk], false);
                         f[0] = "";
+                        //NDS.sector_pos[trk] = Get_CBM_Sector_Pos(NDA.Track_Data[trk]);
                     }
                     catch
                     {
@@ -681,94 +690,135 @@ namespace V_Max_Tool
 
         void Display_Data()
         {
+            jt = new int[42];
+            int jmp = 0;
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
             var ds = 0;
             bool tr = false;
             bool se = false;
+            string db_Text = "";
             Invoke(new Action(() =>
             {
                 Data_Box.Clear();
                 opt = true;
                 ds = Data_Sep.SelectedIndex;
             }));
-            if (ds == 1) tr = true;
-            if (ds == 2) tr = se = true;
-            double trk = .5;
+            if (ds >= 1) tr = true;
+            if (ds == 2) se = true;
+            double trk = 1;
             bool ht = false;
             if (tracks > 42) ht = true;
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
             for (int i = 0; i < tracks; i++)
-            { 
-
+            {
+                if (NDS.cbm[i] > 0 && NDS.cbm[i] < 6)
+                {
+                    if (DV_gcr.Checked)
+                    {
+                        jmp++;
+                        Invoke(new Action(() =>
+                        {
+                            jt[(int)trk] = db_Text.Length; 
+                            if (tr) db_Text += $"\n\nTrack ({trk})  Data Format: {secF[NDS.cbm[i]]} {NDG.Track_Data[i].Length} Bytes\n\n";
+                            db_Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}";
+                        }));
+                    }
+                    if (DV_dec.Checked)
+                    {
+                        if (NDS.cbm[i] == 1) Disp_CBM(i, trk);
+                        if (NDS.cbm[i] == 5) Disp_VPL(i, trk);
+                        jmp++;
+                    }
+                }
                 if (ht) trk += .5; else trk += 1;
-                if (NDS.cbm[i] == 1) Disp_CBM(i, trk);
-                if (NDS.cbm[i] == 5) Disp_VPL(i, trk);
             }
             Invoke(new Action(() =>
             {
-                opt = false;
+                T_jump.Maximum = jmp;
+                if (ds >= 1 && jmp > 0) { T_jump.Visible = Jump.Visible = true; } else { T_jump.Visible = Jump.Visible = false; }
+                Data_Box.Text = db_Text;
                 Disp_Data.Text = "Start";
+                opt = false;
+                watch.Stop();
+                GC.Collect();
+                //Text = watch.Elapsed.TotalMilliseconds.ToString();
             }));
-            File.WriteAllBytes($@"c:\test\{fname}_Decoded.bin", buffer.ToArray());
+            if (DV_dec.Checked) File.WriteAllBytes($@"c:\test\{fname}_Decoded.bin", buffer.ToArray());
 
             void Disp_CBM(int t, double track)
             {
-                bool nul = false;
-                byte[] temp;
-                if (DV_gcr.Checked)
-                {
-                    Invoke(new Action(() =>
-                    {
-                        if (tr) Data_Box.Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]}\n\n";
-                        Data_Box.Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[t]))}";
-                    }));
-                }
+                byte[][] temp = new byte[NDS.sectors[t]][]; // = new byte[0];
+                bool[] nul = new bool[NDS.sectors[t]];
                 if (DV_dec.Checked)
                 {
-                    if (tr) Invoke(new Action(()=> Data_Box.Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]}\n\n"));
-                    for (int i = 0; i < NDS.sectors[t]; i++)
+                    jt[(int)trk] = db_Text.Length;
+                    try
                     {
-                        if (se) Invoke(new Action(() => Data_Box.Text += $"\n\nTrack ({track}) Sector ({i + 1}) Data Format: {secF[NDS.cbm[t]]}\n\n"));
-                        (temp, nul) = Decode_CBM_GCR(NDG.Track_Data[t], i, true);
-                        //byte[] temps = Fix_Stops(temp);
-                        Invoke(new Action(() => 
+                        int total = 0;
+                        byte[] tmp = new byte[NDG.Track_Data[t].Length];
+                        Array.Copy(NDG.Track_Data[t], 0, tmp, 0, tmp.Length);
+                        BitArray tdata = new BitArray(Flip_Endian(tmp));
+                        for (int i = 0; i < NDS.sectors[t]; i++)
                         {
-                            Data_Box.Text += Encoding.ASCII.GetString(Fix_Stops(temp)); 
-                        }));
-                        write.Write(temp);
+                            (temp[i], nul[i]) = Decode_CBM_GCR(NDG.Track_Data[t], i, true, tdata);
+                            total += temp[i].Length;
+                        }
+                        if (tr) db_Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]} Length ({total}) bytes\n\n";
+                        for (int i = 0; i < NDS.sectors[t]; i++)
+                        {
+                            string ck = "";
+                            if (nul[i]) ck = "Checksum OK"; else ck = "Checksum Failed!";
+                            if (se) db_Text += $"\n\nSector ({i + 1}) Length {temp[i].Length} {ck}\n\n";
+                            db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[i]));
+                            write.Write(temp[i]);
+                        }
                     }
+                    catch { }
                 }
             }
 
             void Disp_VPL(int t, double track)
             {
-                byte[] temp = new byte[0];
-                if (DV_gcr.Checked)
-                {
-                    Invoke(new Action(() =>
-                    {
-                        if (tr) Data_Box.Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]}\n\n";
-                        Data_Box.Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[t]))}";
-                    }));
-                }
+                byte[][] temp = new byte[NDS.sectors[t]][]; // = new byte[0];
+                jt[(int)trk] = db_Text.Length;
                 if (DV_dec.Checked)
                 {
-                    //if (tr) Invoke(new Action(()=> Data_Box.Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]}\n\n"));
-                    if (!tr && !se) temp = Decode_Vorpal(NDG.Track_Data[t], -1, false, true);
-                    if (tr && !se) temp = Decode_Vorpal(NDG.Track_Data[t], (int)track, false, true);
-                    if (tr && se) temp = Decode_Vorpal(NDG.Track_Data[t], (int)track, true, true);
-                    //byte[] temps = Fix_Stops(temp);
-                    Invoke(new Action(() => Data_Box.Text += Encoding.ASCII.GetString(Fix_Stops(temp))));
-                    write.Write(temp);
+                    byte[] tmp = new byte[NDG.Track_Data[t].Length];
+                    Array.Copy(NDG.Track_Data[t], 0, tmp, 0, tmp.Length);
+                    BitArray tdata = new BitArray(Flip_Endian(tmp));
+                    int interleave = 3;
+                    int current = 0;
+                    int s = 0;
+                    int total = 0;
+                    for (int ii = 0; ii < NDS.sectors[t]; ii++)
+                    {
+                        temp[ii] = D_Vorpal(tdata, ii);
+                        total += temp[ii].Length;
+                    }
+                    if (tr) db_Text += $"\n\nTrack ({track}) {secF[NDS.cbm[t]]} Sectors ({NDS.sectors[t]}) Length ({total}) bytes\n\n";
+                    for (int ii = 0; ii < NDS.sectors[t]; ii++)
+                    {
+                        if (se) db_Text += $"\n\nSector ({current}) Length ({temp[ii].Length}) bytes\n\n";
+                        db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[current]));
+                        write.Write(temp[current]);
+                        current += interleave;
+                        if (current > NDS.sectors[t] - 1)
+                        {
+                            s++;
+                            current = 0 + s;
+                        }
+                    }
                 }
             }
-            
+
             byte[] Fix_Stops(byte[] data)
             {
                 byte[] fix = new byte[data.Length];
                 for (int i = 0; i < data.Length; i++)
                 {
-                    if (data[i] != 0x00 || data[i] != 0x00) fix[i] = data[i]; else fix[i] = 0x2e;
+                    if (invalid_char.Any(s => s == Convert.ToInt32(data[i]))) fix[i] = 0x2e; else fix[i] = data[i];
                 }
                 return fix;
             }

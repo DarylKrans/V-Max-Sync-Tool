@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Drawing;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -123,6 +122,22 @@ namespace V_Max_Tool
             Dir_screen.SelectionColor = C64_screen;
         }
 
+        void Data_Viewer()
+        {
+            if (!opt)
+            {
+                w = new Thread(new ThreadStart(() => Display_Data()));
+                w.Start();
+                Disp_Data.Text = "Stop";
+            }
+            else
+            {
+                w?.Abort();
+                Disp_Data.Text = "Start";
+                opt = false;
+            }
+        }
+
         void Check_Adv_Opts()
         {
             if (NDS.cbm.Any(s => s == 2))
@@ -156,8 +171,6 @@ namespace V_Max_Tool
             }
             else Tabs.Controls.Remove(Vpl_adv);
             if (NDS.cbm.Any(s => s == 1)) Adj_cbm.Visible = true; else Adj_cbm.Visible = false;
-            //if (NDS.cbm.Any(s => s == 5)) Adj_cbm.Visible = false; else Adj_cbm.Visible = true;
-            //if (Tabs.TabPages.Contains(Adv_V3_Opts) || Tabs.TabPages.Contains(Adv_V2_Opts) || Tabs.TabPages.Contains(Vpl_adv)) Adj_cbm.Visible = false; else Adj_cbm.Visible = true;
             VBS_info.Visible = Reg_info.Visible = Other_opts.Visible = true;
         }
 
@@ -477,32 +490,6 @@ namespace V_Max_Tool
             return plain;
         }
 
-        //(byte, int) Find_Longest_Sync(byte[] data)
-        //{
-        //    int count = 0;
-        //    int longest = 0;
-        //    byte comp = 0x00;
-        //    byte s = 0x00;
-        //    for (int i = 0; i < data.Length; i++)
-        //    {
-        //        if (data[i] == comp) count++;
-        //        else
-        //        {
-        //            if (longest < count)
-        //            {
-        //                if (comp == 0xff)
-        //                {
-        //                    longest = count;
-        //                    s = comp;
-        //                }
-        //            }
-        //            comp = data[i];
-        //            count = 0;
-        //        }
-        //    }
-        //    return (s, longest);
-        //}
-
         byte[] Build_BlockHeader(int track, int sector, byte[] ID)
         {
             byte[] header = new byte[8];
@@ -621,6 +608,7 @@ namespace V_Max_Tool
 
         void Init()
         {
+            listBox1.Visible = false; // set to true for debugging that requires a listbox
             Debug_Button.Visible = debug;
             Other_opts.Visible = false;
             opt = true;
@@ -668,6 +656,8 @@ namespace V_Max_Tool
             string[] d = { "None", "Tracks", "Tracks & Sectors" };
             Data_Box.DetectUrls = false;
             Data_Sep.DataSource = d;
+            Data_Sep.SelectedIndex = 1;
+            T_jump.Visible = Jump.Visible = false;
             DV_gcr.Checked = true;
             fnappend = fix;
             label1.Text = label2.Text = coords.Text = "";

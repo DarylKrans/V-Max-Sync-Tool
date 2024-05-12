@@ -2,16 +2,16 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Threading;
 
 namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.73 (beta)";
+        private readonly string ver = " v0.9.74 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -303,6 +303,12 @@ namespace V_Max_Tool
                             Process_Nib_Data(true, false, true);
                             Set_ListBox_Items(false, false);
                             Get_Disk_Directory();
+                            //byte[] g = new byte[256];
+                            //for (int i = 0; i < 256; i++)
+                            //{
+                            //    g[i] = (byte)i;
+                            //    listBox1.Items.Add($"{i} {Hex(g, i, 1)} {Encoding.ASCII.GetString(g, i, 1)}\n");
+                            //}
                             if (Disk_Dir.Checked) Disk_Dir.Focus();
                             Out_Type = get;
                             Save_Disk.Visible = true;
@@ -347,9 +353,9 @@ namespace V_Max_Tool
                 NDS.Track_Length = new int[len];
                 NDS.D_Start = new int[len];
                 NDS.D_End = new int[len];
-                NDS.Sector_Zero = new int[len];
                 NDS.cbm = new int[len];
                 NDS.sectors = new int[len];
+                NDS.sector_pos = new int[len][];
                 NDS.Header_Len = new int[len];
                 NDS.cbm_sector = new int[len][];
                 NDS.v2info = new byte[len][];
@@ -362,7 +368,6 @@ namespace V_Max_Tool
                 NDA.Track_Length = new int[len];
                 NDA.D_Start = new int[len];
                 NDA.D_End = new int[len];
-                NDA.Sector_Zero = new int[len];
                 NDA.sectors = new int[len];
                 NDA.Total_Sync = new int[len];
                 // NDG is the G64 arrays
@@ -606,18 +611,16 @@ namespace V_Max_Tool
 
         private void Disp_Data_Click(object sender, EventArgs e)
         {
-            if (!opt)
+            Data_Viewer();
+        }
+
+        private void T_jump_ValueChanged(object sender, EventArgs e)
+        {
+            if (Data_Box.Text.Length >= 0)
             {
-                w = new Thread(new ThreadStart(() => Display_Data()));
-                w.Start();
-                Disp_Data.Text = "Stop";
-            } else
-            {
-                w?.Abort();
-                Disp_Data.Text = "Start";
-                opt = false;
+                Data_Box.Select(jt[Convert.ToInt32(T_jump.Value)], 0);
+                Data_Box.ScrollToCaret();
             }
-            //Display_Data();
         }
     }
 }

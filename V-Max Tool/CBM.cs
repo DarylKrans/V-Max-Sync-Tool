@@ -81,7 +81,7 @@ namespace V_Max_Tool
         }
 
 
-        (int, int, int, int, string[], int, int[], int, byte[]) Find_Sector_Zero(byte[] data, bool checksums)
+        (int, int, int, int, string[], int, int[], int, byte[], int[]) Find_Sector_Zero(byte[] data, bool checksums)
         {
             string[] csm = new string[] { "OK", "Bad!" };
             string decoded_header;
@@ -108,6 +108,7 @@ namespace V_Max_Tool
             BitArray source = new BitArray(data);
             List<string> list = new List<string>();
             List<string> headers = new List<string>();
+            int[] s_pos = new int[22];
             byte[] d = new byte[4];
             var h = "";
             Compare(pos);
@@ -131,7 +132,7 @@ namespace V_Max_Tool
             var len = (data_end - data_start);
             list.Add($"{(len) / 8} {data_start} {data_end}");
             //this.Text = $"{data_start} {data_end} {sector_zero} {Math.Abs(len)} {start_found} {end_found}";  // for testing
-            return (data_start, data_end, sector_zero, len, headers.ToArray(), sectors, s_st, total_sync, Disk_ID);
+            return (data_start, data_end, sector_zero, len, headers.ToArray(), sectors, s_st, total_sync, Disk_ID, s_pos);
 
             void add_total()
             {
@@ -154,12 +155,12 @@ namespace V_Max_Tool
                             decoded_header = Hex_Val(dec_hdr);
                             int chksum = 0;
                             string hdr_c = csm[0];
+                            s_pos[dec_hdr[2]] = pos;
                             for (int i = 0; i < 4; i++) chksum ^= dec_hdr[i + 2];
                             if (chksum != dec_hdr[1]) hdr_c = csm[1];
                             string sz = "";
                             int a = Array.FindIndex(valid_cbm, se => se == h);
                             if (a == 0) sz = "*";
-                            s_st[a] = pos;
                             if (!start_found) { data_start = pos; start_found = true; }
                             if (!sec_zero && h == valid_cbm[0])
                             {
@@ -307,10 +308,11 @@ namespace V_Max_Tool
 
         }
 
-        (byte[], bool) Decode_CBM_GCR(byte[] data, int sector, bool decode)
+        (byte[], bool) Decode_CBM_GCR(byte[] data, int sector, bool decode, BitArray source = null)
         {
             byte[] tmp = new byte[0];
-            BitArray source = new BitArray(Flip_Endian(data));
+            //BitArray source = new BitArray(Flip_Endian(data));
+            if (source == null) source = new BitArray(Flip_Endian(data));
             BitArray sector_data = new BitArray(325 * 8);
             byte[] sec;  // = new byte[325];
             bool sector_marker = false;
@@ -318,6 +320,7 @@ namespace V_Max_Tool
             bool sync = false;
             int sync_count = 0;
             int pos = 0;
+            //if (Track_pos >= 0) pos = Track_pos;
             Compare();
             while (pos < source.Length - 32)
             {

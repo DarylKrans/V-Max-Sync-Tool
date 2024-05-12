@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace V_Max_Tool
@@ -64,28 +63,6 @@ namespace V_Max_Tool
             Process_Nib_Data(p, false, false); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
         }
 
-        int Get_VPL_Sectors(BitArray source)
-        {
-            int snc_cnt = 0;
-            int sectors = 0;
-            int skip = 160 * 8; // Sets the # of bits to skip when a sector sync is found
-            for (int k = 0; k < source.Length; k++)
-            {
-                if (source[k]) snc_cnt++;
-                if (!source[k])
-                {
-                    if (snc_cnt == 8)
-                    {
-                        if (k + skip < source.Count) k += skip;
-                        else break;
-                        sectors++;
-                    }
-                    snc_cnt = 0;
-                }
-            }
-            return sectors;
-        }
-
         byte[] Rebuild_Vorpal(byte[] data, int trk = -1)
         {
             int esb = 164; // # of bytes to read when last sector found
@@ -102,7 +79,7 @@ namespace V_Max_Tool
             BitArray source = new BitArray(Flip_Endian(data));
             BitArray comp = new BitArray(Flip_Endian(vpl_s0));
             BitArray cmp = new BitArray(vpl_s0.Length * 8);
-            int sectors = Get_VPL_Sectors(source);
+            int sectors = Get_VPL_Sectors();
             byte[] ssp = { 0x33 };
             byte[] lead_in = new byte[] { 0xaa, 0x6a, 0x9a, 0xa6, 0xa9 };
             byte lead_out = 0xb5;
@@ -167,23 +144,38 @@ namespace V_Max_Tool
                 for (int i = 0; i < li; i++) Array.Copy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
                 temp[temp.Length - 1] = stop;
             }
+
+            int Get_VPL_Sectors()
+            {
+                snc_cnt = 0;
+                sectors = 0;
+                List<int> secpos = new List<int>();
+                int skip = 160 * 8; // Sets the # of bits to skip when a sector sync is found
+                for (int k = 0; k < source.Length; k++)
+                {
+                    if (source[k]) snc_cnt++;
+                    if (!source[k])
+                    {
+                        if (snc_cnt == 8)
+                        {
+                            secpos.Add(k + 7);
+                            if (k + skip < source.Count) k += skip;
+                            else break;
+                            sectors++;
+                        }
+                        snc_cnt = 0;
+                    }
+                }
+                return sectors;
+            }
         }
 
-        byte[] Decode_Vorpal(byte[] data, int trk = -1, bool sec = false, bool intrlve = false)
+        byte[] D_Vorpal(BitArray source, int sector = -1)
         {
             int snc_cnt = 0;
-            int interleave;
-            if (intrlve) interleave = 3; else interleave = 1;
-            int s = 0;
-            int current = 0;
             int psec = 0;
-            var buff = new MemoryStream();
-            var wrt = new BinaryWriter(buff);
-            if (trk >= 0) wrt.Write($"\n\nTrack ({trk}) GCR Type : Vorpal\n\n");
             BitArray sec_data = new BitArray(160 * 8);
-            BitArray source = new BitArray(Flip_Endian(data));
-            int sectors = Get_VPL_Sectors(source);
-            byte[][] sec_dat = new byte[sectors][];
+            byte[] decoded = new byte[0];
             for (int k = 0; k < source.Length; k++)
             {
                 if (source[k]) snc_cnt++;
@@ -192,7 +184,7 @@ namespace V_Max_Tool
                     if (snc_cnt == 8)
                     {
                         var dep = k + 7;
-                        if (psec <= sectors)
+                        if (psec == sector)
                         {
                             try
                             {
@@ -200,29 +192,18 @@ namespace V_Max_Tool
                                 {
                                     sec_data[i] = source[dep + i];
                                 }
-                                sec_dat[psec] = Decode_VPL(Flip_Endian(Bit2Byte(sec_data)));
-                                k += sec_data.Count;
-                                psec++;
+                                decoded = Decode_VPL(Flip_Endian(Bit2Byte(sec_data)));
+                                return decoded;
                             }
                             catch { }
                         }
+                        psec++;
+                        k += sec_data.Count;
                     }
                     snc_cnt = 0;
                 }
             }
-            for (int i = 0; i < sec_dat.Length; i++)
-            {
-                if (sec) wrt.Write($"\n\nSector ({current})\n\n");
-                wrt.Write(sec_dat[current]);
-                current += interleave;
-                if (current > sectors - 1)
-                {
-                    s++;
-                    current = 0 + s;
-                }
-            }
-            return buff.ToArray();
-            // Turn this into a self contained routine later.
+            return decoded;
         }
 
         (byte[], int, int, int, int, int, int[], string[]) Get_Vorpal_Track_Length(byte[] data, int trk = -1)

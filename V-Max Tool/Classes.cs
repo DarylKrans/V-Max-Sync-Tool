@@ -17,6 +17,7 @@ namespace V_Max_Tool
         public static int[] D_End = new int[0];
         public static int[] cbm = new int[0];
         public static int[] sectors = new int[0];
+        public static int[][] sector_pos = new int[0][];
         public static int[] Header_Len = new int[0];
         public static int[][] cbm_sector = new int[0][];
         public static byte[][] v2info = new byte[0][];
