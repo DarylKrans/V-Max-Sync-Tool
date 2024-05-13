@@ -72,14 +72,14 @@ namespace V_Max_Tool
                 0xff, 0x09, 0x0a, 0x0b, 0xff, 0x0d, 0x0e, 0xff
             };
 
-                // 0    1     2     3     4     5    6     7
-                // 8    9     0a    0b    0c    0d   0e    0f
-                // 10   11    12    13    14    15   16    17
-                // 18   19    1a    1b    1c    1d   1e    1f
+        // 0    1     2     3     4     5    6     7
+        // 8    9     0a    0b    0c    0d   0e    0f
+        // 10   11    12    13    14    15   16    17
+        // 18   19    1a    1b    1c    1d   1e    1f
         private readonly byte[] VPL_decode_low =
            {
-                //0xff, 0xff, 0xff, 0xff, 0xff, 0x06, 0x0f, 0xff,
-                0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff,
+                0xff, 0xff, 0xff, 0xff, 0xff, 0x06, 0x0f, 0xff,
+                //0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff,
                 0xff, 0x00, 0x01, 0x02, 0x05, 0x03, 0x04, 0x05,
                 0xff, 0xff, 0x06, 0x07, 0x0a, 0x08, 0x09, 0x0a,
                 0xff, 0x0b, 0x0c, 0x0d, 0xff, 0x0e, 0x0f, 0xff,
@@ -87,12 +87,12 @@ namespace V_Max_Tool
 
         private readonly byte[] VPL_decode_high =
             {
-                //0xff, 0xff, 0xff, 0xff, 0xff, 0x60, 0xf0, 0xff,
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0xf0, 0xff,
+                0xff, 0xff, 0xff, 0xff, 0xff, 0x60, 0xf0, 0xff,
+                //0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0xf0, 0xff,
                 0xff, 0x00, 0x10, 0x20, 0x50, 0x30, 0x40, 0x50,
                 0xff, 0xff, 0x60, 0x70, 0xa0, 0x80, 0x90, 0xa0,
-                //0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0x70, 0xff,
-                0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
+                0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0x70, 0xff,
+                //0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
             };
 
         void Reset_to_Defaults()
@@ -335,8 +335,10 @@ namespace V_Max_Tool
         {
             int i = 0;
             if (len >= 7500) i = 0;
-            if (len >= 6850 && len < 7500) i = 1;
-            if (len >= 6400 && len < 6850) i = 2;
+            //if (len >= 6850 && len < 7500) i = 1;
+            if (len >= 6650 && len < 7500) i = 1;
+            //if (len >= 6400 && len < 6850) i = 2;
+            if (len >= 6400 && len < 6650) i = 2;
             if (len >= 6000 && len < 6400) i = 3;
             return i;
         }
@@ -671,13 +673,15 @@ namespace V_Max_Tool
             Tabs.Visible = true;
             string[] o = { "G64", "NIB", "NIB & G64" };
             string[] d = { "None", "Tracks", "Sectors" };
+            string[] pt = { "Default", "0x55", "0xAA" };
+            Lead_ptn.DataSource = pt;
+            Lead_ptn.SelectedIndex = 0;
             Data_Box.DetectUrls = false;
             Data_Sep.DataSource = d;
             Data_Sep.SelectedIndex = 1;
             VS_hex.Checked = true;
             T_jump.Visible = Jump.Visible = false;
             DV_pbar.Value = 0;
-            //T_jump.Increment = 1m / SystemInformation.MouseWheelScrollLines;
             DV_gcr.Checked = true;
             fnappend = fix;
             label1.Text = label2.Text = coords.Text = "";
@@ -693,6 +697,7 @@ namespace V_Max_Tool
             V3_hlen.Enabled = false;
             V2_hlen.Enabled = false;
             Lead_In.Enabled = VPL_lead.Checked;
+            Lead_ptn.Enabled = VPL_rb.Checked;
             Lead_In.Value = 50;
             v2exp.Text = v3exp.Text = $"\u2190 Experimental";
             v2adv.Text = v3adv.Text = $"\u2193        Advanced users ONLY!        \u2193";

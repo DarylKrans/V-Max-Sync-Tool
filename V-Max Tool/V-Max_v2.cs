@@ -107,6 +107,7 @@ namespace V_Max_Tool
                 }
                 catch
                 {
+                    for (int r = 0; r < sec_dat[sec].Length; r++) sec_dat[sec][r] = 0xf7;
                     error = true;
                     error_sec = sec;
                 }

@@ -26,7 +26,8 @@ namespace V_Max_Tool
             "52-40-05-AC", "52-40-05-C8", "52-40-05-CC", "52-40-05-B8" };
         // vmax = the block header values of V-Max v2 sectors (non-CBM sectors)
         private readonly string[] secF = { "NDOS", "CBM", "V-Max v2", "V-Max v3", "Loader", "Vorpal", "Unformatted" };
-        private readonly int[] invalid_char = { 0, 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 95 };
+        private readonly int[] invalid_char = { 0, 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 95,
+            128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139 };
         private int[] jt = new int[42];
 
         void Parse_Nib_Data()
@@ -724,48 +725,50 @@ namespace V_Max_Tool
             watch.Start();
             for (int i = 0; i < tracks; i++)
             {
-                Invoke(new Action(()=> DV_pbar.Maximum = (int)((double)DV_pbar.Value / (double)(i + 1) * tracks)));
+                Invoke(new Action(() => DV_pbar.Maximum = (int)((double)DV_pbar.Value / (double)(i + 1) * tracks)));
                 if (NDS.cbm[i] > 0 && NDS.cbm[i] < 6)
                 {
                     if (DV_gcr.Checked)
                     {
                         jmp++;
-                        try { 
-                        Invoke(new Action(() =>
+                        try
                         {
-                            jt[(int)trk] = db_Text.Length;
-                            if (tr) db_Text += $"\n\nTrack ({trk})  Data Format: {secF[NDS.cbm[i]]} {NDG.Track_Data[i].Length} Bytes\n\n";
-                            if (VS_dat.Checked) db_Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}";
-                            if (VS_hex.Checked)
+                            Invoke(new Action(() =>
                             {
-                                string temp = "";
-                                for (int j = 0; j < NDG.Track_Data[i].Length / hex;  j++)
+                                jt[(int)trk] = db_Text.Length;
+                                if (tr) db_Text += $"\n\nTrack ({trk})  Data Format: {secF[NDS.cbm[i]]} {NDG.Track_Data[i].Length} Bytes\n\n";
+                                if (VS_dat.Checked) db_Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}";
+                                if (VS_hex.Checked)
                                 {
-                                    temp += Append_Hex(NDG.Track_Data[i], j * hex, hex);
+                                    string temp = "";
+                                    for (int j = 0; j < NDG.Track_Data[i].Length / hex; j++)
+                                    {
+                                        temp += Append_Hex(NDG.Track_Data[i], j * hex, hex);
+                                    }
+                                    var y = (NDG.Track_Data[i].Length / hex) * hex;
+                                    if (y < NDG.Track_Data[i].Length)
+                                    {
+                                        temp += Append_Hex(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, hex);
+                                    }
+                                    db_Text += temp;
                                 }
-                                var y = (NDG.Track_Data[i].Length / hex) * hex;
-                                if (y < NDG.Track_Data[i].Length)
+                                if (VS_bin.Checked)
                                 {
-                                    temp += Append_Hex(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, hex);
+                                    string temp = "";
+                                    for (int j = 0; j < NDG.Track_Data[i].Length / bin; j++)
+                                    {
+                                        temp += Append_Bin(NDG.Track_Data[i], j * bin, bin);
+                                    }
+                                    var y = (NDG.Track_Data[i].Length / bin) * bin;
+                                    if (y < NDG.Track_Data[i].Length)
+                                    {
+                                        temp += Append_Bin(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, bin);
+                                    }
+                                    db_Text += temp;
                                 }
-                                db_Text += temp;
-                            }
-                            if (VS_bin.Checked)
-                            {
-                                string temp = "";
-                                for (int j = 0; j < NDG.Track_Data[i].Length / bin; j++)
-                                {
-                                    temp += Append_Bin(NDG.Track_Data[i], j * bin, bin);
-                                }
-                                var y = (NDG.Track_Data[i].Length / bin) * bin;
-                                if (y < NDG.Track_Data[i].Length)
-                                {
-                                    temp += Append_Bin(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, bin);
-                                }
-                                db_Text += temp;
-                            }
-                        }));
-                        } catch { }
+                            }));
+                        }
+                        catch { }
                     }
                     if (DV_dec.Checked)
                     {
@@ -821,7 +824,7 @@ namespace V_Max_Tool
                             if (VS_dat.Checked) db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[i]));
                             if (VS_hex.Checked)
                             {
-                                for (int j = 0; j < temp[i].Length / hex; j++) 
+                                for (int j = 0; j < temp[i].Length / hex; j++)
                                 {
                                     temp2 += Append_Hex(temp[i], j * hex, hex);
                                 }
@@ -875,7 +878,7 @@ namespace V_Max_Tool
                     {
                         string temp2 = "";
                         if (se) db_Text += $"\n\nSector ({current}) Length ({temp[ii].Length}) bytes\n\n";
-                        if (VS_dat.Checked) db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[current]));
+                        if (VS_dat.Checked) db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[current])); //.Replace('?', '.');
                         if (VS_hex.Checked)
                         {
                             for (int j = 0; j < temp[current].Length / hex; j++)
@@ -921,7 +924,7 @@ namespace V_Max_Tool
                 temp += $"{Hex(data, pos, length)}    ".Replace('-', ' ');
                 byte[] temp2 = new byte[length];
                 Array.Copy(data, pos, temp2, 0, length); // Encoding.ASCII.GetString(NDG.Track_Data[i], j * 16, 16);
-                temp += $"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n";
+                temp += $"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n"; //.Replace('?', '.');
                 return temp;
             }
 
@@ -933,7 +936,7 @@ namespace V_Max_Tool
                 if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "         ";
                 string temp = "";
                 temp += $"{Byte_to_Binary(temp2)}     ".Replace('-', ' ');
-                temp += $"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n";
+                temp += $"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n"; //.Replace('?','.');
                 return temp;
             }
 
@@ -942,7 +945,8 @@ namespace V_Max_Tool
                 byte[] fix = new byte[data.Length];
                 for (int i = 0; i < data.Length; i++)
                 {
-                    if (invalid_char.Any(s => s == Convert.ToInt32(data[i]))) fix[i] = 0x2e; else fix[i] = data[i];
+                    var g = Convert.ToInt32(data[i]);
+                    if (invalid_char.Any(s => s == g) || g > 127) fix[i] = 0x2e; else fix[i] = data[i];
                 }
                 return fix;
             }

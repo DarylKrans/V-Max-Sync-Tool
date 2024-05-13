@@ -303,6 +303,7 @@ namespace V_Max_Tool
                             Process_Nib_Data(true, false, true);
                             Set_ListBox_Items(false, false);
                             Get_Disk_Directory();
+                            //listBox1.Visible = true;
                             //byte[] g = new byte[256];
                             //for (int i = 0; i < 256; i++)
                             //{
@@ -316,10 +317,6 @@ namespace V_Max_Tool
                             Source.Visible = Output.Visible = true;
                             label1.Text = $"{fname}{fext}";
                             label2.Text = l2;
-                            //this.Text = l2;
-                            //label2.Width = 100;
-                            //label1.Update();
-                            //label2.Update();
                             M_render.Enabled = true;
                             Import_File.Visible = false;
                             Adv_ctrl.Enabled = true;
@@ -575,6 +572,7 @@ namespace V_Max_Tool
             {
                 opt = true;
                 if (!VPL_rb.Checked) { VPL_lead.Checked = Lead_In.Enabled = VPL_only_sectors.Checked = VPL_auto_adj.Checked = Adj_cbm.Checked = false; }
+                Lead_ptn.Enabled = VPL_rb.Checked;
                 opt = false;
                 Vorpal_Rebuild();
             }
@@ -639,18 +637,21 @@ namespace V_Max_Tool
 
         private void Data_Sep_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!opt) Data_Viewer();
-        }
-
-        private void VS_Changed(object sender, EventArgs e)
-        {
             if (!opt)
             {
-                if (((RadioButton)sender).Checked)
-                {
-                    Data_Viewer();
-                }
+                Data_Viewer();
             }
         }
+
+        //private void VS_Changed(object sender, EventArgs e)
+        //{
+        //    if (!opt)
+        //    {
+        //        if (((RadioButton)sender).Checked)
+        //        {
+        //            Data_Viewer();
+        //        }
+        //    }
+        //}
     }
 }

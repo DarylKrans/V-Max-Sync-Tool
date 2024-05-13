@@ -200,7 +200,7 @@ namespace V_Max_Tool
 
         byte[] Rebuild_Vorpal(byte[] data, int trk = -1)
         {
-            int esb = 165; // # of bytes to read when last sector found
+            int esb = 164; // # of bytes to read when last sector found
             if (trk == -1) trk -= 0;
             byte[] temp = new byte[0];
             int offset;
@@ -216,9 +216,23 @@ namespace V_Max_Tool
             BitArray cmp = new BitArray(vpl_s0.Length * 8);
             int sectors = Get_VPL_Sectors();
             byte[] ssp = { 0x33 };
-            byte[] lead_in = new byte[] { 0xaa, 0x6a, 0x9a, 0xa6, 0xa9 };
+            byte[] lead_in = new byte[0];
             byte lead_out = 0xb5;
             byte stop = 0xbd;
+            if (Lead_ptn.SelectedIndex == 0) lead_in = new byte[] { 0xaa, 0x6a, 0x9a, 0xa6, 0xa9 };
+            if (Lead_ptn.SelectedIndex == 1)
+            {
+                lead_in = new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55 };
+                lead_out = 0x55;
+                stop = 0x55;
+            }
+            if (Lead_ptn.SelectedIndex == 2)
+            {
+                lead_in = new byte[] { 0xaa, 0xaa, 0xaa, 0xaa, 0xaa };
+                lead_out = 0xaa;
+                stop = 0xaa;
+
+            }
             temp = new byte[tlen];
             if (!VPL_only_sectors.Checked) Write_Lead(100, 400);
             BitArray otmp = new BitArray(Flip_Endian(temp));
@@ -246,6 +260,7 @@ namespace V_Max_Tool
             }
             offset = (((otmp.Length - (tend - tstart)) / 2) / 8) * 8;
             var len = (tend - tstart) / 8;
+            if (VPL_auto_adj.Checked && sectors == 46) len += 104;
             if (VPL_lead.Checked) offset = Convert.ToInt32(Lead_In.Value) * 8;
             if (VPL_only_sectors.Checked)
             {
@@ -255,13 +270,17 @@ namespace V_Max_Tool
             }
             if (VPL_auto_adj.Checked) // || VPL_rb.Checked)
             {
-                offset = 5 * 8;
-                if (len + 10 < density[d])
+                offset = 15 * 8;
+                var r = offset / 8;
+                var e = len + (r * 2);
+                if (e < density[d])
                 {
-                    len = density[d] - 11;
-                    offset = ((((density[d] * 8) - (tend - tstart)) / 2) / 8) * 8;
+                    if (density[d] - e > 125) len = density[d] - 70;
+                    else len = density[d] - ((r * 2) + 1);
+                    //if (len +((r * 2) + 1) < density[d] - 100) len = density[d] - 100;
+                    //offset = ((((density[d] * 8) - (tend - tstart)) / 2) / 8) * 8;
                 }
-                temp = new byte[len + 11];
+                temp = new byte[len + (r * 2) - 1];
                 Write_Lead(100, 400);
                 otmp = new BitArray(Flip_Endian(temp));
             }
@@ -271,15 +290,16 @@ namespace V_Max_Tool
             }
             catch { }
             temp = Flip_Endian(Bit2Byte(otmp));
+            Check_Sync();
             return temp;
-        
+
             void Write_Lead(int li, int lo)
             {
                 for (int i = temp.Length - lo; i < temp.Length; i++) temp[i] = lead_out;
                 for (int i = 0; i < li; i++) Array.Copy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
                 temp[temp.Length - 1] = stop;
             }
-        
+
             int Get_VPL_Sectors()
             {
                 snc_cnt = 0;
@@ -302,6 +322,16 @@ namespace V_Max_Tool
                     }
                 }
                 return sectors;
+            }
+            void Check_Sync()
+            {
+                if (Lead_ptn.SelectedIndex > 0)
+                {
+                    temp[(offset / 8) - 3] = 0xff;
+                    temp[(offset / 8) - 2] = 0xff;
+                    temp[(offset / 8) - 1] = 0x55;
+                    //temp[(offset / 8) - 0] = 0x53;
+                }
             }
         }
 
