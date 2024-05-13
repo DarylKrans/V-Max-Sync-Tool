@@ -11,7 +11,7 @@ namespace V_Max_Tool
     public partial class Form1 : Form
     {
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.74 (beta)";
+        private readonly string ver = " v0.9.75 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -239,7 +239,7 @@ namespace V_Max_Tool
                             }
                         }
                         Stream.Close();
-                        var lab = $"Total Tracks ({tracks}), G64 Track Size ({tr_size:N0})";
+                        var lab = $"Total Tracks {tracks}, G64 Track Size {tr_size:N0} bytes";
                         Out_Type = false;
                         Process(false, lab);
                     }
@@ -309,15 +309,17 @@ namespace V_Max_Tool
                             //    g[i] = (byte)i;
                             //    listBox1.Items.Add($"{i} {Hex(g, i, 1)} {Encoding.ASCII.GetString(g, i, 1)}\n");
                             //}
+                            linkLabel1.Visible = false;
                             if (Disk_Dir.Checked) Disk_Dir.Focus();
                             Out_Type = get;
                             Save_Disk.Visible = true;
                             Source.Visible = Output.Visible = true;
                             label1.Text = $"{fname}{fext}";
                             label2.Text = l2;
-                            label1.Update();
-                            label2.Update();
-                            linkLabel1.Visible = false;
+                            //this.Text = l2;
+                            //label2.Width = 100;
+                            //label1.Update();
+                            //label2.Update();
                             M_render.Enabled = true;
                             Import_File.Visible = false;
                             Adv_ctrl.Enabled = true;
@@ -502,7 +504,12 @@ namespace V_Max_Tool
 
         private void Adj_cbm_CheckedChanged(object sender, EventArgs e)
         {
-            V3_Auto_Adjust();
+            if (!opt)
+            {
+                //opt = true;
+                V3_Auto_Adjust();
+                //opt = false;
+            }
         }
 
         private void V2_Add_Sync_CheckedChanged(object sender, EventArgs e)
@@ -544,8 +551,6 @@ namespace V_Max_Tool
         {
             this.linkLabel1.LinkVisited = true;
             System.Diagnostics.Process.Start("https://github.com/DarylKrans/V-Max-Sync-Tool");
-            //System.Diagnostics.Process.Start("https://github.com/DarylKrans/V-Max-Tool-.net4.8-");
-        
         }
 
         private void VPL_lead_CheckedChanged(object sender, EventArgs e)
@@ -637,5 +642,15 @@ namespace V_Max_Tool
             if (!opt) Data_Viewer();
         }
 
+        private void VS_Changed(object sender, EventArgs e)
+        {
+            if (!opt)
+            {
+                if (((RadioButton)sender).Checked)
+                {
+                    Data_Viewer();
+                }
+            }
+        }
     }
 }

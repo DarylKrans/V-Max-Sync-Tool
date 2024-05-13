@@ -16,6 +16,7 @@ namespace V_Max_Tool
         private string fext = "";
         private string fnappend = "";
         private int tracks = 0;
+        private bool displayed = false;
         private byte[] nib_header = new byte[0];
         private byte[] g64_header = new byte[684];
         private readonly string[] supported = { ".nib", ".g64" }; // Supported file extensions list
@@ -353,7 +354,10 @@ namespace V_Max_Tool
                 else { NDA.Track_Data[i] = NDS.Track_Data[i]; }
             }
             if (!opt && Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"] && !manualRender) Check_Before_Draw(false);
-            if (!opt) Display_Data();
+            if (Adv_ctrl.Controls[2] != Adv_ctrl.SelectedTab) displayed = false;
+            if (Adv_ctrl.Controls[0] != Adv_ctrl.SelectedTab) drawn = false;
+
+            if (!opt) Data_Viewer();
 
             void Process_Ndos(int trk)
             {
@@ -697,11 +701,18 @@ namespace V_Max_Tool
             bool tr = false;
             bool se = false;
             string db_Text = "";
+            int bin = 8;
+            int hex = 16;
             Invoke(new Action(() =>
             {
+                opt = true;
+                if (VS_bin.Checked) Data_Box.Font = new Font("Lucida Console", 7.5f); else Data_Box.Font = new Font("Lucida Console", 10, FontStyle.Regular);
                 Data_Box.Visible = false;
                 Data_Box.Clear();
-                opt = true;
+                DV_pbar.Value = 0;
+                DV_pbar.Maximum = 100;
+                DV_pbar.Maximum *= 100;
+                DV_pbar.Value = DV_pbar.Maximum / 100;
                 ds = Data_Sep.SelectedIndex;
             }));
             if (ds >= 1) tr = true;
@@ -713,17 +724,48 @@ namespace V_Max_Tool
             watch.Start();
             for (int i = 0; i < tracks; i++)
             {
+                Invoke(new Action(()=> DV_pbar.Maximum = (int)((double)DV_pbar.Value / (double)(i + 1) * tracks)));
                 if (NDS.cbm[i] > 0 && NDS.cbm[i] < 6)
                 {
                     if (DV_gcr.Checked)
                     {
                         jmp++;
+                        try { 
                         Invoke(new Action(() =>
                         {
                             jt[(int)trk] = db_Text.Length;
                             if (tr) db_Text += $"\n\nTrack ({trk})  Data Format: {secF[NDS.cbm[i]]} {NDG.Track_Data[i].Length} Bytes\n\n";
-                            db_Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}";
+                            if (VS_dat.Checked) db_Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}";
+                            if (VS_hex.Checked)
+                            {
+                                string temp = "";
+                                for (int j = 0; j < NDG.Track_Data[i].Length / hex;  j++)
+                                {
+                                    temp += Append_Hex(NDG.Track_Data[i], j * hex, hex);
+                                }
+                                var y = (NDG.Track_Data[i].Length / hex) * hex;
+                                if (y < NDG.Track_Data[i].Length)
+                                {
+                                    temp += Append_Hex(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, hex);
+                                }
+                                db_Text += temp;
+                            }
+                            if (VS_bin.Checked)
+                            {
+                                string temp = "";
+                                for (int j = 0; j < NDG.Track_Data[i].Length / bin; j++)
+                                {
+                                    temp += Append_Bin(NDG.Track_Data[i], j * bin, bin);
+                                }
+                                var y = (NDG.Track_Data[i].Length / bin) * bin;
+                                if (y < NDG.Track_Data[i].Length)
+                                {
+                                    temp += Append_Bin(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, bin);
+                                }
+                                db_Text += temp;
+                            }
                         }));
+                        } catch { }
                     }
                     if (DV_dec.Checked)
                     {
@@ -739,7 +781,9 @@ namespace V_Max_Tool
                 T_jump.Maximum = jmp;
                 if (ds >= 1 && jmp > 0) { T_jump.Visible = Jump.Visible = true; } else { T_jump.Visible = Jump.Visible = false; }
                 Data_Box.Text = db_Text;
-                Disp_Data.Text = "Start";
+                Disp_Data.Text = "Refresh";
+                DV_pbar.Value = 0;
+                displayed = true;
                 opt = false;
                 watch.Stop();
                 GC.Collect();
@@ -770,10 +814,37 @@ namespace V_Max_Tool
                         if (tr) db_Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]} Length ({total}) bytes\n\n";
                         for (int i = 0; i < NDS.sectors[t]; i++)
                         {
+                            string temp2 = "";
                             string ck = "";
                             if (nul[i]) ck = "Checksum OK"; else ck = "Checksum Failed!";
                             if (se) db_Text += $"\n\nSector ({i + 1}) Length {temp[i].Length} {ck}\n\n";
-                            db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[i]));
+                            if (VS_dat.Checked) db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[i]));
+                            if (VS_hex.Checked)
+                            {
+                                for (int j = 0; j < temp[i].Length / hex; j++) 
+                                {
+                                    temp2 += Append_Hex(temp[i], j * hex, hex);
+                                }
+                                var y = (temp[i].Length / hex) * hex;
+                                if (y < temp[i].Length)
+                                {
+                                    temp2 += Append_Hex(temp[i], y, temp[i].Length - y, hex);
+                                }
+                                db_Text += temp2;
+                            }
+                            if (VS_bin.Checked)
+                            {
+                                for (int j = 0; j < temp[i].Length / bin; j++)
+                                {
+                                    temp2 += Append_Bin(temp[i], j * bin, bin);
+                                }
+                                var y = (temp[i].Length / bin) * bin;
+                                if (y < temp[i].Length)
+                                {
+                                    temp2 += Append_Bin(temp[i], y, temp[i].Length - y, bin);
+                                }
+                                db_Text += temp2;
+                            }
                             write.Write(temp[i]);
                         }
                     }
@@ -802,8 +873,35 @@ namespace V_Max_Tool
                     if (tr) db_Text += $"\n\nTrack ({track}) {secF[NDS.cbm[t]]} Sectors ({NDS.sectors[t]}) Length ({total}) bytes\n\n";
                     for (int ii = 0; ii < NDS.sectors[t]; ii++)
                     {
+                        string temp2 = "";
                         if (se) db_Text += $"\n\nSector ({current}) Length ({temp[ii].Length}) bytes\n\n";
-                        db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[current]));
+                        if (VS_dat.Checked) db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[current]));
+                        if (VS_hex.Checked)
+                        {
+                            for (int j = 0; j < temp[current].Length / hex; j++)
+                            {
+                                temp2 += Append_Hex(temp[current], j * hex, hex);
+                            }
+                            var y = (temp[current].Length / hex) * hex;
+                            if (y < temp[current].Length)
+                            {
+                                temp2 += Append_Hex(temp[current], y, temp[current].Length - y, hex);
+                            }
+                            db_Text += temp2;
+                        }
+                        if (VS_bin.Checked)
+                        {
+                            for (int j = 0; j < temp[current].Length / bin; j++)
+                            {
+                                temp2 += Append_Bin(temp[current], j * bin, bin);
+                            }
+                            var y = (temp[current].Length / bin) * bin;
+                            if (y < temp[current].Length)
+                            {
+                                temp2 += Append_Bin(temp[current], y, temp[current].Length - y, bin);
+                            }
+                            db_Text += temp2;
+                        }
                         write.Write(temp[current]);
                         current += interleave;
                         if (current > NDS.sectors[t] - 1)
@@ -813,6 +911,30 @@ namespace V_Max_Tool
                         }
                     }
                 }
+            }
+
+            string Append_Hex(byte[] data, int pos, int length, int expected_length = 0)
+            {
+                string spc = "";
+                if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "   ";
+                string temp = "";
+                temp += $"{Hex(data, pos, length)}    ".Replace('-', ' ');
+                byte[] temp2 = new byte[length];
+                Array.Copy(data, pos, temp2, 0, length); // Encoding.ASCII.GetString(NDG.Track_Data[i], j * 16, 16);
+                temp += $"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n";
+                return temp;
+            }
+
+            string Append_Bin(byte[] data, int pos, int length, int expected_length = 0)
+            {
+                byte[] temp2 = new byte[length];
+                Array.Copy(data, pos, temp2, 0, length); // Encoding.ASCII.GetString(NDG.Track_Data[i], j * 16, 16);
+                string spc = "";
+                if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "         ";
+                string temp = "";
+                temp += $"{Byte_to_Binary(temp2)}     ".Replace('-', ' ');
+                temp += $"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n";
+                return temp;
             }
 
             byte[] Fix_Stops(byte[] data)

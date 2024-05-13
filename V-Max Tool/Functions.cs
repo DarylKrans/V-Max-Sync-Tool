@@ -72,13 +72,14 @@ namespace V_Max_Tool
                 0xff, 0x09, 0x0a, 0x0b, 0xff, 0x0d, 0x0e, 0xff
             };
 
-        // 0    1     2     3     4     5    6     7
-        // 8    9     0a    0b    0c    0d   0e    0f
-        // 10   11    12    13    14    15   16    17
-        // 18   19    1a    1b    1c    1d   1e    1f
+                // 0    1     2     3     4     5    6     7
+                // 8    9     0a    0b    0c    0d   0e    0f
+                // 10   11    12    13    14    15   16    17
+                // 18   19    1a    1b    1c    1d   1e    1f
         private readonly byte[] VPL_decode_low =
            {
-                0xff, 0xff, 0xff, 0xff, 0xff, 0x06, 0x0f, 0xff,
+                //0xff, 0xff, 0xff, 0xff, 0xff, 0x06, 0x0f, 0xff,
+                0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff,
                 0xff, 0x00, 0x01, 0x02, 0x05, 0x03, 0x04, 0x05,
                 0xff, 0xff, 0x06, 0x07, 0x0a, 0x08, 0x09, 0x0a,
                 0xff, 0x0b, 0x0c, 0x0d, 0xff, 0x0e, 0x0f, 0xff,
@@ -86,10 +87,12 @@ namespace V_Max_Tool
 
         private readonly byte[] VPL_decode_high =
             {
-                0xff, 0xff, 0xff, 0xff, 0xff, 0x60, 0xf0, 0xff,
+                //0xff, 0xff, 0xff, 0xff, 0xff, 0x60, 0xf0, 0xff,
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0xf0, 0xff,
                 0xff, 0x00, 0x10, 0x20, 0x50, 0x30, 0x40, 0x50,
                 0xff, 0xff, 0x60, 0x70, 0xa0, 0x80, 0x90, 0xa0,
-                0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0x70, 0xff,
+                //0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0x70, 0xff,
+                0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
             };
 
         void Reset_to_Defaults()
@@ -124,17 +127,20 @@ namespace V_Max_Tool
 
         void Data_Viewer()
         {
-            if (!opt)
+            if (Adv_ctrl.Controls[2] == Adv_ctrl.SelectedTab)
             {
-                w = new Thread(new ThreadStart(() => Display_Data()));
-                w.Start();
-                Disp_Data.Text = "Stop";
-            }
-            else
-            {
-                w?.Abort();
-                Disp_Data.Text = "Start";
-                opt = false;
+                if (!opt)
+                {
+                    w = new Thread(new ThreadStart(() => Display_Data()));
+                    w.Start();
+                    Disp_Data.Text = "Stop";
+                }
+                else
+                {
+                    w?.Abort();
+                    Disp_Data.Text = "Refresh";
+                    opt = false;
+                }
             }
         }
 
@@ -610,7 +616,7 @@ namespace V_Max_Tool
                     circ.Start();
                 }
                 catch { }
-
+                drawn = true;
                 GC.Collect();
                 opt = false;
                 Progress_Thread_Check();
@@ -664,11 +670,13 @@ namespace V_Max_Tool
             Adj_cbm.Visible = false;
             Tabs.Visible = true;
             string[] o = { "G64", "NIB", "NIB & G64" };
-            string[] d = { "None", "Tracks", "Tracks & Sectors" };
+            string[] d = { "None", "Tracks", "Sectors" };
             Data_Box.DetectUrls = false;
             Data_Sep.DataSource = d;
             Data_Sep.SelectedIndex = 1;
+            VS_hex.Checked = true;
             T_jump.Visible = Jump.Visible = false;
+            DV_pbar.Value = 0;
             //T_jump.Increment = 1m / SystemInformation.MouseWheelScrollLines;
             DV_gcr.Checked = true;
             fnappend = fix;

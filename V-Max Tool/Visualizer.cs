@@ -18,6 +18,7 @@ namespace V_Max_Tool
         private bool interp = false;
         private bool Dragging = false;
         private bool vm_reverse = false;
+        private bool drawn = false;
         private int xPos;
         private int yPos;
         private readonly string[] Img_Quality = { "Very Low", "Low", "Normal", "High", "Ultra", "Atomic", "Insanity!" };
@@ -678,7 +679,11 @@ namespace V_Max_Tool
         }
         private void Adv_Ctrl_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!opt) Check_Before_Draw(false);
+            if (!opt)
+            {
+                if (Adv_ctrl.Controls[2] == Adv_ctrl.SelectedTab && !displayed) Data_Viewer();
+                if (Adv_ctrl.Controls[0] == Adv_ctrl.SelectedTab && !drawn) Check_Before_Draw(false);
+            }
         }
 
         private void Src_view_CheckedChanged(object sender, EventArgs e)
