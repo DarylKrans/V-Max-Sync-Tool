@@ -679,7 +679,7 @@ namespace V_Max_Tool
         }
         private void Adv_Ctrl_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
                 if (Adv_ctrl.Controls[2] == Adv_ctrl.SelectedTab && !displayed) Data_Viewer();
                 if (Adv_ctrl.Controls[0] == Adv_ctrl.SelectedTab && !drawn) Check_Before_Draw(false);
@@ -693,14 +693,14 @@ namespace V_Max_Tool
                 if (rb.Checked)
                 {
                     Update();
-                    if (!opt) Check_Before_Draw(false);
+                    if (!busy) Check_Before_Draw(false);
                 }
             }
         }
 
         private void Rev_View_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
                 interp = !interp;
                 flat?.Abort();
@@ -716,7 +716,7 @@ namespace V_Max_Tool
         {
             Flat_Interp.Visible = Flat_View.Checked;
             Rev_View.Visible = Circle_View.Checked;
-            if (!opt)
+            if (!busy)
             {
                 if (Flat_View.Checked)
                 {
@@ -778,7 +778,10 @@ namespace V_Max_Tool
 
         private void Flat_Interp_CheckedChanged(object sender, EventArgs e)
         {
-            Draw_Flat_Tracks(true);
+            if (!busy)
+            {
+                Draw_Flat_Tracks(true);
+            }
         }
     }
 }

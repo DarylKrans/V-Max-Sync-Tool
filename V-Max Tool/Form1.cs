@@ -10,15 +10,16 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
+        private readonly bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.75 (beta)";
+        private readonly string ver = " v0.9.76 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
         //private readonly int[] density = { 7692, 7142, 6666, 6250 }; // <- Actual capacity as defined by the manual
         private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private bool error = false;
-        private bool opt = false;
+        private bool busy = false;
         private bool nib_error = false;
         private bool g64_error = false;
         private string nib_err_msg;
@@ -33,132 +34,6 @@ namespace V_Max_Tool
             Init();
             Set_ListBox_Items(true, true);
         }
-
-        void V2_Adv_Opts()
-        {
-            bool c = false;
-            bool p = true;
-            if (V2_Auto_Adj.Checked)
-            {
-                c = true;
-                p = false;
-                for (int t = 0; t < tracks; t++)
-                {
-                    if (NDS.cbm[t] == 4)
-                    {
-                        if (Original.OT[t].Length == 0)
-                        {
-                            Original.OT[t] = new byte[NDG.Track_Data[t].Length];
-                            Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
-                        }
-                        int d = Get_Density(NDG.Track_Data[t].Length);
-                        byte[] temp = Shrink_Track(NDG.Track_Data[t], d);
-                        if (Re_Align.Checked && !NDG.L_Rot)
-                        {
-                            Rotate_Loader(temp);
-                            NDG.L_Rot = true;
-                        }
-                        Set_Dest_Arrays(temp, t);
-                    }
-                }
-            }
-            else
-            {
-                for (int t = 0; t < tracks; t++)
-                {
-                    if (NDS.cbm[t] == 4 || NDS.cbm[t] == 1)
-                    {
-                        if (Original.OT[t].Length != 0)
-                        {
-                            NDG.Track_Data[t] = new byte[Original.OT[t].Length];
-                            Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
-                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
-                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, 8192 - Original.OT[t].Length);
-                        }
-                        NDG.Track_Length[t] = NDG.Track_Data[t].Length;
-                        NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
-                        c = true;
-
-                    }
-                }
-            }
-            int i = Convert.ToInt32(V2_hlen.Value);
-            if (i >= V2_hlen.Minimum && i <= V2_hlen.Maximum)
-            {
-                out_track.Items.Clear();
-                out_size.Items.Clear();
-                out_dif.Items.Clear();
-                Out_density.Items.Clear();
-                out_rpm.Items.Clear();
-                Process_Nib_Data(c, false, p); // false flag instructs the routine NOT to process CBM tracks again
-            }
-        }
-
-        void V3_Auto_Adjust()
-        {
-            bool p = true;
-            bool v = false;
-            if (V3_Auto_Adj.Checked || Adj_cbm.Checked)
-            {
-                for (int t = 0; t < tracks; t++)
-                {
-                    if (NDG.Track_Data[t] != null)
-                    {
-                        if (NDS.cbm[t] == 1 || NDS.cbm[t] == 3)
-                        {
-                            if (Original.OT[t].Length == 0)
-                            {
-                                Original.OT[t] = new byte[NDG.Track_Data[t].Length];
-                                Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
-                            }
-                        }
-                        if (NDS.cbm[t] == 4) Shrink_Short_Sector(t);
-                    }
-                }
-            }
-            else
-            {
-                for (int t = 0; t < tracks; t++)
-                {
-                    if (NDG.Track_Data[t] != null)
-                    {
-                        if (NDS.cbm[t] == 4)
-                        {
-                            NDG.Track_Data[t] = new byte[Original.SG.Length];
-                            NDA.Track_Data[t] = new byte[Original.SA.Length];
-                            Array.Copy(Original.SG, 0, NDG.Track_Data[t], 0, Original.SG.Length);
-                            Array.Copy(Original.SA, 0, NDA.Track_Data[t], 0, Original.SA.Length);
-                            NDG.Track_Length[t] = NDG.Track_Data[t].Length;
-                            NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
-                            NDG.L_Rot = false;
-                        }
-                        if (NDS.cbm[t] == 1 || (NDS.cbm[t] == 3)) // && NDS.sectors[t] < 16))
-                        {
-                            if (Original.OT[t].Length != 0)
-                            {
-                                NDG.Track_Data[t] = new byte[Original.OT[t].Length];
-                                Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
-                                Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
-                                Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, NDA.Track_Data[t].Length - Original.OT[t].Length);
-                                p = false;
-                                v = true;
-                            }
-                            NDG.Track_Length[t] = NDG.Track_Data[t].Length;
-                            NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
-                        }
-                    }
-                }
-            }
-
-            out_track.Items.Clear();
-            out_size.Items.Clear();
-            out_dif.Items.Clear();
-            Out_density.Items.Clear();
-            out_rpm.Items.Clear();
-            if (Adj_cbm.Checked && !V3_Auto_Adj.Checked) p = false;
-            Process_Nib_Data(true, p, v); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
-        }
-
 
         void Process_New_Image(string file)
         {
@@ -451,71 +326,73 @@ namespace V_Max_Tool
 
         private void V2_Custom_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                opt = true;
+                busy = true;
                 V2_hlen.Enabled = V2_Custom.Checked;
                 if (V2_Custom.Checked) V2_Auto_Adj.Checked = false;
-                opt = false;
+                busy = false;
                 V2_Adv_Opts();
             }
         }
 
         private void AutoAdj_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                opt = true;
+                busy = true;
                 if (V2_Auto_Adj.Checked) V2_Custom.Checked = V2_hlen.Enabled = V2_Add_Sync.Checked = false;
-                opt = false;
+                if (!V2_Auto_Adj.Checked) { v2aa = false; }
+                busy = false;
                 V2_Adv_Opts();
             }
         }
 
         private void V3_Auto_Adj_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                opt = true;
+                busy = true;
                 if (V3_Auto_Adj.Checked) V3_Custom.Checked = V3_hlen.Enabled = false;
-                opt = false;
+                if (!V3_Auto_Adj.Checked) { v3aa = false; }
+                busy = false;
                 V3_Auto_Adjust();
             }
         }
 
         private void V3_Custom_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                opt = true;
+                busy = true;
                 if (V3_Custom.Checked)
                 {
                     V3_Auto_Adj.Checked = false;
                     V3_hlen.Enabled = true;
                 }
                 else V3_hlen.Enabled = false;
-                opt = false;
+                busy = false;
                 V3_Auto_Adjust();
             }
         }
 
         private void Adj_cbm_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                //opt = true;
+                busy = true;
                 V3_Auto_Adjust();
-                //opt = false;
+                busy = false;
             }
         }
 
         private void V2_Add_Sync_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                opt = true;
+                busy = true;
                 if (V2_Add_Sync.Checked) V2_Auto_Adj.Checked = false;
-                opt = false;
+                busy = false;
                 V2_Adv_Opts();
             }
         }
@@ -532,6 +409,7 @@ namespace V_Max_Tool
 
         private void Manual_render_Click(object sender, EventArgs e)
         {
+            drawn = false;
             Check_Before_Draw(false);
         }
 
@@ -543,7 +421,8 @@ namespace V_Max_Tool
         private void Button1_Click(object sender, EventArgs e)
         {
             Create_Blank_Disk();
-        }//
+        }
+
         private void LinkLabel1_LinkClicked(object sender, System.Windows.Forms.LinkLabelLinkClickedEventArgs e)
         {
             this.linkLabel1.LinkVisited = true;
@@ -552,35 +431,35 @@ namespace V_Max_Tool
 
         private void VPL_lead_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                opt = true;
+                busy = true;
                 Lead_In.Enabled = VPL_lead.Checked;
                 if (VPL_lead.Checked)
                 {
                     VPL_rb.Checked = true;
                     VPL_only_sectors.Checked = VPL_auto_adj.Checked = false;
                 }
-                opt = false;
+                busy = false;
                 Vorpal_Rebuild();
             }
         }
 
         private void VPL_rb_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                opt = true;
+                busy = true;
                 if (!VPL_rb.Checked) { VPL_lead.Checked = Lead_In.Enabled = VPL_only_sectors.Checked = VPL_auto_adj.Checked = Adj_cbm.Checked = false; }
                 Lead_ptn.Enabled = VPL_rb.Checked;
-                opt = false;
+                busy = false;
                 Vorpal_Rebuild();
             }
         }
 
         private void Lead_In_ValueChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
                 Vorpal_Rebuild();
             }
@@ -588,28 +467,26 @@ namespace V_Max_Tool
 
         private void VPL_only_sectors_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                opt = true;
+                busy = true;
                 if (VPL_only_sectors.Checked)
                 {
                     Lead_In.Enabled = VPL_lead.Checked = VPL_auto_adj.Checked = false;
                     VPL_rb.Checked = true;
                 }
-                opt = false;
+                busy = false;
                 Vorpal_Rebuild();
             }
         }
 
         private void VPL_Auto_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
-                opt = true;
-                Adj_cbm.Checked = VPL_auto_adj.Checked; // true;
+                busy = true;
                 Lead_In.Enabled = VPL_lead.Checked = VPL_only_sectors.Checked = VPL_rb.Checked = false;
-                Update();
-                opt = false;
+                busy = false;
                 Vorpal_Rebuild();
             }
         }
@@ -626,7 +503,7 @@ namespace V_Max_Tool
 
         private void DV_gcr_CheckedChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
                 if (((RadioButton)sender).Checked)
                 {
@@ -637,21 +514,28 @@ namespace V_Max_Tool
 
         private void Data_Sep_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!opt)
+            if (!busy)
             {
                 Data_Viewer();
             }
         }
 
-        //private void VS_Changed(object sender, EventArgs e)
-        //{
-        //    if (!opt)
-        //    {
-        //        if (((RadioButton)sender).Checked)
-        //        {
-        //            Data_Viewer();
-        //        }
-        //    }
-        //}
+        private void Show_sec_CheckedChanged(object sender, EventArgs e)
+        {
+            if (((CheckBox)sender).Checked) drawn = false;
+            if (!busy)
+            {
+                Check_Before_Draw(false);
+            }
+        }
+
+        private void Img_Q_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            drawn = false;
+            if (!busy)
+            {
+                Check_Before_Draw(false);
+            }
+        }
     }
 }

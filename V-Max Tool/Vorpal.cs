@@ -19,7 +19,7 @@ namespace V_Max_Tool
         void Vorpal_Rebuild()
         {
             bool p = false;
-            if (VPL_rb.Checked || Adj_cbm.Checked)
+            if (VPL_rb.Checked || VPL_auto_adj.Checked)
             {
                 for (int t = 0; t < tracks; t++)
                 {
@@ -36,7 +36,7 @@ namespace V_Max_Tool
                     }
                 }
             }
-            if (Adj_cbm.Checked) p = true;
+            if (VPL_auto_adj.Checked) p = true;
             for (int t = 0; t < tracks; t++)
             {
                 if (NDG.Track_Data[t] != null)

@@ -121,6 +121,7 @@
             this.DV_gcr = new System.Windows.Forms.RadioButton();
             this.Save_Dialog = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.Adj_pbar = new System.Windows.Forms.ProgressBar();
             this.Dir_screen = new System.Windows.Forms.RichTextBox();
             this.Drag_pic = new System.Windows.Forms.PictureBox();
             this.Out_density = new System.Windows.Forms.ListBox();
@@ -296,7 +297,7 @@
             this.Import_File.Controls.Add(this.label5);
             this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(23, 50);
+            this.Import_File.Location = new System.Drawing.Point(23, 56);
             this.Import_File.Name = "Import_File";
             this.Import_File.Size = new System.Drawing.Size(863, 108);
             this.Import_File.TabIndex = 59;
@@ -836,7 +837,7 @@
             this.Cap_margins.TabIndex = 40;
             this.Cap_margins.Text = "Density Margins";
             this.Cap_margins.UseVisualStyleBackColor = true;
-            this.Cap_margins.CheckedChanged += new System.EventHandler(this.Adv_Ctrl_SelectedIndexChanged);
+            this.Cap_margins.CheckedChanged += new System.EventHandler(this.Show_sec_CheckedChanged);
             // 
             // Show_sec
             // 
@@ -848,7 +849,7 @@
             this.Show_sec.TabIndex = 41;
             this.Show_sec.Text = "Highlight Sectors";
             this.Show_sec.UseVisualStyleBackColor = true;
-            this.Show_sec.CheckedChanged += new System.EventHandler(this.Adv_Ctrl_SelectedIndexChanged);
+            this.Show_sec.CheckedChanged += new System.EventHandler(this.Show_sec_CheckedChanged);
             // 
             // Rev_View
             // 
@@ -880,7 +881,7 @@
             this.Img_Q.Name = "Img_Q";
             this.Img_Q.Size = new System.Drawing.Size(149, 33);
             this.Img_Q.TabIndex = 44;
-            this.Img_Q.SelectedIndexChanged += new System.EventHandler(this.Adv_Ctrl_SelectedIndexChanged);
+            this.Img_Q.SelectedIndexChanged += new System.EventHandler(this.Img_Q_SelectedIndexChanged);
             // 
             // Img_zoom
             // 
@@ -1244,6 +1245,7 @@
             // 
             this.panel1.BackColor = System.Drawing.Color.Gainsboro;
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.Adj_pbar);
             this.panel1.Controls.Add(this.Dir_screen);
             this.panel1.Controls.Add(this.Drag_pic);
             this.panel1.Controls.Add(this.Out_density);
@@ -1262,6 +1264,13 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(900, 1123);
             this.panel1.TabIndex = 37;
+            // 
+            // Adj_pbar
+            // 
+            this.Adj_pbar.Location = new System.Drawing.Point(-11, 1100);
+            this.Adj_pbar.Name = "Adj_pbar";
+            this.Adj_pbar.Size = new System.Drawing.Size(917, 15);
+            this.Adj_pbar.TabIndex = 38;
             // 
             // Dir_screen
             // 
@@ -1596,6 +1605,7 @@
         private System.Windows.Forms.ProgressBar DV_pbar;
         private System.Windows.Forms.ComboBox Lead_ptn;
         private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.ProgressBar Adj_pbar;
     }
 }
 

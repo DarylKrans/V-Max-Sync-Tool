@@ -15,7 +15,66 @@ namespace V_Max_Tool
         private readonly byte[] VM2_Valid = { 0xa5, 0xa4, 0xa9, 0xaC, 0xad, 0xb4, 0xbc };
         private readonly string v2 = "A5-A5-A5"; // V-MAX v2 sector 0 header (cinemaware)
 
-        /// --------------------------------  Rebuild V-Max v2 Track  ---------------------------------------
+        void V2_Adv_Opts()
+        {
+            bool c = false;
+            bool p = true;
+            if (V2_Auto_Adj.Checked)
+            {
+                c = true;
+                p = false;
+                for (int t = 0; t < tracks; t++)
+                {
+                    if (NDS.cbm[t] == 4)
+                    {
+                        if (Original.OT[t].Length == 0)
+                        {
+                            Original.OT[t] = new byte[NDG.Track_Data[t].Length];
+                            Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
+                        }
+                        int d = Get_Density(NDG.Track_Data[t].Length);
+                        byte[] temp = Shrink_Track(NDG.Track_Data[t], d);
+                        if (Re_Align.Checked && !NDG.L_Rot)
+                        {
+                            Rotate_Loader(temp);
+                            NDG.L_Rot = true;
+                        }
+                        Set_Dest_Arrays(temp, t);
+                    }
+                }
+            }
+            else
+            {
+                for (int t = 0; t < tracks; t++)
+                {
+                    if (NDS.cbm[t] == 4 || NDS.cbm[t] == 1)
+                    {
+                        if (Original.OT[t].Length != 0)
+                        {
+                            NDG.Track_Data[t] = new byte[Original.OT[t].Length];
+                            Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
+                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
+                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, 8192 - Original.OT[t].Length);
+                        }
+                        NDG.Track_Length[t] = NDG.Track_Data[t].Length;
+                        NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
+                        c = true;
+
+                    }
+                }
+            }
+            int i = Convert.ToInt32(V2_hlen.Value);
+            if (i >= V2_hlen.Minimum && i <= V2_hlen.Maximum)
+            {
+                out_track.Items.Clear();
+                out_size.Items.Clear();
+                out_dif.Items.Clear();
+                Out_density.Items.Clear();
+                out_rpm.Items.Clear();
+                Process_Nib_Data(c, false, p); // false flag instructs the routine NOT to process CBM tracks again
+            }
+        }
+
         (byte[], int, int, int) Rebuild_V2(byte[] data, int sectors, byte[] t_info, int trk)
         {
             // t_info[0] = start byte, t_info[1] = end byte, t_info[2] = header length, t_info[3] = v-max version (for sector headers)
@@ -75,7 +134,6 @@ namespace V_Max_Tool
                 byte[] t = Rotate_Left(data, gap_pos);
                 Array.Copy(t, 0, data, 0, t.Length);
             }
-            //File.WriteAllBytes($@"c:\source{trk}.bin", data); // <- for debugging
             int slen;
             var sec = 1000;
             for (int i = 0; i < data.Length; i++)
@@ -134,7 +192,6 @@ namespace V_Max_Tool
             }
             if (t_gap.Length > 0) write.Write(t_gap);
             for (int j = 0; j < gap_len; j++) write.Write((byte)gab_byte);
-            //File.WriteAllBytes($@"c:\track{trk}.bin", buffer.ToArray()); // <- for debugging
             if (error)
             {
                 var tk = 0;
@@ -161,8 +218,6 @@ namespace V_Max_Tool
                 return buff.ToArray();
             }
         }
-
-        /// -----------------------------------------------------------------------------------------------------
 
         (byte[], int, int, int, int, string[], int, byte[]) Get_V2_Track_Info(byte[] data, int trk)
         {

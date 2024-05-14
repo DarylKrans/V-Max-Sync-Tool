@@ -12,6 +12,11 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
+
+        bool v2cc = false;
+        bool v2aa = false;
+        bool v3cc = false;
+        bool v3aa = false;
         private string fname = "";
         private string fext = "";
         private string fnappend = "";
@@ -120,11 +125,6 @@ namespace V_Max_Tool
                             Track_Info.Items.Add(new LineColor { Color = color, Text = $"{f[j]}" });
                         }
                         Track_Info.Items.Add(" ");
-                        //for (int j = 0; j < NDS.sectors[i]; j++)
-                        //{
-                        //    Track_Info.Items.Add(new LineColor { Color = color, Text = $"f{junk[j]}" });
-                        //}
-
                     }));
                     NDA.sectors[i] = NDS.sectors[i];
                 }
@@ -285,6 +285,7 @@ namespace V_Max_Tool
                 if (v3) VM_Ver.Text = "Protection : V-Max v3";
                 if (!v2 && !v3) VM_Ver.Text = "Protection : V-Max (CBM)";
                 if (NDS.cbm.Any(s => s == 5)) VM_Ver.Text = "Protection : Vorpal";
+                
             }));
 
             void Get_Fmt(int trk)
@@ -307,6 +308,9 @@ namespace V_Max_Tool
             double ht;
             bool halftracks = false;
             string[] f;
+            bool v2a = false;
+            bool v3a = false;
+            bool vpa = false;
             if (tracks > 42)
             {
                 halftracks = true;
@@ -314,11 +318,20 @@ namespace V_Max_Tool
             }
             else ht = 0;
             Color color = new Color(); // = Color.Green;
+            Invoke(new Action(() =>
+            {
+                Adj_pbar.Value = 0;
+                Adj_pbar.Maximum = 100;
+                Adj_pbar.Maximum *= 100;
+                Adj_pbar.Value = Adj_pbar.Maximum / 100;
+                Adj_pbar.Visible = true;
+            }));
             for (int i = 0; i < tracks; i++)
             {
                 if (halftracks) ht += .5; else ht += 1;
                 if (NDS.Track_Length[i] > 0 && NDS.cbm[i] != 0)
                 {
+                    if (i - 1 > 0) Invoke(new Action(() => Adj_pbar.Maximum = (int)((double)Adj_pbar.Value / (double)(i + 1) * tracks)));
                     if (NDS.cbm[i] == 0) Process_Ndos(i);
                     if (NDS.cbm[i] == 1) Process_CBM(i);
                     if (NDS.cbm[i] == 2) Process_VMAX_V2(i);
@@ -354,11 +367,20 @@ namespace V_Max_Tool
                 }
                 else { NDA.Track_Data[i] = NDS.Track_Data[i]; }
             }
-            if (!opt && Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"] && !manualRender) Check_Before_Draw(false);
+            Invoke(new Action(()=> Adj_pbar.Visible = false));
+            if (!busy && Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"] && !manualRender) Check_Before_Draw(false);
             if (Adv_ctrl.Controls[2] != Adv_ctrl.SelectedTab) displayed = false;
             if (Adv_ctrl.Controls[0] != Adv_ctrl.SelectedTab) drawn = false;
 
-            if (!opt) Data_Viewer();
+            if (!busy) Data_Viewer();
+
+            (bool, bool, bool) Check_Tabs()
+            {
+                bool a = (V2_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V2_Opts));
+                bool b = (V3_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V3_Opts));
+                bool c = (VPL_auto_adj.Checked && Tabs.TabPages.Contains(Vpl_adv));
+                return (a, b, c);
+            }
 
             void Process_Ndos(int trk)
             {
@@ -383,7 +405,16 @@ namespace V_Max_Tool
                     try
                     {
                         temp = Adjust_Sync_CBM(NDS.Track_Data[trk], exp_snc, min_snc, ign_snc, NDS.D_Start[trk], NDS.D_End[trk], NDS.Sector_Zero[trk], NDS.Track_Length[trk], trk);
-                        if ((V2_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V2_Opts)) || (V3_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V3_Opts)) || Adj_cbm.Checked) // || VPL_auto_adj.Checked)
+                        if (temp != null)
+                        {
+                            if (Original.OT[trk].Length == 0)
+                            {
+                                Original.OT[trk] = new byte[temp.Length];
+                                Array.Copy(temp, 0, Original.OT[trk], 0, temp.Length);
+                            }
+                        }
+                        (v2a, v3a, vpa) = Check_Tabs();
+                        if (v2a || v3a || vpa || Adj_cbm.Checked || (NDS.cbm.Any(s => s == 2) && v2aa) || (NDS.cbm.Any(s => s == 3) && v3aa))
                         {
                             if (track == 18 && NDS.sectors[trk] != 19) rebuild = false;
                             if (rebuild)
@@ -398,7 +429,6 @@ namespace V_Max_Tool
                         Set_Dest_Arrays(temp, trk);
                         (NDA.D_Start[trk], NDA.D_End[trk], NDA.Sector_Zero[trk], NDA.Track_Length[trk], f, NDA.sectors[trk], NDS.cbm_sector[trk], NDA.Total_Sync[trk], NDS.Disk_ID[trk], NDS.sector_pos[trk]) = Find_Sector_Zero(NDA.Track_Data[trk], false);
                         f[0] = "";
-                        //NDS.sector_pos[trk] = Get_CBM_Sector_Pos(NDA.Track_Data[trk]);
                     }
                     catch
                     {
@@ -423,7 +453,13 @@ namespace V_Max_Tool
 
             void Process_VMAX_V2(int trk)
             {
-                opt = true;
+                busy = true;
+                if (V3_Auto_Adj.Checked || V3_Custom.Checked)
+                {
+                    if (V3_Auto_Adj.Checked) v3aa = true; else v3aa = false;
+                    if (V3_Custom.Checked) v3cc = true; else v3cc = false;
+                    V3_Auto_Adj.Checked = V3_Custom.Checked = false;
+                }
                 V3_Auto_Adj.Checked = V3_Custom.Checked = false;
                 if (rb_vm)
                 {
@@ -439,6 +475,8 @@ namespace V_Max_Tool
                     NDA.sectors[trk] = NDS.sectors[trk];
                     Set_Dest_Arrays(temp, trk);
                 }
+                if (v2aa) V2_Auto_Adj.Checked = true;
+                if (v2cc) V2_Custom.Checked = true;
                 if (V2_Auto_Adj.Checked && NDS.sectors[trk] > 12)
                 {
                     if (Original.OT[trk].Length == 0)
@@ -452,12 +490,18 @@ namespace V_Max_Tool
                 }
                 if (V2_Auto_Adj.Checked || V2_Custom.Checked || V2_Add_Sync.Checked) fnappend = mod; // "(sync_fixed)(modified)";
                 else fnappend = fix;
-                opt = false;
+                busy = false;
             }
 
             void Process_VMAX_V3(int trk)
             {
-                opt = true;
+                busy = true;
+                if (V2_Auto_Adj.Checked || V2_Custom.Checked)
+                {
+                    if (V2_Auto_Adj.Checked) v2aa = true; else v2aa = false;
+                    if (V2_Custom.Checked) v2cc = true; else v2cc = false;
+                    V2_Auto_Adj.Checked = V2_Custom.Checked = false;
+                }
                 V2_Auto_Adj.Checked = V2_Custom.Checked = V2_Add_Sync.Checked = false;
                 if (V3_Auto_Adj.Checked || V3_Custom.Checked) fnappend = mod;
                 else fnappend = fix;
@@ -471,6 +515,8 @@ namespace V_Max_Tool
                     else Shrink_Short_Sector(trk);
                 }
                 NDG.Track_Length[trk] = NDG.Track_Data[trk].Length;
+                if (v3aa) V3_Auto_Adj.Checked = true;
+                if (v3cc) V3_Custom.Checked = true;
                 if (V3_Auto_Adj.Checked)
                 {
                     if (Original.OT[trk].Length == 0)
@@ -494,7 +540,7 @@ namespace V_Max_Tool
                     }
                     catch { }
                 }
-                opt = false;
+                busy = false;
             }
 
             void Process_Loader(int trk)
@@ -706,7 +752,7 @@ namespace V_Max_Tool
             int hex = 16;
             Invoke(new Action(() =>
             {
-                opt = true;
+                busy = true;
                 if (VS_bin.Checked) Data_Box.Font = new Font("Lucida Console", 7.5f); else Data_Box.Font = new Font("Lucida Console", 10, FontStyle.Regular);
                 Data_Box.Visible = false;
                 Data_Box.Clear();
@@ -787,7 +833,7 @@ namespace V_Max_Tool
                 Disp_Data.Text = "Refresh";
                 DV_pbar.Value = 0;
                 displayed = true;
-                opt = false;
+                busy = false;
                 watch.Stop();
                 GC.Collect();
                 //Text = watch.Elapsed.TotalMilliseconds.ToString();

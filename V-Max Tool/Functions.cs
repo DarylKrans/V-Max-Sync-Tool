@@ -97,7 +97,7 @@ namespace V_Max_Tool
 
         void Reset_to_Defaults()
         {
-            opt = true;
+            busy = true;
             Img_Q.SelectedIndex = 2;
             Set_ListBox_Items(true, true);
             Import_File.Visible = f_load.Visible = false;
@@ -113,7 +113,7 @@ namespace V_Max_Tool
             Draw_Init_Img(def_bg_text);
             Data_Box.Clear();
             Default_Dir_Screen();
-            opt = false;
+            busy = false;
         }
 
         void Default_Dir_Screen()
@@ -129,7 +129,7 @@ namespace V_Max_Tool
         {
             if (Adv_ctrl.Controls[2] == Adv_ctrl.SelectedTab)
             {
-                if (!opt)
+                if (!busy)
                 {
                     w = new Thread(new ThreadStart(() => Display_Data()));
                     w.Start();
@@ -139,7 +139,7 @@ namespace V_Max_Tool
                 {
                     w?.Abort();
                     Disp_Data.Text = "Refresh";
-                    opt = false;
+                    busy = false;
                 }
             }
         }
@@ -599,7 +599,7 @@ namespace V_Max_Tool
         {
             if (Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"])
             {
-                opt = true;
+                busy = true;
                 this.Update();
                 circ?.Abort();
                 flat?.Abort();
@@ -620,7 +620,7 @@ namespace V_Max_Tool
                 catch { }
                 drawn = true;
                 GC.Collect();
-                opt = false;
+                busy = false;
                 Progress_Thread_Check();
             }
         }
@@ -630,7 +630,7 @@ namespace V_Max_Tool
             listBox1.Visible = false; // set to true for debugging that requires a listbox
             Debug_Button.Visible = debug;
             Other_opts.Visible = false;
-            opt = true;
+            busy = true;
             this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LinkLabel1_LinkClicked);
             bool flip = false;
             for (int i = 0; i < leadIn_std.Length; i++)
@@ -682,6 +682,8 @@ namespace V_Max_Tool
             VS_hex.Checked = true;
             T_jump.Visible = Jump.Visible = false;
             DV_pbar.Value = 0;
+            Adj_pbar.Value = 0;
+            Adj_pbar.Visible = false;
             DV_gcr.Checked = true;
             fnappend = fix;
             label1.Text = label2.Text = coords.Text = "";
@@ -730,7 +732,11 @@ namespace V_Max_Tool
             Import_File.BringToFront();
             Import_File.Top = 60;
             Import_File.Left = 15;
-            opt = false;
+            if (Auto_Adjust)
+            {
+                V3_Auto_Adj.Checked = V2_Auto_Adj.Checked = VPL_auto_adj.Checked = true;
+            }
+            busy = false;
 
             void Set_Boxes()
             {
