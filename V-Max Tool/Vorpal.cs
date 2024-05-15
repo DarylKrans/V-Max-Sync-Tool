@@ -9,8 +9,8 @@ namespace V_Max_Tool
     public partial class Form1 : Form
     {
 
-        readonly byte[] vpl_s0 = new byte[] { 0x33, 0x3F, 0xD5 };
         //readonly byte[] vpl_s0 = new byte[] { 0x26, 0x67, 0xfa };
+        readonly byte[] vpl_s0 = new byte[] { 0x33, 0x3F, 0xD5 };
         readonly byte[] vpl_s1 = new byte[] { 0x35, 0x4d, 0x53 };
         readonly BitArray leadIn_std = new BitArray(10);
         readonly BitArray leadIn_alt = new BitArray(10);
@@ -138,6 +138,7 @@ namespace V_Max_Tool
             {
                 //offset = 15 * 8;
                 offset = ((((vpl_density[d] << 3) - (tend - tstart)) >> 1) >> 3) << 3;
+                if (offset > 60 << 3) offset = 60 << 3;
                 var r = offset >> 3;
                 var e = len + (r << 1);
                 if (e < vpl_density[d])

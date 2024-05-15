@@ -12,14 +12,15 @@ namespace V_Max_Tool
     {
         private readonly bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.76 (beta)";
+        private readonly string ver = " v0.9.77 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
         //private readonly int[] density = { 7692, 7142, 6666, 6250 }; // <- Actual capacity as defined by the manual
-        //private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        private readonly int[] density = { 7680, 7130, 6650, 6240 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        private readonly int[] vpl_density = { 7732, 7080, 6605, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        //private readonly int[] density = { 7680, 7130, 6650, 6240 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        //private readonly int[] vpl_density = { 7732, 7080, 6605, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        private readonly int[] vpl_density = { 7750, 7062, 6605, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private bool error = false;
         private bool busy = false;
         private bool nib_error = false;
