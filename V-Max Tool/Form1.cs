@@ -17,7 +17,9 @@ namespace V_Max_Tool
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
         //private readonly int[] density = { 7692, 7142, 6666, 6250 }; // <- Actual capacity as defined by the manual
-        private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        //private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        private readonly int[] density = { 7680, 7130, 6650, 6240 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        private readonly int[] vpl_density = { 7732, 7080, 6605, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private bool error = false;
         private bool busy = false;
         private bool nib_error = false;
@@ -33,6 +35,28 @@ namespace V_Max_Tool
             this.Text = $"Re-Master V-Max/Vorpal Utility {ver}";
             Init();
             Set_ListBox_Items(true, true);
+        }
+
+        private void Drag_Drop(object sender, DragEventArgs e)
+        {
+            Source.Visible = Output.Visible = false;
+            f_load.Text = "Fix Loader Sync";
+            Save_Disk.Visible = false;
+            sl.DataSource = null;
+            out_size.DataSource = null;
+            string[] File_List = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (File.Exists(File_List[0]))
+            {
+                fname = Path.GetFileNameWithoutExtension(File_List[0]);
+                fext = Path.GetExtension(File_List[0]);
+            }
+            Process_New_Image(File_List[0]);
+            /// ------ Section for Batch file conversion.  Need to work out threading issues ----------
+            //if (File_List.Length > 1)
+            //{
+            //    for (int i = 0; i < File_List.Length; i++) Process_New_Image(File_List[i]);
+            //}
+            //else Process_New_Image(File_List[0]);
         }
 
         void Process_New_Image(string file)
@@ -261,22 +285,6 @@ namespace V_Max_Tool
         private void Drag_Enter(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
-        }
-
-        private void Drag_Drop(object sender, DragEventArgs e)
-        {
-            Source.Visible = Output.Visible = false;
-            f_load.Text = "Fix Loader Sync";
-            Save_Disk.Visible = false;
-            sl.DataSource = null;
-            out_size.DataSource = null;
-            string[] File_List = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (File.Exists(File_List[0]))
-            {
-                fname = Path.GetFileNameWithoutExtension(File_List[0]);
-                fext = Path.GetExtension(File_List[0]);
-            }
-            Process_New_Image(File_List[0]);
         }
 
         private void Make(object sender, EventArgs e)

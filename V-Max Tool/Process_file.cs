@@ -197,11 +197,9 @@ namespace V_Max_Tool
                         {
                             Track_Info.Items.Add(new LineColor { Color = Color.DarkBlue, Text = f[j] });
                         }
-
                         Track_Info.Items.Add(new LineColor { Color = Color.Black, Text = $"Track Length : ({(NDS.D_End[i] - NDS.D_Start[i] >> 3)}) Sectors ({NDS.sectors[i]})" });
                         Track_Info.Items.Add(" ");
                     }));
-                    //NDG.Track_Data[i] = Rebuild_Vorpal(NDG.Track_Data[i]);
                     if (NDG.Track_Data[i] != null)
                     {
                         if (NDS.cbm[i] == 5)
@@ -981,7 +979,7 @@ namespace V_Max_Tool
                 string spc = "";
                 if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "         ";
                 string temp = "";
-                temp += $"{Byte_to_Binary(temp2)}     ".Replace('-', ' ');
+                temp += $"{Byte_to_Binary(temp2)}     "; //.Replace('-', ' ');
                 temp += $"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n"; //.Replace('?','.');
                 return temp;
             }

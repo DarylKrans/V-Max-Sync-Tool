@@ -305,7 +305,6 @@ namespace V_Max_Tool
             }
             byte[] ret = new byte[((temp.Count - 1) / 8) + 1];
             temp.CopyTo(ret, 0);
-            //if (FlipEndian) return (Flip_Endian(ret));
             return ret;
         }
 
@@ -316,10 +315,23 @@ namespace V_Max_Tool
             return sb.ToString();
         }
 
-        public static String Byte_to_Binary(Byte[] data)
+        public static String Byte_to_Binary(Byte[] data)  // (use this for .NET 3.5 build) Note: only 100ms longer
         {
-            return string.Join("-", data.Select(byt => Convert.ToString(byt, 2).PadLeft(8, '0')));
+            BitArray bits = new BitArray(data);
+            string b = "";
+            for (int counter = 0; counter < bits.Length; counter++)
+            {
+                b += (bits[counter] ? "1" : "0");
+                if ((counter + 1) % 8 == 0)
+                    b += " ";
+            }
+            return b;
         }
+
+        //public static String Byte_to_Binary(Byte[] data)  // (use this for .NET 4.x build) Note: only 100ms faster
+        //{
+        //    return string.Join(" ", data.Select(byt => Convert.ToString(byt, 2).PadLeft(8, '0')));
+        //}
 
         void Pad_Bits(int position, int count, BitArray bitarray)
         {
@@ -331,14 +343,22 @@ namespace V_Max_Tool
             }
         }
 
+        int VPL_Density(int len)
+        {
+            int i = 0;
+            if (len >= 7500) i = 0;
+            if (len >= 6700 && len < 7500) i = 1;
+            if (len >= 6300 && len < 6700) i = 2;
+            if (len >= 6000 && len < 6300) i = 3;
+            return i;
+        }
+
         int Get_Density(int len)
         {
             int i = 0;
             if (len >= 7500) i = 0;
-            //if (len >= 6850 && len < 7500) i = 1;
-            if (len >= 6650 && len < 7500) i = 1;
-            //if (len >= 6400 && len < 6850) i = 2;
-            if (len >= 6400 && len < 6650) i = 2;
+            if (len >= 6850 && len < 7500) i = 1;
+            if (len >= 6400 && len < 6850) i = 2;
             if (len >= 6000 && len < 6400) i = 3;
             return i;
         }
