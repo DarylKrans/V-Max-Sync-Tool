@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -12,18 +13,19 @@ namespace V_Max_Tool
     {
         private readonly bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.80 (beta)";
+        private readonly string ver = " v0.9.81 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
         private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         //private int[] vpl_density = { 7760, 7204, 6723, 6302 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        private int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private bool error = false;
+        private bool cancel = false;
         private bool busy = false;
         private bool nib_error = false;
         private bool g64_error = false;
-        //private bool batch = false;
+        private bool batch = false;
         private string nib_err_msg;
         private string g64_err_msg;
         private readonly int min_t_len = 6000;
@@ -45,30 +47,142 @@ namespace V_Max_Tool
             sl.DataSource = null;
             out_size.DataSource = null;
             string[] File_List = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (File.Exists(File_List[0]))
-            {
-                fname = Path.GetFileNameWithoutExtension(File_List[0]);
-                fext = Path.GetExtension(File_List[0]);
-            }
-            Process_New_Image(File_List[0]);
+
+            //Process_New_Image(File_List[0]);
             /// ------ Section for Batch file conversion.  Need to work out threading issues ----------
-            //if (File_List.Length > 1)
-            //{
-            //    batch = true;
-            //    Adv_ctrl.Enabled = true;
-            //    Task.Run(delegate
-            //    {
-            //        for (int i = 0; i < File_List.Length; i++)
-            //        {
-            //            working = true;
-            //            Process_New_Image(File_List[i]);
-            //            while (working) { Thread.Sleep(100); }
-            //            //Set_ListBox_Items(false, false);
-            //        }
-            //        batch = false;
-            //    });
-            //}
-            //else Process_New_Image(File_List[0]);
+            if (File_List.Length > 1)
+            {
+                using (Message_Center center = new Message_Center(this)) // center message box
+                {
+                    string t = "Multiple Files Selected";
+                    string s = "Only .NIB files will be processed\nand exported as .G64 with the\nAuto-Adjust options\n\nStart Batch-Processing?";
+                    DialogResult uc = MessageBox.Show(s, t, MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
+                    if (uc.ToString() == "OK")
+                    {
+                        if (SaveFolder.ShowDialog() == DialogResult.OK)
+                        {
+                            string sel_path = SaveFolder.SelectedPath.ToString();
+                            if (sel_path != "")
+                            {
+                                List<string> f = new List<string>();
+                                for (int i = 0; i < File_List.Length; i++)
+                                {
+                                    string ext = Path.GetExtension(File_List[i]);
+                                    if (ext.ToLower() == supported[0]) f.Add(File_List[i]); // || ext.ToLower() == supported[1]) f.Add(File_List[i]);
+                                }
+                                Process_Batch(f.ToArray(), sel_path);
+                            }
+                        }
+                    }
+                }
+
+                
+            }
+            else
+            {
+                if (System.IO.File.Exists(File_List[0]))
+                {
+                    fname = Path.GetFileNameWithoutExtension(File_List[0]);
+                    fext = Path.GetExtension(File_List[0]);
+                }
+                Process_New_Image(File_List[0]);
+            }
+        }
+
+        void Process_Batch(string[] batch_list, string path)
+        {
+            Drag_pic.Visible = false;
+            Batch_Box.Visible = true;
+            batch = true;
+            Batch_Bar.Value = 0;
+            Batch_Bar.Maximum = 100;
+            Batch_Bar.Maximum *= 100;
+            Batch_Bar.Value = Batch_Bar.Maximum / 100;
+            Task.Run(delegate
+            {
+                for (int i = 0; i < batch_list.Length; i++)
+                {
+                    if (!cancel)
+                    {
+                        if (System.IO.File.Exists(batch_list[i]))
+                        {
+                            Invoke(new Action(() =>
+                            {
+                                label8.Text = $"Processing file {i + 1} of {batch_list.Length}";
+                                label9.Text = $"{Path.GetFileName(batch_list[i])}";
+                                Batch_Bar.Maximum = (int)((double)Batch_Bar.Value / (double)(i + 1) * batch_list.Length);
+                            }));
+                            fname = Path.GetFileNameWithoutExtension(batch_list[i]);
+                            fext = Path.GetExtension(batch_list[0]);
+                            if (fext.ToLower() == supported[0]) Batch_NIB(batch_list[i]);
+                            //if (fext.ToLower() == supported[1]) Batch_G64(batch_list[i]);
+                        }
+                    }
+                    else break;
+                }
+                Invoke(new Action(() =>
+                {
+                    Import_File.Visible = false;
+                    Import_Progress_Bar.Value = 0;
+                    Batch_Bar.Value = 0;
+                    Batch_Box.Visible = false;
+                    using (Message_Center center = new Message_Center(this)) // center message box
+                    {
+                        string t = "";
+                        string s = "";
+                        if (!cancel)
+                        {
+                            t = "Done!";
+                            s = "Batch processing completed..";
+                        }
+                        else
+                        {
+                            t = "Canceled!";
+                            s = "Batch processing canceled by user";
+                        }
+                        MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    cancel = false;
+                    Reset_to_Defaults();
+                }));
+                batch = false;
+            });
+
+            void Batch_NIB(string fn)
+            {
+                FileStream Stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                long length = new System.IO.FileInfo(fn).Length;
+                tracks = (int)(length - 256) / 8192;
+                if ((tracks * 8192) + 256 == length)
+                {
+                    //Track_Info.Items.Clear();
+                    //Set_ListBox_Items(true, false);
+                    nib_header = new byte[256];
+                    Stream.Seek(0, SeekOrigin.Begin);
+                    Stream.Read(nib_header, 0, 256);
+                    Set_Arrays(tracks);
+                    for (int i = 0; i < tracks; i++)
+                    {
+                        NDS.Track_Data[i] = new byte[8192];
+                        Stream.Seek(256 + (8192 * i), SeekOrigin.Begin);
+                        Stream.Read(NDS.Track_Data[i], 0, 8192);
+                        Original.OT[i] = new byte[0];
+                    }
+                    Stream.Close();
+                    var head = Encoding.ASCII.GetString(nib_header, 0, 13);
+                    if (head == "MNIB-1541-RAW")
+                    {
+                        Parse_Nib_Data();
+                        if (!error)
+                        {
+                            Process_Nib_Data(true, false, true);
+                            Make_G64($@"{path}\{fname}{fnappend}.g64");
+                        } 
+                        else error = false;
+                    }
+                }
+                GC.Collect();
+            }
         }
 
         void Process_New_Image(string file)
@@ -236,7 +350,7 @@ namespace V_Max_Tool
                                 {
                                     string t = "Output integrity warning!";
 
-                                    string s = "Vorpal tracks detected.\n\nIt is advised to use NIB files when processing Vorpal images\nWhen processing G64's, the output file may not work correctly.";
+                                    string s = "Vorpal tracks detected.\n\nIt is advised to use NIB batch_list when processing Vorpal images\nWhen processing G64's, the output file may not work correctly.";
                                     if (s.ToLower().Contains("source array")) s = "Image is corrupt and cannot be opened";
                                     MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                     error = true;
@@ -252,44 +366,6 @@ namespace V_Max_Tool
                 Import_Progress_Bar.Value = 0;
                 Import_File.Visible = true;
                 Update();
-            }
-
-            void Set_Arrays(int len)
-            {
-                // NDS is the input or source array
-                NDS.Track_Data = new byte[len][];
-                NDS.Sector_Zero = new int[len];
-                NDS.Track_Length = new int[len];
-                NDS.D_Start = new int[len];
-                NDS.D_End = new int[len];
-                NDS.cbm = new int[len];
-                NDS.sectors = new int[len];
-                NDS.sector_pos = new int[len][];
-                NDS.Header_Len = new int[len];
-                NDS.cbm_sector = new int[len][];
-                NDS.v2info = new byte[len][];
-                NDS.Loader = new byte[0];
-                NDS.Total_Sync = new int[len];
-                NDS.Disk_ID = new byte[len][];
-                // NDA is the destination or output array
-                NDA.Track_Data = new byte[len][];
-                NDA.Sector_Zero = new int[len];
-                NDA.Track_Length = new int[len];
-                NDA.D_Start = new int[len];
-                NDA.D_End = new int[len];
-                NDA.sectors = new int[len];
-                NDA.Total_Sync = new int[len];
-                // NDG is the G64 arrays
-                NDG.Track_Length = new int[len];
-                NDG.Track_Data = new byte[len][];
-                NDG.L_Rot = false;
-                NDG.s_len = new int[len];
-                // Original is the arrays that keep the original track data for the Auto Adjust feature
-                Original.A = new byte[0];
-                Original.G = new byte[0];
-                Original.SA = new byte[0];
-                Original.SG = new byte[0];
-                Original.OT = new byte[len][];
             }
         }
 
@@ -572,6 +648,11 @@ namespace V_Max_Tool
                 vpl_density[3] = Convert.ToInt32(VD3.Value);
                 Vorpal_Rebuild();
             }
+        }
+
+        private void B_cancel_Click(object sender, EventArgs e)
+        {
+            cancel = true;
         }
     }
 }

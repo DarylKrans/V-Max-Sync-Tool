@@ -465,11 +465,15 @@ namespace V_Max_Tool
                 if (buff.Length != 0)
                 {
                     // Read track 18 sector 1 if sector 0 signals the end of the directory
-                    if (buff.Length < 257)
+                    try
                     {
-                        (temp, c) = Decode_CBM_GCR(NDA.Track_Data[halftrack], 1, true);
-                        if (c || !c) wrt.Write(temp);
+                        if (buff.Length < 257)
+                        {
+                            (temp, c) = Decode_CBM_GCR(NDA.Track_Data[halftrack], 1, true);
+                            if (c || !c) wrt.Write(temp);
+                        }
                     }
+                    catch { }
                     byte[] directory = buff.ToArray();
                     if (write_dir) File.WriteAllBytes($@"hdr_c:\dir", directory);
                     if (directory.Length >= 256)

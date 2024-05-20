@@ -230,7 +230,7 @@ namespace V_Max_Tool
                 color = Color.Black;
                 Invoke(new Action(() =>
                 {
-                    if (NDS.Track_Length[i] > 6000 && NDS.cbm[i] != 6 && NDS.cbm[i] != 0)
+                    if (!batch && NDS.Track_Length[i] > 6000 && NDS.cbm[i] != 6 && NDS.cbm[i] != 0)
                     {
                         var d = Get_Density(NDS.Track_Length[i] >> 3);
                         string e = "";
@@ -248,43 +248,46 @@ namespace V_Max_Tool
                     }
                 }));
             }
-            Invoke(new Action(() =>
+            if (!batch)
             {
-                Track_Info.EndUpdate();
-                if (NDS.cbm.Any(s => s == 4)) f_load.Visible = true; else f_load.Visible = false;
-                Check_Adv_Opts();
-                if (ldr) Loader_Track.Text = "Loader Track : Yes"; else Loader_Track.Text = "Loader Track : No";
-                CBM_Tracks.Text = $"CBM tracks : {cbm}";
-                if (vmx > 0) Protected_Tracks.Text = $"V-Max tracks : {vmx}";
-                if (vpl > 0) Protected_Tracks.Text = $"Vorpal tracks : {vpl}";
-                Protected_Tracks.Visible = (vmx > 0 || vpl > 0);
-                if (tracks > 42)
+                Invoke(new Action(() =>
                 {
-                    halftracks = true;
-                    ht = 0.5;
-                }
-                else ht = 0;
-                bool cust_dens = false;
-                bool v2 = false;
-                bool v3 = false;
-                for (int i = 0; i < tracks; i++)
-                {
-                    if (halftracks) ht += .5; else ht += 1;
-                    if (NDS.cbm[i] > 0 && NDS.cbm[i] < 5)
+                    Track_Info.EndUpdate();
+                    if (NDS.cbm.Any(s => s == 4)) f_load.Visible = true; else f_load.Visible = false;
+                    Check_Adv_Opts();
+                    if (ldr) Loader_Track.Text = "Loader Track : Yes"; else Loader_Track.Text = "Loader Track : No";
+                    CBM_Tracks.Text = $"CBM tracks : {cbm}";
+                    if (vmx > 0) Protected_Tracks.Text = $"V-Max tracks : {vmx}";
+                    if (vpl > 0) Protected_Tracks.Text = $"Vorpal tracks : {vpl}";
+                    Protected_Tracks.Visible = (vmx > 0 || vpl > 0);
+                    if (tracks > 42)
                     {
-                        var d = Get_Density(NDS.Track_Length[i] >> 3);
-                        if ((ht >= 0 && ht < 18 && d != 0) || (ht >= 18 && ht < 25 && d != 1) || (ht >= 25 && ht < 31 && d != 2) || (ht >= 31 && ht < 43 && d != 3)) cust_dens = true;
-                        if (NDS.cbm[i] == 2) v2 = true;
-                        if (NDS.cbm[i] == 3) v3 = true;
+                        halftracks = true;
+                        ht = 0.5;
                     }
-                }
-                if (!cust_dens) Cust_Density.Text = "Track Densities : Standard"; else Cust_Density.Text = "Track Densities : Custom";
-                if (v2) VM_Ver.Text = "Protection : V-Max v2";
-                if (v3) VM_Ver.Text = "Protection : V-Max v3";
-                if (!v2 && !v3) VM_Ver.Text = "Protection : V-Max (CBM)";
-                if (NDS.cbm.Any(s => s == 5)) VM_Ver.Text = "Protection : Vorpal";
+                    else ht = 0;
+                    bool cust_dens = false;
+                    bool v2 = false;
+                    bool v3 = false;
+                    for (int i = 0; i < tracks; i++)
+                    {
+                        if (halftracks) ht += .5; else ht += 1;
+                        if (NDS.cbm[i] > 0 && NDS.cbm[i] < 5)
+                        {
+                            var d = Get_Density(NDS.Track_Length[i] >> 3);
+                            if ((ht >= 0 && ht < 18 && d != 0) || (ht >= 18 && ht < 25 && d != 1) || (ht >= 25 && ht < 31 && d != 2) || (ht >= 31 && ht < 43 && d != 3)) cust_dens = true;
+                            if (NDS.cbm[i] == 2) v2 = true;
+                            if (NDS.cbm[i] == 3) v3 = true;
+                        }
+                    }
+                    if (!cust_dens) Cust_Density.Text = "Track Densities : Standard"; else Cust_Density.Text = "Track Densities : Custom";
+                    if (v2) VM_Ver.Text = "Protection : V-Max v2";
+                    if (v3) VM_Ver.Text = "Protection : V-Max v3";
+                    if (!v2 && !v3) VM_Ver.Text = "Protection : V-Max (CBM)";
+                    if (NDS.cbm.Any(s => s == 5)) VM_Ver.Text = "Protection : Vorpal";
 
-            }));
+                }));
+            }
 
             void Get_Fmt(int trk)
             {
@@ -322,7 +325,7 @@ namespace V_Max_Tool
                 Adj_pbar.Maximum = 100;
                 Adj_pbar.Maximum *= 100;
                 Adj_pbar.Value = Adj_pbar.Maximum / 100;
-                Adj_pbar.Visible = true;
+                if (!batch) Adj_pbar.Visible = true;
             }));
             for (int i = 0; i < tracks; i++)
             {
@@ -336,7 +339,7 @@ namespace V_Max_Tool
                     if (NDS.cbm[i] == 3) Process_VMAX_V3(i);
                     if (NDS.cbm[i] == 4) Process_Loader(i);
                     if (NDS.cbm[i] == 5) Process_Vorpal(i);
-                    if (NDA.Track_Length[i] > 0 && NDS.cbm[i] != 6)
+                    if (!batch && NDA.Track_Length[i] > 0 && NDS.cbm[i] != 6)
                     {
                         out_size.Items.Add((NDA.Track_Length[i] / 8).ToString("N0"));
                         out_dif.Items.Add((NDA.Track_Length[i] - NDS.Track_Length[i] >> 3).ToString("+#;-#;0"));
@@ -356,8 +359,8 @@ namespace V_Max_Tool
                         out_track.Items.Add(ht);
                         double r = Math.Round(((double)density[Get_Density(NDA.Track_Length[i] >> 3)] / (double)(NDA.Track_Length[i] >> 3) * 300), 1);
                         if (r > 300) r = Math.Floor(r);
-                        if (VPL_auto_adj.Checked && (tracks > 42 && i < 33 || tracks < 43 && i < 18) && NDS.cbm[i] == 5) r = 296.6;
-                        if (VPL_auto_adj.Checked && (tracks > 42 && i > 32 || tracks < 43 && i > 18) && NDS.cbm[i] == 5) r = 299.0;
+                        if (VPL_auto_adj.Checked && (tracks >= 43 && i < 33 || tracks <= 42 && i < 18) && NDS.cbm[i] == 5) r = 296.6;
+                        if (VPL_auto_adj.Checked && (tracks >= 43 && i > 33 || tracks <= 42 && i > 17) && NDS.cbm[i] == 5) r = 299.0;
                         if (r == 300 && r < 301) color = Color.FromArgb(0, 30, 255);
                         if ((r >= 301 && r < 302) || (r < 300 && r >= 299)) color = Color.DarkGreen;
                         if (r > 302 || (r < 299 && r >= 297)) color = Color.Purple;
@@ -368,10 +371,13 @@ namespace V_Max_Tool
                 else { NDA.Track_Data[i] = NDS.Track_Data[i]; }
             }
             Invoke(new Action(() => Adj_pbar.Visible = false));
-            if (!busy && Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"] && !manualRender) Check_Before_Draw(false);
-            if (Adv_ctrl.Controls[2] != Adv_ctrl.SelectedTab) displayed = false;
-            if (Adv_ctrl.Controls[0] != Adv_ctrl.SelectedTab) drawn = false;
-            if (!busy) Data_Viewer();
+            if (!batch)
+            {
+                if (!busy && Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"] && !manualRender) Check_Before_Draw(false);
+                if (Adv_ctrl.Controls[2] != Adv_ctrl.SelectedTab) displayed = false;
+                if (Adv_ctrl.Controls[0] != Adv_ctrl.SelectedTab) drawn = false;
+                if (!busy) Data_Viewer();
+            }
 
             (bool, bool, bool) Check_Tabs()
             {
@@ -414,7 +420,11 @@ namespace V_Max_Tool
                         (v2a, v3a, vpa) = Check_Tabs();
                         if (v2a || v3a || vpa || Adj_cbm.Checked || (NDS.cbm.Any(s => s == 2) && v2aa) || (NDS.cbm.Any(s => s == 3) && v3aa))
                         {
-                            if (track == 18 && NDS.sectors[trk] != 19) temp = Lengthen_Track(temp);
+                            if (track == 18 && NDS.sectors[trk] != 19)
+                            {
+                                if (temp.Length < density[1]) temp = Lengthen_Track(temp);
+                                if (temp.Length > density[1]) temp = Shrink_Track(temp, 1);
+                            }
                             else
                             {
                                 d = Get_Density(NDS.Track_Length[trk] >> 3);

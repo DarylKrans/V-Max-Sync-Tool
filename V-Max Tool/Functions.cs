@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -123,6 +124,44 @@ namespace V_Max_Tool
             Dir_screen.Select(2, 23);
             Dir_screen.SelectionBackColor = c64_text;
             Dir_screen.SelectionColor = C64_screen;
+        }
+
+        void Set_Arrays(int len)
+        {
+            // NDS is the input or source array
+            NDS.Track_Data = new byte[len][];
+            NDS.Sector_Zero = new int[len];
+            NDS.Track_Length = new int[len];
+            NDS.D_Start = new int[len];
+            NDS.D_End = new int[len];
+            NDS.cbm = new int[len];
+            NDS.sectors = new int[len];
+            NDS.sector_pos = new int[len][];
+            NDS.Header_Len = new int[len];
+            NDS.cbm_sector = new int[len][];
+            NDS.v2info = new byte[len][];
+            NDS.Loader = new byte[0];
+            NDS.Total_Sync = new int[len];
+            NDS.Disk_ID = new byte[len][];
+            // NDA is the destination or output array
+            NDA.Track_Data = new byte[len][];
+            NDA.Sector_Zero = new int[len];
+            NDA.Track_Length = new int[len];
+            NDA.D_Start = new int[len];
+            NDA.D_End = new int[len];
+            NDA.sectors = new int[len];
+            NDA.Total_Sync = new int[len];
+            // NDG is the G64 arrays
+            NDG.Track_Length = new int[len];
+            NDG.Track_Data = new byte[len][];
+            NDG.L_Rot = false;
+            NDG.s_len = new int[len];
+            // Original is the arrays that keep the original track data for the Auto Adjust feature
+            Original.A = new byte[0];
+            Original.G = new byte[0];
+            Original.SA = new byte[0];
+            Original.SG = new byte[0];
+            Original.OT = new byte[len][];
         }
 
         void Data_Viewer()
@@ -429,30 +468,36 @@ namespace V_Max_Tool
 
         byte[] Lengthen_Track(byte[] data) // For track 18 on Vorpal images
         {
-            byte[] temp = new byte[density[1]];
-            int c = 0;
-            int l = 0;
-            int p = 0;
-            byte fill = 0x55;
-            int a = temp.Length - data.Length;
-            for (int i = 0; i < data.Length; i++)
+            //Invoke(new Action(() => this.Text = data.Length.ToString()));
+            if (data.Length > 0)
             {
-                if (data[i] == 0x55 || data[i] == 0xaa) c++;
-                else
+                byte[] temp = new byte[density[1]];
+                int c = 0;
+                int l = 0;
+                int p = 0;
+                byte fill = 0x55;
+                int a = temp.Length - data.Length;
+                for (int i = 0; i < data.Length; i++)
                 {
-                    if (c > l)
+                    if (data[i] == 0x55 || data[i] == 0xaa) c++;
+                    else
                     {
-                        p = i - 1;
-                        l = c;
-                        fill = data[i - 1];
+                        if (c > l)
+                        {
+                            p = i - 1;
+                            l = c;
+                            fill = data[i - 1];
+                        }
+                        c = 0;
                     }
-                    c = 0;
                 }
+                Array.Copy(data, 0, temp, 0, p);
+                for (int i = p; i < p + a; i++) temp[i] = fill;
+                Array.Copy(data, p, temp, p + a, data.Length - p);
+                File.WriteAllBytes($@"C:\test\fff", temp);
+                return temp;
             }
-            Array.Copy(data, 0, temp, 0, p);
-            for (int i = p; i < p + a; i++) temp[i] = fill;
-            Array.Copy(data, p, temp, p + a, data.Length - p);
-            return temp;
+            else return data;
         }
 
         void Set_Dest_Arrays(byte[] data, int trk)
@@ -614,7 +659,6 @@ namespace V_Max_Tool
         byte[] Shrink_Track(byte[] data, int trk_density)
         {
             byte[] temp;
-
             if (data.Length > density[trk_density])
             {
                 int start = 0;
@@ -768,6 +812,7 @@ namespace V_Max_Tool
             Circle_Render.Visible = Flat_Render.Visible = label3.Visible = false;
             Img_opts.Enabled = Img_style.Enabled = Img_View.Enabled = false;
             Import_File.Visible = false;
+            Batch_Box.Visible = false;
             for (int i = 0; i < 8000; i++) { def_bg_text += "10"; }
             Draw_Init_Img(def_bg_text);
             M_render.Enabled = false;

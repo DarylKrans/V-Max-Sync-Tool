@@ -192,7 +192,7 @@ namespace V_Max_Tool
             }
             if (t_gap.Length > 0) write.Write(t_gap);
             for (int j = 0; j < gap_len; j++) write.Write((byte)gab_byte);
-            if (error)
+            if (error && !batch)
             {
                 var tk = 0;
                 if (tracks > 42) tk = (trk / 2) + 1; else tk = trk + 1;

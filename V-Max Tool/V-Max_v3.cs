@@ -318,15 +318,18 @@ namespace V_Max_Tool
             }
             catch
             {
-                Invoke(new Action(() =>
+                if (!batch)
                 {
-                    using (Message_Center centeringService = new Message_Center(this)) // center message box
+                    Invoke(new Action(() =>
                     {
-                        string m = "Output image may not work!";
-                        string t = $"Error processing track {(trk / 2) + 1}";
-                        MessageBox.Show(m, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                }));
+                        using (Message_Center centeringService = new Message_Center(this)) // center message box
+                        {
+                            string m = "Output image may not work!";
+                            string t = $"Error processing track {(trk / 2) + 1}";
+                            MessageBox.Show(m, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    }));
+                }
             }
             if (header_avg > 0 && header_total > 0) header_avg = header_total / ss.Count;
 
