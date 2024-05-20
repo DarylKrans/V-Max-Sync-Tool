@@ -283,7 +283,7 @@ namespace V_Max_Tool
                 if (v3) VM_Ver.Text = "Protection : V-Max v3";
                 if (!v2 && !v3) VM_Ver.Text = "Protection : V-Max (CBM)";
                 if (NDS.cbm.Any(s => s == 5)) VM_Ver.Text = "Protection : Vorpal";
-                
+
             }));
 
             void Get_Fmt(int trk)
@@ -356,6 +356,8 @@ namespace V_Max_Tool
                         out_track.Items.Add(ht);
                         double r = Math.Round(((double)density[Get_Density(NDA.Track_Length[i] >> 3)] / (double)(NDA.Track_Length[i] >> 3) * 300), 1);
                         if (r > 300) r = Math.Floor(r);
+                        if (VPL_auto_adj.Checked && (tracks > 42 && i < 33 || tracks < 43 && i < 18) && NDS.cbm[i] == 5) r = 296.6;
+                        if (VPL_auto_adj.Checked && (tracks > 42 && i > 32 || tracks < 43 && i > 18) && NDS.cbm[i] == 5) r = 299.0;
                         if (r == 300 && r < 301) color = Color.FromArgb(0, 30, 255);
                         if ((r >= 301 && r < 302) || (r < 300 && r >= 299)) color = Color.DarkGreen;
                         if (r > 302 || (r < 299 && r >= 297)) color = Color.Purple;
@@ -365,11 +367,10 @@ namespace V_Max_Tool
                 }
                 else { NDA.Track_Data[i] = NDS.Track_Data[i]; }
             }
-            Invoke(new Action(()=> Adj_pbar.Visible = false));
+            Invoke(new Action(() => Adj_pbar.Visible = false));
             if (!busy && Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"] && !manualRender) Check_Before_Draw(false);
             if (Adv_ctrl.Controls[2] != Adv_ctrl.SelectedTab) displayed = false;
             if (Adv_ctrl.Controls[0] != Adv_ctrl.SelectedTab) drawn = false;
-
             if (!busy) Data_Viewer();
 
             (bool, bool, bool) Check_Tabs()
@@ -399,7 +400,6 @@ namespace V_Max_Tool
                 byte[] temp = new byte[0];
                 if (cbm)
                 {
-                    bool rebuild = true;
                     try
                     {
                         temp = Adjust_Sync_CBM(NDS.Track_Data[trk], exp_snc, min_snc, ign_snc, NDS.D_Start[trk], NDS.D_End[trk], NDS.Sector_Zero[trk], NDS.Track_Length[trk], trk);
@@ -414,16 +414,14 @@ namespace V_Max_Tool
                         (v2a, v3a, vpa) = Check_Tabs();
                         if (v2a || v3a || vpa || Adj_cbm.Checked || (NDS.cbm.Any(s => s == 2) && v2aa) || (NDS.cbm.Any(s => s == 3) && v3aa))
                         {
-                            if (track == 18 && NDS.sectors[trk] != 19) rebuild = false;
-                            if (rebuild)
+                            if (track == 18 && NDS.sectors[trk] != 19) temp = Lengthen_Track(temp);
+                            else
                             {
                                 d = Get_Density(NDS.Track_Length[trk] >> 3);
                                 temp = Rebuild_CBM(NDS.Track_Data[trk], NDS.sectors[trk], NDS.Disk_ID[trk], d, trk);
-                                Set_Dest_Arrays(temp, trk);
                             }
-                            else rebuild = true;
-
                         }
+
                         Set_Dest_Arrays(temp, trk);
                         (NDA.D_Start[trk], NDA.D_End[trk], NDA.Sector_Zero[trk], NDA.Track_Length[trk], f, NDA.sectors[trk], NDS.cbm_sector[trk], NDA.Total_Sync[trk], NDS.Disk_ID[trk], NDS.sector_pos[trk]) = Find_Sector_Zero(NDA.Track_Data[trk], false);
                         f[0] = "";
@@ -838,7 +836,7 @@ namespace V_Max_Tool
                 View_Jump();
                 Data_Box.Visible = true;
             }));
-            if (DV_dec.Checked) File.WriteAllBytes($@"c:\test\{fname}_Decoded.bin", buffer.ToArray());
+            //if (DV_dec.Checked) File.WriteAllBytes($@"c:\test\{fname}_Decoded.bin", buffer.ToArray());
 
             void Disp_CBM(int t, double track)
             {
@@ -914,7 +912,9 @@ namespace V_Max_Tool
                     int total = 0;
                     for (int ii = 0; ii < NDS.sectors[t]; ii++)
                     {
-                        temp[ii] = D_Vorpal(tdata, ii);
+                        temp[ii] = Decode_Vorpal(tdata, ii);
+                        //if (track == 22 && ii == 3) File.WriteAllBytes($@"c:\test\T{track}-s{ii}", Decode_Vorpal(tdata, ii, false));
+                        //File.WriteAllBytes($@"c:\test\T{track}-s{ii}", Decode_Vorpal(tdata, ii, false));
                         total += temp[ii].Length;
                     }
                     if (tr) db_Text += $"\n\nTrack ({track}) {secF[NDS.cbm[t]]} Sectors ({NDS.sectors[t]}) Length ({total}) bytes\n\n";

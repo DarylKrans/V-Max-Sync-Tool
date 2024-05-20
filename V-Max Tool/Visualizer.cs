@@ -65,7 +65,7 @@ namespace V_Max_Tool
                 Bitmap t = new Bitmap(flat_large.Width, flat_large.Height);
                 int at = 0;
                 int pt = 0;
-                for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len) at++;
+                for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < 6) at++;
                 if (at > 0) Invoke(new Action(() =>
                 {
                     Flat_Render.Value = 0;
@@ -78,7 +78,7 @@ namespace V_Max_Tool
                 {
                     if (Out_view.Checked)
                     {
-                        if (NDG.Track_Length[i] > min_t_len)
+                        if (NDG.Track_Length[i] > min_t_len && NDS.cbm[i] < 6)
                         {
                             d = Get_Density(NDG.Track_Data[i].Length);
                             t = Draw_Track(flat_large, (42 * 14), NDG.Track_Data[i], (int)ht, 0, 0, NDS.cbm[i], NDS.v2info[i], d, Out_view.Checked, NDS.cbm_sector[i]);
@@ -142,7 +142,7 @@ namespace V_Max_Tool
         {
             int at = 0;
             int pt = 0;
-            for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len) at++;
+            for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < 6) at++;
             int m = 0;
             Invoke(new Action(() =>
             {
@@ -186,7 +186,7 @@ namespace V_Max_Tool
             while (r > 80 && track < tracks)
             {
                 bool v5 = false;
-                if (NDG.Track_Length[track] > min_t_len)
+                if (NDG.Track_Length[track] > min_t_len && NDS.cbm[track] < 6)
                 {
                     pt++;
                     v2 = false;

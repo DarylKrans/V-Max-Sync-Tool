@@ -12,19 +12,18 @@ namespace V_Max_Tool
     {
         private readonly bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.77 (beta)";
+        private readonly string ver = " v0.9.80 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
-        //private readonly int[] density = { 7692, 7142, 6666, 6250 }; // <- Actual capacity as defined by the manual
         private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        //private readonly int[] density = { 7680, 7130, 6650, 6240 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        //private readonly int[] vpl_density = { 7732, 7080, 6605, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        private readonly int[] vpl_density = { 7750, 7062, 6605, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        //private int[] vpl_density = { 7760, 7204, 6723, 6302 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        private int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private bool error = false;
         private bool busy = false;
         private bool nib_error = false;
         private bool g64_error = false;
+        //private bool batch = false;
         private string nib_err_msg;
         private string g64_err_msg;
         private readonly int min_t_len = 6000;
@@ -55,7 +54,19 @@ namespace V_Max_Tool
             /// ------ Section for Batch file conversion.  Need to work out threading issues ----------
             //if (File_List.Length > 1)
             //{
-            //    for (int i = 0; i < File_List.Length; i++) Process_New_Image(File_List[i]);
+            //    batch = true;
+            //    Adv_ctrl.Enabled = true;
+            //    Task.Run(delegate
+            //    {
+            //        for (int i = 0; i < File_List.Length; i++)
+            //        {
+            //            working = true;
+            //            Process_New_Image(File_List[i]);
+            //            while (working) { Thread.Sleep(100); }
+            //            //Set_ListBox_Items(false, false);
+            //        }
+            //        batch = false;
+            //    });
             //}
             //else Process_New_Image(File_List[0]);
         }
@@ -199,7 +210,6 @@ namespace V_Max_Tool
                     {
                         Invoke(new Action(() =>
                         {
-
                             Process_Nib_Data(true, false, true);
                             Set_ListBox_Items(false, false);
                             Get_Disk_Directory();
@@ -232,11 +242,11 @@ namespace V_Max_Tool
                                     error = true;
                                 }
                             }
+
                         }));
                     }
                 });
             }
-
             void Show_Progress_Bar()
             {
                 Import_Progress_Bar.Value = 0;
@@ -448,6 +458,7 @@ namespace V_Max_Tool
                 {
                     VPL_rb.Checked = true;
                     VPL_only_sectors.Checked = VPL_auto_adj.Checked = false;
+                    VPL_presync.Enabled = VPL_auto_adj.Checked;
                 }
                 busy = false;
                 Vorpal_Rebuild();
@@ -460,7 +471,10 @@ namespace V_Max_Tool
             {
                 busy = true;
                 if (!VPL_rb.Checked) { VPL_lead.Checked = Lead_In.Enabled = VPL_only_sectors.Checked = VPL_auto_adj.Checked = Adj_cbm.Checked = false; }
+                VPL_presync.Enabled = VPL_auto_adj.Checked;
                 Lead_ptn.Enabled = VPL_rb.Checked;
+                if (VPL_rb.Checked) VPL_auto_adj.Checked = false;
+                VPL_presync.Enabled = VPL_auto_adj.Checked;
                 busy = false;
                 Vorpal_Rebuild();
             }
@@ -495,6 +509,7 @@ namespace V_Max_Tool
             {
                 busy = true;
                 Lead_In.Enabled = VPL_lead.Checked = VPL_only_sectors.Checked = VPL_rb.Checked = false;
+                VPL_presync.Enabled = VPL_auto_adj.Checked;
                 busy = false;
                 Vorpal_Rebuild();
             }
@@ -544,6 +559,18 @@ namespace V_Max_Tool
             if (!busy)
             {
                 Check_Before_Draw(false);
+            }
+        }
+
+        private void VD0_ValueChanged(object sender, EventArgs e)
+        {
+            if (!busy)
+            {
+                vpl_density[0] = Convert.ToInt32(VD0.Value);
+                vpl_density[1] = Convert.ToInt32(VD1.Value);
+                vpl_density[2] = Convert.ToInt32(VD2.Value);
+                vpl_density[3] = Convert.ToInt32(VD3.Value);
+                Vorpal_Rebuild();
             }
         }
     }

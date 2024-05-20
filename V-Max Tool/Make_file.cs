@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace V_Max_Tool
 {
@@ -68,7 +69,13 @@ namespace V_Max_Tool
             var write = new BinaryWriter(buffer);
             byte[] head = Encoding.ASCII.GetBytes("GCR-1541");
             byte z = 0;
-            short m = Convert.ToInt16(NDG.Track_Length.Max());
+            List<int> len = new List<int>(0);
+            for (int i = 0; i < tracks; i++)
+            {
+                if (NDS.cbm[i] > 0 && NDS.cbm[i] < 6) len.Add(NDG.Track_Length[i]);
+            }
+            short m = Convert.ToInt16(len.Max());
+            //short m = Convert.ToInt16(NDG.Track_Length.Max());
             if (m < 7928) m = 7928;
             write.Write(head);
             write.Write(z);
@@ -81,18 +88,22 @@ namespace V_Max_Tool
             for (int i = 0; i < 84; i++) write.Write(td[i]);
             for (int i = 0; i < tracks; i++)
             {
-                if (NDG.Track_Length[i] > 6000)
+                if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] > 0 && NDS.cbm[i] < 6)
                 {
                     write.Write((short)NDG.Track_Length[i]);
-                    if (NDG.Track_Data[i].Length < m) write.Write(NDG.Track_Data[i]);
-                    else
+                    if (debug)
                     {
-                        byte[] t = new byte[m];
-                        Array.Copy(NDG.Track_Data[i], 0, t, 0, m);
-                        write.Write(t);
+                        if (NDG.Track_Data[i].Length < m) write.Write(NDG.Track_Data[i]);
+                        else
+                        {
+                            byte[] t = new byte[m];
+                            Array.Copy(NDG.Track_Data[i], 0, t, 0, m);
+                            write.Write(t);
+                        }
+                        var o = m - NDG.Track_Length[i];
+                        if (o > 0) for (int j = 0; j < o; j++) write.Write((byte)0);
                     }
-                    var o = m - NDG.Track_Length[i];
-                    if (o > 0) for (int j = 0; j < o; j++) write.Write((byte)0);
+                    else write.Write(NDG.Track_Data[i]);
                 }
             }
             try
@@ -109,11 +120,11 @@ namespace V_Max_Tool
             {
                 for (int i = 0; i < 84; i++)
                 {
-                    if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000)
+                    if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < 6)
                     {
                         write.Write((int)offset + th);
                         th += 2;
-                        offset += m;
+                        if (debug) offset += m; else offset += NDG.Track_Data[i].Length;
                         td[i] = 3 - Get_Density(NDG.Track_Data[i].Length);
                     }
                     else write.Write((int)0);
@@ -125,11 +136,11 @@ namespace V_Max_Tool
                 int r = 0;
                 for (int i = 0; i < 42; i++)
                 {
-                    if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 0)
+                    if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < 6)
                     {
                         write.Write((int)offset + th);
                         th += 2;
-                        offset += m;
+                        if (debug) offset += m; else offset += NDG.Track_Data[i].Length;
                         td[r] = 3 - Get_Density(NDG.Track_Data[i].Length);
                         r++; td[r] = 0; r++;
                     }

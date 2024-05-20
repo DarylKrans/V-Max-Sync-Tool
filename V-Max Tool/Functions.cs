@@ -315,9 +315,9 @@ namespace V_Max_Tool
             return sb.ToString();
         }
 
-        public static String Byte_to_Binary(Byte[] data)  // (use this for .NET 3.5 build) Note: only 100ms longer
+        public String Byte_to_Binary(Byte[] data)  // (use this for .NET 3.5 build) Note: only 100ms longer
         {
-            BitArray bits = new BitArray(data);
+            BitArray bits = new BitArray(Flip_Endian(data));
             string b = "";
             for (int counter = 0; counter < bits.Length; counter++)
             {
@@ -425,6 +425,34 @@ namespace V_Max_Tool
         bool BytesMatch(byte[] source, byte[] target)
         {
             return (Hex_Val(source) == Hex_Val(target));
+        }
+
+        byte[] Lengthen_Track(byte[] data) // For track 18 on Vorpal images
+        {
+            byte[] temp = new byte[density[1]];
+            int c = 0;
+            int l = 0;
+            int p = 0;
+            byte fill = 0x55;
+            int a = temp.Length - data.Length;
+            for (int i = 0; i < data.Length; i++)
+            {
+                if (data[i] == 0x55 || data[i] == 0xaa) c++;
+                else
+                {
+                    if (c > l)
+                    {
+                        p = i - 1;
+                        l = c;
+                        fill = data[i - 1];
+                    }
+                    c = 0;
+                }
+            }
+            Array.Copy(data, 0, temp, 0, p);
+            for (int i = p; i < p + a; i++) temp[i] = fill;
+            Array.Copy(data, p, temp, p + a, data.Length - p);
+            return temp;
         }
 
         void Set_Dest_Arrays(byte[] data, int trk)
@@ -727,6 +755,11 @@ namespace V_Max_Tool
             "A4-A9", "A5-AB", "A5-AA", "A5-B5", "B4-A5", "A5-B7", "A5-B6", "A9-BD", "BC-A9" };
             vm2_ver[1] = new string[] { "A5-A5", "A4-A5", "A5-A7", "A5-A6", "A9-AD", "AC-A9", "A5-A3", "A9-AE", "A5-AD", "AC-A5", "A9-A3", "A5-AE", "A5-A9",
             "A4-A9", "A5-AB", "A5-AA", "A5-B5", "B4-A5", "A5-B7", "A5-B6", "A9-BD", "BC-A9" };
+            VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = debug;
+            VD0.Value = vpl_density[0];
+            VD1.Value = vpl_density[1];
+            VD2.Value = vpl_density[2];
+            VD3.Value = vpl_density[3];
             Img_Q.DataSource = Img_Quality;
             Img_Q.SelectedIndex = 2;
             Width = PreferredSize.Width;

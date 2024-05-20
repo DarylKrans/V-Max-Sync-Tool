@@ -9,7 +9,6 @@ namespace V_Max_Tool
     public partial class Form1 : Form
     {
 
-        //readonly byte[] vpl_s0 = new byte[] { 0x26, 0x67, 0xfa };
         readonly byte[] vpl_s0 = new byte[] { 0x33, 0x3F, 0xD5 };
         readonly byte[] vpl_s1 = new byte[] { 0x35, 0x4d, 0x53 };
         readonly BitArray leadIn_std = new BitArray(10);
@@ -126,8 +125,7 @@ namespace V_Max_Tool
             }
             offset = (((otmp.Length - (tend - tstart)) >> 1) >> 3) << 3;
             var len = (tend - tstart) / 8;
-            if (VPL_auto_adj.Checked && sectors == 46) len += 104;
-            if (VPL_lead.Checked) offset = Convert.ToInt32(Lead_In.Value) >> 3;
+            if (VPL_lead.Checked) offset = Convert.ToInt32(Lead_In.Value) << 3;
             if (VPL_only_sectors.Checked)
             {
                 offset = 0;
@@ -136,9 +134,9 @@ namespace V_Max_Tool
             }
             if (VPL_auto_adj.Checked) // || VPL_rb.Checked)
             {
-                //offset = 15 * 8;
                 offset = ((((vpl_density[d] << 3) - (tend - tstart)) >> 1) >> 3) << 3;
                 if (offset > 60 << 3) offset = 60 << 3;
+                if (offset < 15 << 3) offset = 15 << 3;
                 var r = offset >> 3;
                 var e = len + (r << 1);
                 if (e < vpl_density[d])
@@ -148,7 +146,12 @@ namespace V_Max_Tool
                 }
                 temp = new byte[vpl_density[d]];
                 Write_Lead(100, 400);
+                if (VPL_presync.Checked) Add_Pre_Sync();
                 otmp = new BitArray(Flip_Endian(temp));
+                int os = 0;
+                int ts = 0;
+                if (!otmp[offset - 1] && !otmp[offset - 2]) ts += 2;
+                offset += os; tstart += ts;
             }
             try
             {
@@ -193,18 +196,33 @@ namespace V_Max_Tool
             {
                 if (Lead_ptn.SelectedIndex > 0)
                 {
+                    temp[(offset / 8) - 4] = 0xff;
                     temp[(offset / 8) - 3] = 0xff;
-                    temp[(offset / 8) - 2] = 0xff;
+                    temp[(offset / 8) - 2] = 0x55;
                     temp[(offset / 8) - 1] = 0x55;
                 }
             }
+
+            void Add_Pre_Sync()
+            {
+                temp[0] = 0xff;
+                temp[1] = 0xff;
+                temp[2] = 0x55;
+                temp[3] = 0x55;
+            }
         }
 
-        byte[] D_Vorpal(BitArray source, int sector = -1)
+        byte[] Decode_Vorpal(BitArray source, int sector = -1, bool dec = true)
         {
             int snc_cnt = 0;
             int psec = 0;
+            int sub = 0;
             BitArray sec_data = new BitArray(160 * 8);
+            if (!dec)
+            {
+                sec_data = new BitArray(165 * 8);
+                sub = 8 * 5;
+            }
             byte[] decoded = new byte[0];
             for (int k = 0; k < source.Length; k++)
             {
@@ -222,13 +240,14 @@ namespace V_Max_Tool
                                 {
                                     sec_data[i] = source[dep + i];
                                 }
-                                decoded = Decode_VPL(Flip_Endian(Bit2Byte(sec_data)));
-                                return decoded;
+                                if (dec) return Decode_VPL(Flip_Endian(Bit2Byte(sec_data)));
+                                else return (Flip_Endian(Bit2Byte(sec_data)));
                             }
                             catch { }
                         }
                         psec++;
-                        k += sec_data.Count;
+                        k += sec_data.Count - sub;
+                        //if (!dec) k -= (8 * 5);
                     }
                     snc_cnt = 0;
                 }

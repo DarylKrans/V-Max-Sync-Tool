@@ -68,6 +68,11 @@
             this.V3_Auto_Adj = new System.Windows.Forms.CheckBox();
             this.V3_Custom = new System.Windows.Forms.CheckBox();
             this.Vpl_adv = new System.Windows.Forms.TabPage();
+            this.VPL_presync = new System.Windows.Forms.CheckBox();
+            this.VD3 = new System.Windows.Forms.NumericUpDown();
+            this.VD2 = new System.Windows.Forms.NumericUpDown();
+            this.VD1 = new System.Windows.Forms.NumericUpDown();
+            this.VD0 = new System.Windows.Forms.NumericUpDown();
             this.Lead_ptn = new System.Windows.Forms.ComboBox();
             this.label7 = new System.Windows.Forms.Label();
             this.VPL_auto_adj = new System.Windows.Forms.CheckBox();
@@ -147,6 +152,10 @@
             this.Adv_V3_Opts.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.V3_hlen)).BeginInit();
             this.Vpl_adv.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.VD3)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.VD2)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.VD1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.VD0)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.Lead_In)).BeginInit();
             this.Adv_ctrl.SuspendLayout();
             this.tabPage2.SuspendLayout();
@@ -621,6 +630,11 @@
             // Vpl_adv
             // 
             this.Vpl_adv.BackColor = System.Drawing.Color.Gainsboro;
+            this.Vpl_adv.Controls.Add(this.VPL_presync);
+            this.Vpl_adv.Controls.Add(this.VD3);
+            this.Vpl_adv.Controls.Add(this.VD2);
+            this.Vpl_adv.Controls.Add(this.VD1);
+            this.Vpl_adv.Controls.Add(this.VD0);
             this.Vpl_adv.Controls.Add(this.Lead_ptn);
             this.Vpl_adv.Controls.Add(this.label7);
             this.Vpl_adv.Controls.Add(this.VPL_auto_adj);
@@ -635,6 +649,109 @@
             this.Vpl_adv.Size = new System.Drawing.Size(908, 183);
             this.Vpl_adv.TabIndex = 3;
             this.Vpl_adv.Text = "Vorpal Advanced";
+            // 
+            // VPL_presync
+            // 
+            this.VPL_presync.AutoSize = true;
+            this.VPL_presync.Location = new System.Drawing.Point(399, 9);
+            this.VPL_presync.Name = "VPL_presync";
+            this.VPL_presync.Size = new System.Drawing.Size(331, 29);
+            this.VPL_presync.TabIndex = 73;
+            this.VPL_presync.Text = "Add pre-sync to start of tracks";
+            this.VPL_presync.UseVisualStyleBackColor = true;
+            this.VPL_presync.CheckedChanged += new System.EventHandler(this.Lead_In_ValueChanged);
+            // 
+            // VD3
+            // 
+            this.VD3.Location = new System.Drawing.Point(777, 125);
+            this.VD3.Maximum = new decimal(new int[] {
+            6350,
+            0,
+            0,
+            0});
+            this.VD3.Minimum = new decimal(new int[] {
+            6200,
+            0,
+            0,
+            0});
+            this.VD3.Name = "VD3";
+            this.VD3.Size = new System.Drawing.Size(120, 31);
+            this.VD3.TabIndex = 72;
+            this.VD3.Value = new decimal(new int[] {
+            6200,
+            0,
+            0,
+            0});
+            this.VD3.ValueChanged += new System.EventHandler(this.VD0_ValueChanged);
+            // 
+            // VD2
+            // 
+            this.VD2.Location = new System.Drawing.Point(651, 125);
+            this.VD2.Maximum = new decimal(new int[] {
+            6750,
+            0,
+            0,
+            0});
+            this.VD2.Minimum = new decimal(new int[] {
+            6555,
+            0,
+            0,
+            0});
+            this.VD2.Name = "VD2";
+            this.VD2.Size = new System.Drawing.Size(120, 31);
+            this.VD2.TabIndex = 71;
+            this.VD2.Value = new decimal(new int[] {
+            6555,
+            0,
+            0,
+            0});
+            this.VD2.ValueChanged += new System.EventHandler(this.VD0_ValueChanged);
+            // 
+            // VD1
+            // 
+            this.VD1.Location = new System.Drawing.Point(525, 125);
+            this.VD1.Maximum = new decimal(new int[] {
+            7210,
+            0,
+            0,
+            0});
+            this.VD1.Minimum = new decimal(new int[] {
+            7012,
+            0,
+            0,
+            0});
+            this.VD1.Name = "VD1";
+            this.VD1.Size = new System.Drawing.Size(120, 31);
+            this.VD1.TabIndex = 70;
+            this.VD1.Value = new decimal(new int[] {
+            7012,
+            0,
+            0,
+            0});
+            this.VD1.ValueChanged += new System.EventHandler(this.VD0_ValueChanged);
+            // 
+            // VD0
+            // 
+            this.VD0.Location = new System.Drawing.Point(399, 125);
+            this.VD0.Maximum = new decimal(new int[] {
+            7800,
+            0,
+            0,
+            0});
+            this.VD0.Minimum = new decimal(new int[] {
+            7700,
+            0,
+            0,
+            0});
+            this.VD0.Name = "VD0";
+            this.VD0.Size = new System.Drawing.Size(120, 31);
+            this.VD0.TabIndex = 69;
+            this.VD0.Value = new decimal(new int[] {
+            7700,
+            0,
+            0,
+            0});
+            this.VD0.ValueChanged += new System.EventHandler(this.VD0_ValueChanged);
             // 
             // Lead_ptn
             // 
@@ -660,9 +777,9 @@
             this.VPL_auto_adj.AutoSize = true;
             this.VPL_auto_adj.Location = new System.Drawing.Point(10, 9);
             this.VPL_auto_adj.Name = "VPL_auto_adj";
-            this.VPL_auto_adj.Size = new System.Drawing.Size(645, 29);
+            this.VPL_auto_adj.Size = new System.Drawing.Size(337, 29);
             this.VPL_auto_adj.TabIndex = 66;
-            this.VPL_auto_adj.Text = "Auto Adjust Tracks to fit Density (note: some tracks may not fit)";
+            this.VPL_auto_adj.Text = "Auto Adjust Tracks for optimal ";
             this.VPL_auto_adj.UseVisualStyleBackColor = true;
             this.VPL_auto_adj.CheckedChanged += new System.EventHandler(this.VPL_Auto_CheckedChanged);
             // 
@@ -1469,6 +1586,10 @@
             ((System.ComponentModel.ISupportInitialize)(this.V3_hlen)).EndInit();
             this.Vpl_adv.ResumeLayout(false);
             this.Vpl_adv.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.VD3)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.VD2)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.VD1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.VD0)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.Lead_In)).EndInit();
             this.Adv_ctrl.ResumeLayout(false);
             this.tabPage2.ResumeLayout(false);
@@ -1606,6 +1727,11 @@
         private System.Windows.Forms.ComboBox Lead_ptn;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.ProgressBar Adj_pbar;
+        private System.Windows.Forms.NumericUpDown VD3;
+        private System.Windows.Forms.NumericUpDown VD2;
+        private System.Windows.Forms.NumericUpDown VD1;
+        private System.Windows.Forms.NumericUpDown VD0;
+        private System.Windows.Forms.CheckBox VPL_presync;
     }
 }
 
