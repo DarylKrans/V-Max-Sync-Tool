@@ -11,7 +11,7 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-        private readonly bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
+        private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
         private readonly string ver = " v0.9.81 (beta)";
         private readonly string fix = "(sync_fixed)";
@@ -28,6 +28,10 @@ namespace V_Max_Tool
         private bool batch = false;
         private string nib_err_msg;
         private string g64_err_msg;
+        private byte[] v2ldrcbm = new byte[0];
+        private byte[] v24e64pal = new byte[0];
+        private byte[] v26446ntsc = new byte[0];
+        private byte[] v2644entsc = new byte[0];
         private readonly int min_t_len = 6000;
         Thread w;
 
@@ -47,9 +51,7 @@ namespace V_Max_Tool
             sl.DataSource = null;
             out_size.DataSource = null;
             string[] File_List = (string[])e.Data.GetData(DataFormats.FileDrop);
-
             //Process_New_Image(File_List[0]);
-            /// ------ Section for Batch file conversion.  Need to work out threading issues ----------
             if (File_List.Length > 1)
             {
                 using (Message_Center center = new Message_Center(this)) // center message box
@@ -75,8 +77,6 @@ namespace V_Max_Tool
                         }
                     }
                 }
-
-                
             }
             else
             {
@@ -91,7 +91,12 @@ namespace V_Max_Tool
 
         void Process_Batch(string[] batch_list, string path)
         {
-            Drag_pic.Visible = false;
+            bool temp = Auto_Adjust;
+            busy = true;
+            Auto_Adjust = true;
+            Set_Auto_Opts();
+            busy = false;
+            Drag_pic.Visible = Adv_ctrl.Enabled = false;
             Batch_Box.Visible = true;
             batch = true;
             Batch_Bar.Value = 0;
@@ -102,6 +107,8 @@ namespace V_Max_Tool
             {
                 for (int i = 0; i < batch_list.Length; i++)
                 {
+                    loader_fixed = false;
+                    NDG.L_Rot = false;
                     if (!cancel)
                     {
                         if (System.IO.File.Exists(batch_list[i]))
@@ -143,6 +150,10 @@ namespace V_Max_Tool
                         MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     cancel = false;
+                    busy = true;
+                    Auto_Adjust = temp;
+                    Set_Auto_Opts();
+                    busy = false;
                     Reset_to_Defaults();
                 }));
                 batch = false;
@@ -177,7 +188,7 @@ namespace V_Max_Tool
                         {
                             Process_Nib_Data(true, false, true);
                             Make_G64($@"{path}\{fname}{fnappend}.g64");
-                        } 
+                        }
                         else error = false;
                     }
                 }
@@ -317,6 +328,7 @@ namespace V_Max_Tool
             {
                 Dir_screen.Clear();
                 Dir_screen.Text = "LOAD\"$\",8\nSEARCHING FOR $\nLOADING";
+                loader_fixed = false;
                 Task.Run(delegate
                 {
                     Parse_Nib_Data();
@@ -350,7 +362,7 @@ namespace V_Max_Tool
                                 {
                                     string t = "Output integrity warning!";
 
-                                    string s = "Vorpal tracks detected.\n\nIt is advised to use NIB batch_list when processing Vorpal images\nWhen processing G64's, the output file may not work correctly.";
+                                    string s = "Vorpal tracks detected.\n\nIt is advised to use NIB files when processing Vorpal images\nWhen processing G64's, the output file may not work correctly.";
                                     if (s.ToLower().Contains("source array")) s = "Image is corrupt and cannot be opened";
                                     MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                     error = true;
@@ -381,42 +393,7 @@ namespace V_Max_Tool
 
         private void F_load_CheckedChanged(object sender, EventArgs e)
         {
-            int i = 100;
-            if (f_load.Checked)
-            {
-                if (tracks > 0 && NDS.Track_Data.Length > 0)
-                {
-                    i = Array.FindIndex(NDS.cbm, s => s == 4);
-                    if (i < 100 && i > -1)
-                    {
-                        Original.G = new byte[NDG.Track_Data[i].Length];
-                        Original.A = new byte[NDA.Track_Data[i].Length];
-                        Array.Copy(NDG.Track_Data[i], 0, Original.G, 0, NDG.Track_Data[i].Length);
-                        Array.Copy(NDA.Track_Data[i], 0, Original.A, 0, NDA.Track_Data[i].Length);
-                        NDG.Track_Data[i] = Fix_Loader(NDG.Track_Data[i]);
-                        NDA.Track_Data[i] = new byte[8192];
-                        if (NDG.Track_Data[i].Length < 8192)
-                        {
-                            try
-                            {
-                                Array.Copy(NDG.Track_Data[i], 0, NDA.Track_Data[i], 0, NDG.Track_Data[i].Length);
-                                Array.Copy(NDG.Track_Data[i], 0, NDA.Track_Data[i], NDG.Track_Data[i].Length, 8192 - NDG.Track_Data[i].Length);
-                            }
-                            catch { }
-                        }
-                    }
-                }
-            }
-            if (!f_load.Checked)
-            {
-                f_load.Text = "Fix Loader Sync";
-                if (tracks > 0) i = Array.FindIndex(NDS.cbm, s => s == 4);
-                if (i > -1 && i < 100)
-                {
-                    if (Original.A.Length > 0) { NDA.Track_Data[i] = Original.A; }
-                    if (Original.G.Length > 0) { NDG.Track_Data[i] = Original.G; f_load.Text += " ( Restored )"; }
-                }
-            }
+            Fix_Loader_Option();
         }
 
         private void V2_Custom_CheckedChanged(object sender, EventArgs e)
@@ -653,6 +630,46 @@ namespace V_Max_Tool
         private void B_cancel_Click(object sender, EventArgs e)
         {
             cancel = true;
+        }
+
+        private void Re_Align_CheckedChanged(object sender, EventArgs e)
+        {
+            for (int t = 0; t < tracks; t++)
+            {
+                if (NDS.cbm[t] == 4)
+                {
+                    if (Original.OT[t].Length == 0)
+                    {
+                        Original.OT[t] = new byte[NDG.Track_Data[t].Length];
+                        Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
+                    }
+                    if (!NDG.L_Rot)
+                    {
+                        Set_Dest_Arrays(Rotate_Loader(NDG.Track_Data[t]), t);
+                        NDG.L_Rot = true;
+                    }
+                    else
+                    {
+                        if (Original.OT[t].Length != 0)
+                        {
+                            NDG.Track_Data[t] = new byte[Original.OT[t].Length];
+                            Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
+                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
+                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, 8192 - Original.OT[t].Length);
+                        }
+                        NDG.Track_Length[t] = NDG.Track_Data[t].Length;
+                        NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
+                        NDG.L_Rot = false;
+                    }
+                    displayed = false;
+                    drawn = false;
+                    if (!busy && !batch)
+                    {
+                        Check_Before_Draw(false);
+                        Data_Viewer();
+                    }
+                }
+            }
         }
     }
 }

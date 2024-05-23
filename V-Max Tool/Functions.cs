@@ -1,7 +1,9 @@
-﻿using System;
+﻿using ReMaster_Utility.Properties;
+using System;
 using System.Collections;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -126,6 +128,14 @@ namespace V_Max_Tool
             Dir_screen.SelectionColor = C64_screen;
         }
 
+        void Set_Auto_Opts()
+        {
+            if (Auto_Adjust)
+            {
+                V3_Auto_Adj.Checked = V2_Auto_Adj.Checked = VPL_auto_adj.Checked = f_load.Checked = true;
+            }
+        }
+
         void Set_Arrays(int len)
         {
             // NDS is the input or source array
@@ -162,6 +172,27 @@ namespace V_Max_Tool
             Original.SA = new byte[0];
             Original.SG = new byte[0];
             Original.OT = new byte[len][];
+        }
+
+        public static byte[] Compress(byte[] data)
+        {
+            MemoryStream output = new MemoryStream();
+            using (DeflateStream dstream = new DeflateStream(output, CompressionLevel.Optimal))
+            {
+                dstream.Write(data, 0, data.Length);
+            }
+            return output.ToArray();
+        }
+
+        public static byte[] Decompress(byte[] data)
+        {
+            MemoryStream input = new MemoryStream(data);
+            MemoryStream output = new MemoryStream();
+            using (DeflateStream dstream = new DeflateStream(input, CompressionMode.Decompress))
+            {
+                dstream.CopyTo(output);
+            }
+            return output.ToArray();
         }
 
         void Data_Viewer()
@@ -309,6 +340,12 @@ namespace V_Max_Tool
             catch { }
         }
 
+        byte[] XOR(byte[] data, byte value)
+        {
+            for (int i = 0; i < data.Length; i++) data[i] ^= value;
+            return data;
+        }
+
         byte[] Rotate_Left(byte[] data, int s)
         {
             s -= 1;
@@ -330,7 +367,8 @@ namespace V_Max_Tool
 
         string Hex(byte[] data, int a, int b)
         {
-            return BitConverter.ToString(data, a, b);
+            if (data != null) return BitConverter.ToString(data, a, b);
+            else return "";
         }
 
         byte[] Bit2Byte(BitArray bits, int start = 0, int length = -1)
@@ -498,6 +536,12 @@ namespace V_Max_Tool
                 return temp;
             }
             else return data;
+        }
+
+        void Shrink_Loader(int trk)
+        {
+            byte[] temp = Shrink_Track(NDG.Track_Data[trk], 1);
+            Set_Dest_Arrays(temp, trk);
         }
 
         void Set_Dest_Arrays(byte[] data, int trk)
@@ -830,10 +874,20 @@ namespace V_Max_Tool
             Import_File.BringToFront();
             Import_File.Top = 60;
             Import_File.Left = 15;
-            if (Auto_Adjust)
-            {
-                V3_Auto_Adj.Checked = V2_Auto_Adj.Checked = VPL_auto_adj.Checked = true;
-            }
+            Set_Auto_Opts();
+            
+            // Loads V-Max Loader track replacements into byte[] arrays
+            v2ldrcbm = Decompress(XOR(Resources.v2cbmla, 0xcb)); // V-Max CBM sectors (DotC, Into the Eagles Nest, Paperboy, etc..)
+            v24e64pal = Decompress(XOR(Resources.v24e64p, 0x64)); // V-Max Custom sectors (PAL Loader)
+            v26446ntsc = Decompress(XOR(Resources.v26446n, 0x46)); // V-Max Custom sectors (NTSC Loader) Older version, headers have weak bits and may be incompatible with some 1541's
+            v2644entsc = Decompress(XOR(Resources.v2644En, 0x4e)); // V-Max Custom sectors (NTSC Loader) Newer version, headers are compatible with all 1541 versions.
+                                                                   // these loaders are guaranteed to work and the loader code has not been modified from original. (these are not "cracked" loaders)
+
+            //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
+            //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
+            //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
+            //File.WriteAllBytes($@"c:\test\compressed\v2644en.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\644e")), 0x4e));
+
             busy = false;
 
             void Set_Boxes()

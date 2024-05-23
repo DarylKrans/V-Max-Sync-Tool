@@ -70,7 +70,7 @@ namespace V_Max_Tool
                     }
                 }
             }
-
+            f_load.Checked = V3_Auto_Adj.Checked;
             out_track.Items.Clear();
             out_size.Items.Clear();
             out_dif.Items.Clear();

@@ -125,6 +125,66 @@ namespace V_Max_Tool
 
         /// ------------------------ Add Sync to Loader Track --------------------------------------------------
 
+        void Fix_Loader_Option()
+        {
+            int i = 100;
+            if (f_load.Checked)
+            {
+                var tt = 0;
+                if (tracks > 0 && NDS.Track_Data.Length > 0)
+                {
+                    i = Array.FindIndex(NDS.cbm, s => s == 4);
+                    if (i < 100 && i > -1)
+                    {
+                        Original.G = new byte[NDG.Track_Data[i].Length];
+                        Original.A = new byte[NDA.Track_Data[i].Length];
+                        Array.Copy(NDG.Track_Data[i], 0, Original.G, 0, NDG.Track_Data[i].Length);
+                        Array.Copy(NDA.Track_Data[i], 0, Original.A, 0, NDA.Track_Data[i].Length);
+
+                        if (NDS.cbm.Any(x => x == 3))
+                        {
+                            var d = Get_Density(NDG.Track_Data[i].Length);
+                            if (NDG.Track_Data[i].Length > density[d]) Shrink_Loader(i);
+                            byte[] temp = Rotate_Loader(NDG.Track_Data[i]);
+                            NDG.L_Rot = true;
+                            Set_Dest_Arrays(Fix_Loader(temp), i);
+                        }
+                        if (!(NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3))) Set_Dest_Arrays(v2ldrcbm, i); // Replaces the loader track with V-Max CBM style loader from DOTC
+                        if (NDS.cbm.Any(x => x == 2))
+                        {
+                            for (int x = 0; i < tracks; x++) if (NDS.v2info[x]?.Length > 0) { tt = x; break; }
+                            if (Hex(NDS.v2info[tt], 0, 2) == "4E-64") Set_Dest_Arrays(v24e64pal, i);
+                            if (Hex(NDS.v2info[tt], 0, 2) == "64-46") Set_Dest_Arrays(v26446ntsc, i);
+                            if (Hex(NDS.v2info[tt], 0, 2) == "64-4E") Set_Dest_Arrays(v2644entsc, i);
+                        }
+                    }
+                    loader_fixed = true;
+                }
+
+            }
+            if (!f_load.Checked)
+            {
+                f_load.Text = "Fix Loader Sync";
+                if (tracks > 0) i = Array.FindIndex(NDS.cbm, s => s == 4);
+                if (i > -1 && i < 100)
+                {
+                    if (Original.A.Length > 0) { NDA.Track_Data[i] = Original.A; }
+                    if (Original.G.Length > 0) { NDG.Track_Data[i] = Original.G; f_load.Text += " ( Restored )"; }
+                    NDG.L_Rot = false;
+                }
+                loader_fixed = false;
+                //Check_Before_Draw(false);
+            }
+            displayed = false;
+            drawn = false;
+            if (!busy && !batch)
+            {
+                Check_Before_Draw(false);
+                Data_Viewer();
+            }
+        }
+
+
         byte[] Fix_Loader(byte[] data)
         {
             byte[] tdata = data;

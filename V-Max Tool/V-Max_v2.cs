@@ -32,14 +32,6 @@ namespace V_Max_Tool
                             Original.OT[t] = new byte[NDG.Track_Data[t].Length];
                             Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
                         }
-                        int d = Get_Density(NDG.Track_Data[t].Length);
-                        byte[] temp = Shrink_Track(NDG.Track_Data[t], d);
-                        if (Re_Align.Checked && !NDG.L_Rot)
-                        {
-                            Rotate_Loader(temp);
-                            NDG.L_Rot = true;
-                        }
-                        Set_Dest_Arrays(temp, t);
                     }
                 }
             }
@@ -59,13 +51,13 @@ namespace V_Max_Tool
                         NDG.Track_Length[t] = NDG.Track_Data[t].Length;
                         NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
                         c = true;
-
                     }
                 }
             }
             int i = Convert.ToInt32(V2_hlen.Value);
             if (i >= V2_hlen.Minimum && i <= V2_hlen.Maximum)
             {
+                f_load.Checked = V2_Auto_Adj.Checked;
                 out_track.Items.Clear();
                 out_size.Items.Clear();
                 out_dif.Items.Clear();
@@ -178,7 +170,8 @@ namespace V_Max_Tool
             gap_len = trk_density - ((hlen * sectors) + trk_len) - t_gap.Length;
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
-            var st_sec = g_sec;
+            //var st_sec = g_sec;
+            var st_sec = 0;
             for (int i = 0; i < sectors; i++)
             {
                 if (sec_dat[st_sec].Length > 0)

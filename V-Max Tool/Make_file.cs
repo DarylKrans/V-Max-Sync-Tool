@@ -84,9 +84,21 @@ namespace V_Max_Tool
             int offset = 684;
             int th = 0;
             int[] td = new int[84];
-            if (tracks > 42) Big(); else Small();
+            int tr = tracks;
+            if (tracks > 42)
+            {
+                if (NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)) tr = 75;
+                if (NDS.cbm.Any(x => x == 5)) tr = 69;
+                Big(tr);
+            }
+            else
+            {
+                if (NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)) tr = 38;
+                if (NDS.cbm.Any(x => x == 5)) tr = 35;
+                Small(tr);
+            }
             for (int i = 0; i < 84; i++) write.Write(td[i]);
-            for (int i = 0; i < tracks; i++)
+            for (int i = 0; i < tr; i++) // tracks; i++)
             {
                 if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] > 0 && NDS.cbm[i] < 6)
                 {
@@ -116,32 +128,32 @@ namespace V_Max_Tool
                 g64_err_msg = ex.Message;
             }
 
-            void Big() // 84 track nib file
+            void Big(int trk) // 84 track nib file
             {
                 for (int i = 0; i < 84; i++)
                 {
                     if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < 6)
                     {
-                        write.Write((int)offset + th);
+                        if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
                         th += 2;
                         if (debug) offset += m; else offset += NDG.Track_Data[i].Length;
-                        td[i] = 3 - Get_Density(NDG.Track_Data[i].Length);
+                        if (i <= trk) td[i] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[i] = 0;
                     }
                     else write.Write((int)0);
                 }
             }
 
-            void Small() // 42 track nib file
+            void Small(int trk) // 42 track nib file
             {
                 int r = 0;
                 for (int i = 0; i < 42; i++)
                 {
                     if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < 6)
                     {
-                        write.Write((int)offset + th);
+                        if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
                         th += 2;
                         if (debug) offset += m; else offset += NDG.Track_Data[i].Length;
-                        td[r] = 3 - Get_Density(NDG.Track_Data[i].Length);
+                        if (i <= trk) td[r] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[i] = 0;
                         r++; td[r] = 0; r++;
                     }
                     else write.Write((int)0);

@@ -489,6 +489,7 @@
             this.Re_Align.TabIndex = 38;
             this.Re_Align.Text = "Re-Align Loader";
             this.Re_Align.UseVisualStyleBackColor = true;
+            this.Re_Align.CheckedChanged += new System.EventHandler(this.Re_Align_CheckedChanged);
             // 
             // v2exp
             // 
@@ -1365,9 +1366,9 @@
             this.Batch_Box.Controls.Add(this.B_cancel);
             this.Batch_Box.Controls.Add(this.Batch_Bar);
             this.Batch_Box.Controls.Add(this.label8);
-            this.Batch_Box.Location = new System.Drawing.Point(23, 89);
+            this.Batch_Box.Location = new System.Drawing.Point(3, 3);
             this.Batch_Box.Name = "Batch_Box";
-            this.Batch_Box.Size = new System.Drawing.Size(840, 149);
+            this.Batch_Box.Size = new System.Drawing.Size(892, 149);
             this.Batch_Box.TabIndex = 59;
             this.Batch_Box.TabStop = false;
             this.Batch_Box.Text = "Batch Processing";
@@ -1393,9 +1394,9 @@
             // 
             // Batch_Bar
             // 
-            this.Batch_Bar.Location = new System.Drawing.Point(22, 105);
+            this.Batch_Bar.Location = new System.Drawing.Point(22, 102);
             this.Batch_Bar.Name = "Batch_Bar";
-            this.Batch_Bar.Size = new System.Drawing.Size(793, 24);
+            this.Batch_Bar.Size = new System.Drawing.Size(856, 27);
             this.Batch_Bar.TabIndex = 1;
             // 
             // label8
@@ -1588,7 +1589,7 @@
             this.Import_File.Controls.Add(this.label5);
             this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(23, 56);
+            this.Import_File.Location = new System.Drawing.Point(23, 55);
             this.Import_File.Name = "Import_File";
             this.Import_File.Size = new System.Drawing.Size(863, 108);
             this.Import_File.TabIndex = 59;
