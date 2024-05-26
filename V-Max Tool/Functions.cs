@@ -1,6 +1,7 @@
 ﻿using ReMaster_Utility.Properties;
 using System;
 using System.Collections;
+using System.ComponentModel;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace V_Max_Tool
 {
@@ -350,15 +352,13 @@ namespace V_Max_Tool
         byte[] Rotate_Left(byte[] data, int s)
         {
             s -= 1;
-            data = data.Skip(s).Concat(data.Take(s)).ToArray();
-            return data;
+            return data.Skip(s).Concat(data.Take(s)).ToArray();
         }
 
         byte[] Rotate_Right(byte[] data, int s)
         {
             s -= 1;
-            byte[] ret = data.Skip(data.Length - s).Concat(data.Take(data.Length - s)).ToArray();
-            return ret;
+            return data.Skip(data.Length - s).Concat(data.Take(data.Length - s)).ToArray();
         }
 
         string Hex_Val(byte[] data)
@@ -471,19 +471,50 @@ namespace V_Max_Tool
             return (false);
         }
 
+        static bool Match(byte[] expecting, byte[] have)
+        {
+            return expecting.SequenceEqual(have);
+        }
+
+        byte[] IArray(int size, byte value = 0)
+        {
+            byte[] temp = new byte[size];
+            for (int i = 0; i < size; i++) temp[i] = value;
+            return temp;
+        }
+
         (bool, int) Find_Data(string find, byte[] data, int clen, int start_pos = -1)
         {
-            //int i;
             if (start_pos < 0) start_pos = 0;
             byte[] comp = new byte[clen];
             for (int i = start_pos; i < data.Length - find.Length; i++)
             {
                 Array.Copy(data, i, comp, 0, comp.Length);
-                //if (Hex_Val(comp) == find) break;
                 if (Hex_Val(comp) == find) return (true, i);
+                if (Hex(data, i, 2) == find) return (true, i);
             }
-            return (false, 0); //i;
+            return (false, 0);
         }
+
+        //(bool, int) Find_D(byte[] find, byte[] data, int clen, int start_pos = -1)
+        //{
+        //    if (start_pos < 0) start_pos = 0;
+        //    byte[] comp = new byte[clen];
+        //    for (int i = start_pos; i < data.Length - find.Length; i++)
+        //    {
+        //        Array.Copy(data, i, comp, 0, comp.Length);
+        //        if (Match(comp, find)) return (true, i);
+        //    }
+        //    return (false, 0);
+        //}
+
+        //byte[] StringToByteArray(string hex)
+        //{
+        //    return Enumerable.Range(0, hex.Length)
+        //                     .Where(x => x % 2 == 0)
+        //                     .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+        //                     .ToArray();
+        //}
 
         //public static String Byte_to_Binary(Byte[] data)  // (use this for .NET 4.x build) Note: only 100ms faster
         //{
@@ -514,11 +545,6 @@ namespace V_Max_Tool
         //    }
         //    return i;
         //}
-
-        bool BytesMatch(byte[] source, byte[] target)
-        {
-            return (Hex_Val(source) == Hex_Val(target));
-        }
 
         byte[] Shrink_Track(byte[] data, int trk_density)
         {
@@ -890,6 +916,15 @@ namespace V_Max_Tool
             V3_hlen.Enabled = false;
             /// ----------------- V-Max v2 Config -------------
             Tabs.Controls.Remove(Adv_V2_Opts);
+            //byte[] vhead = Resources.v2h;
+            //for (int i = 0; i < vhead.Length / 2; i++)
+            //{
+            //    v2ver[i,0] = new byte[2];
+            //    v2ver[i,1] = new byte[2];
+            //    Array.Copy(vhead, i * 2, v2ver[i, 0], 0, 2);
+            //    Array.Copy(vhead, i * 2, v2ver[i, 1], 0, 2);
+            //}
+            //v2ver[6, 1] = new byte[] { 0xa5, 0xa3 }; v2ver[10, 1] = new byte[] { 0xa9, 0xa3 };
             V2_hlen.Enabled = false;
             v2exp.Text = v3exp.Text = $"\u2190 Experimental";
             v2adv.Text = v3adv.Text = $"\u2193        Advanced users ONLY!        \u2193";

@@ -92,7 +92,7 @@ namespace V_Max_Tool
             int oh_len = 0;
             int tlen = 0;
             int fill = 0;
-            byte[] header = { 0x49, 0x49, 0x49 };
+            byte[] header = IArray(3, 0x49); //{ 0x49, 0x49, 0x49 };
             byte[][] sec_data;
             byte[] sb = { 0x49 }; // start byte of header
             byte[] eb = { 0xee }; // end byte of header
@@ -133,7 +133,7 @@ namespace V_Max_Tool
             for (int i = 0; i < data.Length - comp.Length; i++)
             {
                 if (data[i] == sb[0]) Array.Copy(data, i, comp, 0, comp.Length);
-                if (BytesMatch(comp, header))
+                if (Match(comp, header))
                 {
                     int b = 0;
                     while (data[i + b] == sb[0]) b++;
@@ -257,7 +257,7 @@ namespace V_Max_Tool
             bool end_found = false;
             bool s_zero = false;
             byte sec_0_ID = 0xf3; // V-Max v3 sector 0 ID marker
-            byte[] header = new byte[] { 0x49, 0x49 }; // V-Max v3 header pattern
+            byte[] header = IArray(2, 0x49); //new byte[] { 0x49, 0x49 }; // V-Max v3 header pattern
             byte head_end = 0xee; // V-Max v3 header end byte located directly following the 49-49-49 pattern
             byte[] comp = new byte[2];
             byte[] head = new byte[18];
@@ -269,7 +269,7 @@ namespace V_Max_Tool
             for (int i = 0; i < data.Length - comp.Length; i++)
             {
                 Array.Copy(data, i, comp, 0, comp.Length);
-                if (BytesMatch(comp, header))
+                if (Match(comp, header))
                 {
                     var a = 0;
                     while (data[i + a] == header[0]) a++;
@@ -404,7 +404,7 @@ namespace V_Max_Tool
                     try
                     {
                         Array.Copy(tdata, spos + 2, comp, 0, comp.Length);
-                        if (BytesMatch(comp, hd)) // && (spos < tdata.Length - 4))
+                        if (Match(comp, hd)) // && (spos < tdata.Length - 4))
                         {
                             var a = 0;
                             while (tdata[spos + a] != hd[0])

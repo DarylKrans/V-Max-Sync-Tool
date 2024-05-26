@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace V_Max_Tool
 {
@@ -14,6 +15,7 @@ namespace V_Max_Tool
         private readonly string[] v_check = { "A5-A3", "A9-A3", "AD-AB", "AD-A7" };
         private readonly byte[] VM2_Valid = { 0xa5, 0xa4, 0xa9, 0xaC, 0xad, 0xb4, 0xbc };
         private readonly string v2 = "A5-A5-A5"; // V-MAX v2 sector 0 header (cinemaware)
+        //private readonly byte[,][] v2ver = new byte[22,2][];
 
         void V2_Adv_Opts()
         {
@@ -173,12 +175,10 @@ namespace V_Max_Tool
                 if (sec == sectors) sec = 0;
             }
             int left = trk_density - trk_len - 15;
-            //int left = trk_density - trk_len - 115;
             int hlen = ((left / sectors) / 2) * 2;
             gap_len = trk_density - ((hlen * sectors) + trk_len) - t_gap.Length;
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
-            //var st_sec = g_sec;
             var st_sec = 0;
             for (int i = 0; i < sectors; i++)
             {
@@ -232,7 +232,7 @@ namespace V_Max_Tool
             bool found = false;
             byte[] start_byte = new byte[1];
             byte[] end_byte = new byte[1];
-            byte[] pattern = new byte[] { 0xa5, 0xa5, 0xa5, 0xa5, 0xa5, 0xa5 };
+            byte[] pattern = IArray(6, 0xa5); // new byte[] { 0xa5, 0xa5, 0xa5, 0xa5, 0xa5, 0xa5 };
             byte[] ignore = new byte[] { 0x7e, 0x7f, 0xff, 0x5f, 0xbf, 0x57 };
             byte[] compare = new byte[6];
             byte[] m = new byte[6];
@@ -241,7 +241,7 @@ namespace V_Max_Tool
             for (int i = 0; i < data.Length - 4; i++)
             {
                 try { Array.Copy(data, i, compare, 0, compare.Length); } catch { }
-                if (Hex_Val(compare) == Hex_Val(pattern))
+                if (Match(pattern, compare)) // == Hex_Val(pattern))
                 {
                     start_byte[0] = data[i - 1];
                     m[0] = data[i - 1];
@@ -300,7 +300,7 @@ namespace V_Max_Tool
                         {
                             hd.Add(data[pos]); pos++;
                         }
-                        if (Hex_Val(comp) != Hex_Val(rep))
+                        if (!Match(rep, comp)) // != Hex_Val(rep))
                         {
                             var a = Array.FindIndex(vm2_ver[vs], s => s == Hex_Val(comp));
                             if (pos - dif > 370)
@@ -355,17 +355,19 @@ namespace V_Max_Tool
             byte[] start_byte = { t_info[0] };
             byte[] end_byte = { t_info[1] };
             byte[] compare = new byte[4];
-            byte[] pattern = { 0xa5, 0xa5, 0xa5 };
+            byte[] pattern = IArray(3, 0xa5);// { 0xa5, 0xa5, 0xa5 };
             byte[] ignore = new byte[] { 0x7e, 0x7f, 0xff, 0x5f, 0xbf, 0x57, 0x5b }; // possible sync markers to ignore when building track
             bool st = (t_info[4] == 0);
             int head_len = Convert.ToInt32(t_info[2]);
             int sec_zero;
+            byte[] find = IArray(4, 0xa5);
+            find[0] = start_byte[0];
             int vs = Convert.ToInt32(t_info[3]);
             try { Array.Copy(data, data_start, temp_data, 0, data_end - data_start); } catch { }
             for (int i = 0; i < temp_data.Length - 5; i++)
             {
                 Array.Copy(temp_data, i, compare, 0, compare.Length);
-                if (Hex_Val(compare) == $"{Hex_Val(start_byte)}-{Hex_Val(pattern)}")
+                if (Match(find, compare)) // == $"{Hex_Val(start_byte)}-{Hex_Val(pattern)}")
                 {
                     if (i > 5)
                     {

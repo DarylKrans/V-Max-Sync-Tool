@@ -176,6 +176,7 @@ namespace V_Max_Tool
                         }
                         if (NDS.cbm.Any(x => x == 2))
                         {
+                            Invoke(new Action(() => Text = "4c"));
                             for (int x = 0; i < tracks; x++) if (NDS.v2info[x]?.Length > 0) { tt = x; break; }
                             if (Hex(NDS.v2info[tt], 0, 2) == "4E-64") Set_Dest_Arrays(Pad_Loader(v24e64pal, loader_padding, density_map[trk_num]), i);
                             if (Hex(NDS.v2info[tt], 0, 2) == "64-46") Set_Dest_Arrays(Pad_Loader(v26446ntsc, loader_padding, density_map[trk_num]), i);
@@ -227,13 +228,13 @@ namespace V_Max_Tool
             for (int i = 0; i < tdata.Length - 4; i++)
             {
                 Array.Copy(tdata, i, comp, 0, comp.Length);
-                if (BytesMatch(comp, v1)) { Patch_V3(i - 4); f = true; }
-                if (BytesMatch(comp, v2)) { Patch_V2(i - 3); f = true; }
-                if (BytesMatch(comp, v3)) { Patch_V3(i - 4); f = true; }
-                if (BytesMatch(comp, v4)) { Patch_V2(i - 3); f = true; }
+                if (Match(comp, v1)) { Patch_V3(i - 4); f = true; }
+                if (Match(comp, v2)) { Patch_V2(i - 3); f = true; }
+                if (Match(comp, v3)) { Patch_V3(i - 4); f = true; }
+                if (Match(comp, v4)) { Patch_V2(i - 3); f = true; }
                 if (f) break;
             }
-            if (f) f_load.Text = "Fix Loader (Fixed)";
+            if (f) Invoke(new Action(()=> f_load.Text = "Fix Loader (Fixed)"));
             return tdata;
 
             void Patch_V2(int pos)

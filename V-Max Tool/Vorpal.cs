@@ -87,13 +87,13 @@ namespace V_Max_Tool
             if (Lead_ptn.SelectedIndex == 0) lead_in = new byte[] { 0xd5, 0x35, 0x4d, 0x53, 0x54 };
             if (Lead_ptn.SelectedIndex == 1)
             {
-                lead_in = new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55 };
+                lead_in = IArray(5, 0x55); // new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55 };
                 lead_out = 0x55;
                 stop = 0x55;
             }
             if (Lead_ptn.SelectedIndex == 2)
             {
-                lead_in = new byte[] { 0xaa, 0xaa, 0xaa, 0xaa, 0xaa };
+                lead_in = IArray(5, 0xaa); // new byte[] { 0xaa, 0xaa, 0xaa, 0xaa, 0xaa };
                 lead_out = 0xaa;
                 stop = 0xaa;
 
@@ -381,7 +381,7 @@ namespace V_Max_Tool
                     while (q < source.Length - (compare_len * 8))
                     {
                         byte[] rcomp = Flip_Endian(Bit2Byte(source, q, isRealend.Length * 8));
-                        if (Hex_Val(rcomp) == Hex_Val(isRealend))
+                        if (Match(isRealend, rcomp)) // == Hex_Val(isRealend))
                         {
                             end_found = true;
                             data_end = q - sub;

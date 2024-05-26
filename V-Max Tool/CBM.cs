@@ -42,7 +42,7 @@ namespace V_Max_Tool
         byte[] Rebuild_CBM(byte[] data, int sectors, byte[] Disk_ID, int t_density, int trk)
         {
             if (tracks > 42) trk = (trk / 2) + 1; else trk += 1;
-
+            BitArray tk = new BitArray(Flip_Endian(data));
             int sector_len = 10 + 325 + 10;
             int gap_len = 25;
             int gap_sync = 0;
@@ -71,7 +71,7 @@ namespace V_Max_Tool
                 write.Write(Build_BlockHeader(trk, i, Disk_ID));
                 write.Write(gap);
                 write.Write(sync);
-                (current_sector, c) = Decode_CBM_GCR(data, i, false);
+                (current_sector, c) = Decode_CBM_GCR(data, i, false, tk);
                 if (c || !c) write.Write(current_sector);
                 if (i != sectors - 1) write.Write(gap);
             }
@@ -81,7 +81,7 @@ namespace V_Max_Tool
         }
 
 
-        (int, int, int, int, string[], int, int[], int, byte[], int[]) Find_Sector_Zero(byte[] data, bool checksums)
+        (int, int, int, int, string[], int, int[], int, byte[], int[]) CBM_Track_Info(byte[] data, bool checksums)
         {
             string[] csm = new string[] { "OK", "Bad!" };
             string decoded_header;
@@ -147,7 +147,7 @@ namespace V_Max_Tool
 
                     for (int i = 1; i < sz.Length; i++) d[i] &= sz[i];
                     h = Hex_Val(d);
-                    if (valid_cbm.Any(s => s == h)) //.Contains(h))
+                    if (valid_cbm.Any(s => s == h))
                     {
                         if (!list.Any(s => s == h))
                         {
@@ -199,7 +199,6 @@ namespace V_Max_Tool
                                     (s_dat, c) = Decode_CBM_GCR(pdata, a, true);
                                     if (!c) sec_c = csm[1];
                                 }
-
                                 headers[0] = $"Sector ({a}){sz} Checksum ({sec_c}) pos ({data_start / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})";
                                 headers.Add($"pos {p / 8} ** repeat ** {h}");
                                 if (data_start == 0) data_end = pos;
@@ -211,7 +210,6 @@ namespace V_Max_Tool
                         }
                         list.Add(h);
                         string q = $"sector_data {Array.FindIndex(valid_cbm, s => s == h)} Position {pos}";
-                        //compare.Add($"{h} {q} {start_found} {end_found} {data_start} {data_end}");  // for testing
                     }
                 }
             }
@@ -311,7 +309,6 @@ namespace V_Max_Tool
         (byte[], bool) Decode_CBM_GCR(byte[] data, int sector, bool decode, BitArray source = null)
         {
             byte[] tmp = new byte[0];
-            //BitArray source = new BitArray(Flip_Endian(data));
             if (source == null) source = new BitArray(Flip_Endian(data));
             BitArray sector_data = new BitArray(325 * 8);
             byte[] sec;  // = new byte[325];
@@ -320,7 +317,6 @@ namespace V_Max_Tool
             bool sync = false;
             int sync_count = 0;
             int pos = 0;
-            //if (Track_pos >= 0) pos = Track_pos;
             Compare();
             while (pos < source.Length - 32)
             {
@@ -384,13 +380,11 @@ namespace V_Max_Tool
         (bool, int) Find_Sector(byte[] data, int sector, int pos = -1)
         {
             BitArray source = new BitArray(Flip_Endian(data));
-            bool sector_found; // = false;
+            bool sector_found;
             bool sync = false;
             int sync_count = 0;
-            //int pos = 0;
             if (pos < 0) pos = 0; else pos *= 8;
             int cl = 5;
-            //BitArray comp = new BitArray(40);
             sector_found = Compare();
             if (!sector_found)
             {
@@ -430,52 +424,6 @@ namespace V_Max_Tool
             }
         }
 
-        (bool, int) Find_Sector_Position(byte[] data, int sector)
-        {
-            BitArray source = new BitArray(Flip_Endian(data));
-            bool sector_found; // = false;
-            bool sync = false;
-            int sync_count = 0;
-            int pos = 0;
-            int cl = 5;
-            //BitArray comp = new BitArray(40);
-            sector_found = Compare();
-            if (!sector_found)
-            {
-                while (pos < source.Length - 32)
-                {
-                    if (source[pos])
-                    {
-                        sync_count++;
-                        if (sync_count == 7) sync = true;
-                    }
-                    if (!source[pos])
-                    {
-                        if (sync) sector_found = Compare();
-                        if (sector_found) return (true, (pos - 8) / 8);
-                        sync = false;
-                        sync_count = 0;
-                    }
-                    pos++;
-                }
-            }
-            return (false, 0);
-
-            bool Compare()
-            {
-                byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
-                if (d[0] == 0x52 && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
-                {
-                    byte[] g = Decode_CBM_GCR(d);
-                    if (g[3] > 0 && g[3] < 43)
-                    {
-                        if ((g[2] == sector)) { return true; }
-                        //pos += (320 * 8);
-                    }
-                }
-                return false;
-            }
-        }
 
         void Get_Disk_Directory()
         {
@@ -507,7 +455,7 @@ namespace V_Max_Tool
                             if ((next_sector[0] - 1) * 2 >= 0) halftrack = (Convert.ToInt32(next_sector[0]) - 1) * 2;
                         }
                         wrt.Write(temp);
-                        if (BytesMatch(last_sector, next_sector)) break;
+                        if (Match(last_sector, next_sector)) break;
                     }
                     else { ret = "Error processing directory!"; break; }
                 }

@@ -112,6 +112,7 @@
     <None Include="Properties\v26446n.bin" />
     <None Include="Properties\v2644En.bin" />
     <None Include="Properties\v2cbmla.bin" />
+    <None Include="Properties\v2h.bin" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
