@@ -151,7 +151,7 @@ namespace V_Max_Tool
                     {
                         if (!list.Any(s => s == h))
                         {
-                            dec_hdr = Decode_GCR(Flip_Endian(Bit2Byte(source, pos, 80)));
+                            dec_hdr = Decode_CBM_GCR(Flip_Endian(Bit2Byte(source, pos, 80)));
                             decoded_header = Hex_Val(dec_hdr);
                             int chksum = 0;
                             string hdr_c = csm[0];
@@ -185,7 +185,7 @@ namespace V_Max_Tool
                                 string sz = "";
                                 int a = Array.FindIndex(valid_cbm, se => se == h);
                                 if (a == 0) sz = "*";
-                                dec_hdr = Decode_GCR(Flip_Endian(Bit2Byte(source, data_start, s_hed)));
+                                dec_hdr = Decode_CBM_GCR(Flip_Endian(Bit2Byte(source, data_start, s_hed)));
                                 decoded_header = Hex_Val(dec_hdr);
                                 int chksum = 0;
                                 string hdr_c = csm[0];
@@ -356,7 +356,7 @@ namespace V_Max_Tool
             {
                 sec = Flip_Endian(Bit2Byte(source, pos, sector_data.Count));
                 if (!decode) return (sec, false);
-                byte[] d_sec = Decode_GCR(sec);
+                byte[] d_sec = Decode_CBM_GCR(sec);
                 /// Calculate block checksum
                 int cksm = 0;
                 for (int i = 1; i < 257; i++) cksm ^= d_sec[i];
@@ -370,7 +370,7 @@ namespace V_Max_Tool
                 byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
                 if (d[0] == 0x52 && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
                 {
-                    byte[] g = Decode_GCR(d);
+                    byte[] g = Decode_CBM_GCR(d);
                     if (g[3] > 0 && g[3] < 43)
                     {
                         if ((g[2] == sector)) { sector_found = true; return true; }
@@ -381,13 +381,14 @@ namespace V_Max_Tool
             }
         }
 
-        bool Find_Sector(byte[] data, int sector)
+        (bool, int) Find_Sector(byte[] data, int sector, int pos = -1)
         {
             BitArray source = new BitArray(Flip_Endian(data));
             bool sector_found; // = false;
             bool sync = false;
             int sync_count = 0;
-            int pos = 0;
+            //int pos = 0;
+            if (pos < 0) pos = 0; else pos *= 8;
             int cl = 5;
             //BitArray comp = new BitArray(40);
             sector_found = Compare();
@@ -410,18 +411,66 @@ namespace V_Max_Tool
                     pos++;
                 }
             }
-            return sector_found;
+            if (sector_found) return (true, pos / 8);
+            else return (false, -1);
 
             bool Compare()
             {
                 byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
                 if (d[0] == 0x52 && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
                 {
-                    byte[] g = Decode_GCR(d);
+                    byte[] g = Decode_CBM_GCR(d);
                     if (g[3] > 0 && g[3] < 43)
                     {
                         if ((g[2] == sector)) { return true; }
                         pos += (320 * 8);
+                    }
+                }
+                return false;
+            }
+        }
+
+        (bool, int) Find_Sector_Position(byte[] data, int sector)
+        {
+            BitArray source = new BitArray(Flip_Endian(data));
+            bool sector_found; // = false;
+            bool sync = false;
+            int sync_count = 0;
+            int pos = 0;
+            int cl = 5;
+            //BitArray comp = new BitArray(40);
+            sector_found = Compare();
+            if (!sector_found)
+            {
+                while (pos < source.Length - 32)
+                {
+                    if (source[pos])
+                    {
+                        sync_count++;
+                        if (sync_count == 7) sync = true;
+                    }
+                    if (!source[pos])
+                    {
+                        if (sync) sector_found = Compare();
+                        if (sector_found) return (true, (pos - 8) / 8);
+                        sync = false;
+                        sync_count = 0;
+                    }
+                    pos++;
+                }
+            }
+            return (false, 0);
+
+            bool Compare()
+            {
+                byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
+                if (d[0] == 0x52 && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
+                {
+                    byte[] g = Decode_CBM_GCR(d);
+                    if (g[3] > 0 && g[3] < 43)
+                    {
+                        if ((g[2] == sector)) { return true; }
+                        //pos += (320 * 8);
                     }
                 }
                 return false;
@@ -561,9 +610,9 @@ namespace V_Max_Tool
             byte[] id = Encoding.ASCII.GetBytes("00 2A");
             byte[] Disk_ID = new byte[] { id[1], id[0], 0x0f, 0x0f };
             byte[] sync = new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff };
-            byte[] dir_s0 = Encode_GCR(T18S0());
-            byte[] dir_s1 = Encode_GCR(T18S1());
-            byte[] blank = Encode_GCR(Empty_Sector());
+            byte[] dir_s0 = Encode_CBM_GCR(T18S0());
+            byte[] dir_s1 = Encode_CBM_GCR(T18S1());
+            byte[] blank = Encode_CBM_GCR(Empty_Sector());
             int ht;
             for (int i = 0; i < 40; i++)
             {

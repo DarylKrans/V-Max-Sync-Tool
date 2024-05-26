@@ -205,9 +205,9 @@
             this.f_load.AutoSize = true;
             this.f_load.Location = new System.Drawing.Point(8, 62);
             this.f_load.Name = "f_load";
-            this.f_load.Size = new System.Drawing.Size(206, 29);
+            this.f_load.Size = new System.Drawing.Size(146, 29);
             this.f_load.TabIndex = 12;
-            this.f_load.Text = "Fix Loader Track";
+            this.f_load.Text = "Fix Loader";
             this.f_load.UseVisualStyleBackColor = true;
             this.f_load.CheckedChanged += new System.EventHandler(this.F_load_CheckedChanged);
             // 
@@ -283,7 +283,7 @@
             this.Tabs.Location = new System.Drawing.Point(12, 10);
             this.Tabs.Name = "Tabs";
             this.Tabs.SelectedIndex = 0;
-            this.Tabs.Size = new System.Drawing.Size(916, 224);
+            this.Tabs.Size = new System.Drawing.Size(918, 226);
             this.Tabs.TabIndex = 35;
             // 
             // Main
@@ -301,7 +301,7 @@
             this.Main.Location = new System.Drawing.Point(4, 37);
             this.Main.Name = "Main";
             this.Main.Padding = new System.Windows.Forms.Padding(3);
-            this.Main.Size = new System.Drawing.Size(908, 183);
+            this.Main.Size = new System.Drawing.Size(910, 185);
             this.Main.TabIndex = 0;
             this.Main.Text = "File Info";
             // 
@@ -465,7 +465,7 @@
             this.Adv_V2_Opts.Location = new System.Drawing.Point(4, 37);
             this.Adv_V2_Opts.Name = "Adv_V2_Opts";
             this.Adv_V2_Opts.Padding = new System.Windows.Forms.Padding(3);
-            this.Adv_V2_Opts.Size = new System.Drawing.Size(908, 183);
+            this.Adv_V2_Opts.Size = new System.Drawing.Size(909, 185);
             this.Adv_V2_Opts.TabIndex = 1;
             this.Adv_V2_Opts.Text = "V-Max v2 Advanced";
             // 
@@ -523,7 +523,7 @@
             this.Adv_V3_Opts.Location = new System.Drawing.Point(4, 37);
             this.Adv_V3_Opts.Name = "Adv_V3_Opts";
             this.Adv_V3_Opts.Padding = new System.Windows.Forms.Padding(3);
-            this.Adv_V3_Opts.Size = new System.Drawing.Size(908, 183);
+            this.Adv_V3_Opts.Size = new System.Drawing.Size(909, 185);
             this.Adv_V3_Opts.TabIndex = 2;
             this.Adv_V3_Opts.Text = "V-Max v3 Advanced";
             // 
@@ -622,7 +622,7 @@
             this.Vpl_adv.Location = new System.Drawing.Point(4, 37);
             this.Vpl_adv.Name = "Vpl_adv";
             this.Vpl_adv.Padding = new System.Windows.Forms.Padding(3);
-            this.Vpl_adv.Size = new System.Drawing.Size(908, 183);
+            this.Vpl_adv.Size = new System.Drawing.Size(909, 185);
             this.Vpl_adv.TabIndex = 3;
             this.Vpl_adv.Text = "Vorpal Advanced";
             // 
@@ -1589,7 +1589,7 @@
             this.Import_File.Controls.Add(this.label5);
             this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(23, 55);
+            this.Import_File.Location = new System.Drawing.Point(19, 50);
             this.Import_File.Name = "Import_File";
             this.Import_File.Size = new System.Drawing.Size(863, 108);
             this.Import_File.TabIndex = 59;

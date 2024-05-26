@@ -9,9 +9,9 @@ namespace V_Max_Tool
     public partial class Form1 : Form
     {
         // V-Max v3 sync and header variables for "Rebuild tracks" options
-        private readonly byte[] v3_sync_marker = { 0x5b, 0xff };  // change the sync marker placed before sector headers (0x57, 0xff known working)
+        private readonly byte[] v3_sector_sync = { 0x5b, 0xff };  // change the sync marker placed before sector headers (0x57, 0xff known working)
         private readonly int v3_min_header = 3;             // adjust the minimum length of the sector header (0x49) bytes
-        private readonly int v3_max_header = 12;            // adjust the maximum length of the sector header (0x49) bytes
+        private readonly int v3_max_header = 7; //12;            // adjust the maximum length of the sector header (0x49) bytes
         private readonly byte[] vm3_pos_sync = { 0x57, 0x5b, 0x5f, 0xff };
         private readonly string v3 = "49-49-49"; // V-MAX v3 sector header
 
@@ -70,7 +70,10 @@ namespace V_Max_Tool
                     }
                 }
             }
+            bool e = busy;
+            busy = true;
             f_load.Checked = V3_Auto_Adj.Checked;
+            busy = e;
             out_track.Items.Clear();
             out_size.Items.Clear();
             out_dif.Items.Clear();
@@ -80,7 +83,7 @@ namespace V_Max_Tool
             Process_Nib_Data(true, p, v); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
         }
 
-        byte[] Rebuild_V3(byte[] data, int trk = -1)
+        byte[] Rebuild_V3(byte[] data, int gap_sector, int trk = -1)
         {
             if (trk < 0) trk = 0;
             int d = Get_Density(data.Length);
@@ -94,8 +97,8 @@ namespace V_Max_Tool
             byte[] sb = { 0x49 }; // start byte of header
             byte[] eb = { 0xee }; // end byte of header
             byte filler = 0xff;
-            int sync = v3_sync_marker.Length;
-            int gap_len = 115;
+            int sync = v3_sector_sync.Length;
+            int gap_len = 50;
             byte gap = 0x55;
             List<string> headers = new List<string>();
             List<string> h2 = new List<string>();
@@ -103,7 +106,24 @@ namespace V_Max_Tool
             List<string> hdr_ID = new List<string>();
             List<int> s_end = new List<int>();
             byte[] comp = new byte[3];
-            var a = Find_Data($"{Hex_Val(header)}-EE", data, 4);
+            var tid = gap_sector;
+            byte[] track_ID = new byte[0];
+            // Trying to find if a track contains Track-ID marker (helps the 1541/71 find which track it's on)
+            while (tid < data.Length - 11)
+            {
+                if ((data[tid] == 0xff || data[tid] == 0xf7) && data[tid + 1] == 0x52)
+                {
+                    track_ID = new byte[11];
+                    Array.Copy(data, tid, track_ID, 0, track_ID.Length);
+                    //Invoke(new Action(() => Text = $"tid - gapsec {tid - gap_sector} tid {tid} gapsec {gap_sector}"));
+                    break;
+                }
+                tid++;
+
+            }
+            var a = 0;
+            bool fnd = false;
+            (fnd, a) = Find_Data($"{Hex_Val(header)}-EE", data, 4);
             while (data[a] == 0x49)
             {
                 a -= 1;
@@ -164,29 +184,27 @@ namespace V_Max_Tool
                 write.Close();
                 tlen += sec_data[i].Length + sync;
             }
-            if ((tlen + gap_len + (header_len * sectors)) > density[d])
+            if ((tlen + gap_len + track_ID.Length + (header_len * sectors)) > density[d])
             {
-                while ((tlen + gap_len + (header_len * sectors)) > density[d])
+                while ((tlen + gap_len + track_ID.Length + (header_len * sectors)) > density[d])
                 {
                     if (header_len == v3_min_header) break;
                     else header_len -= 1;
                 }
             }
-            if ((tlen + gap_len + (header_len * sectors)) < density[d])
+            if ((tlen + gap_len + track_ID.Length + (header_len * sectors)) < density[d])
             {
-                while ((tlen + gap_len + (header_len * sectors)) < density[d])
+                while ((tlen + gap_len + track_ID.Length + (header_len * sectors)) < density[d])
                 {
                     if (header_len == v3_max_header) break;
                     else header_len += 1;
                 }
             }
-            int track_len = tlen + (header_len * sectors);
-            gap_len = density[d] - track_len;
+            int track_len = tlen + track_ID.Length + (header_len * sectors);
             if (sectors < 16)
             {
                 byte[] p_fill = { 0x49, 0xff, 0xaa, 0x55 };
-                fill = (gap_len - 115);
-                gap_len = 115;
+                fill = (density[d] - track_len);
                 int start = 0;
                 int longest = 0;
                 int count = 0;
@@ -203,48 +221,29 @@ namespace V_Max_Tool
                 }
             }
             int index = hdr_ID.FindIndex(x => x.StartsWith("F3"));
-            // Trying to find if a track contains Track-ID marker (helps the 1541/71 find which track it's on)
-            byte[] track_ID = new byte[10];
-            var tin = index - 1;
-            if (tin < 0) tin = sectors - 1;
-            var tid = Find_Data(h2[tin], data, 3);
-            tid += sec_data[tin].Length + oh_len;
-            bool tdd = false;
-            while (tid < data.Length - 10)
-            {
-                Array.Copy(data, tid, track_ID, 0, track_ID.Length);
-                if (track_ID[0] == 0xff && track_ID[1] == 0x52)
-                {
-                    tdd = true;
-                    gap_len -= track_ID.Length;
-                    if (gap_len < 0) gap_len = 0;
-                    break;
-                }
-                tid++;
-            }
-            if (!tdd) track_ID = new byte[0];
+
             // Start rebuilding the track
             var buff = new MemoryStream();
             var wrt = new BinaryWriter(buff);
             for (int i = 0; i < sectors; i++)
             {
-                wrt.Write(v3_sync_marker);
+                wrt.Write(v3_sector_sync);
                 for (int j = 0; j < header_len; j++) wrt.Write(sb[0]);
                 try { wrt.Write(sec_data[index]); } catch { }
                 index++;
                 if (index == sectors) index = 0;
             }
+            if (track_ID.Length > 0) wrt.Write(track_ID);
             if (fill > 0)
             {
                 for (int i = 0; i < fill; i++) wrt.Write((byte)filler);
             }
-            if (track_ID.Length > 0) wrt.Write(track_ID);
-            for (int q = 0; q < gap_len; q++) wrt.Write((byte)gap);
+            for (int q = (int)buff.Position; q < density[d]; q++) wrt.Write((byte)gap);
 
             return buff.ToArray();
         }
 
-        (string[], int, int, int, int, int, int) Get_vmv3_track_length(byte[] data, int trk)
+        (string[], int, int, int, int, int, int, int) Get_vmv3_track_length(byte[] data, int trk)
         {
             string msg = "";
             int data_start = 0;
@@ -252,6 +251,8 @@ namespace V_Max_Tool
             int sector_zero = 0;
             int header_total = 0;
             int header_avg = 0;
+            int gap_sector = 0;
+            int last_sector = 0;
             bool start_found = false;
             bool end_found = false;
             bool s_zero = false;
@@ -278,8 +279,16 @@ namespace V_Max_Tool
                         if (i + head.Length < data.Length) Array.Copy(data, i, head, 0, head.Length);
                         if (!ss.Any(b => b == Hex_Val(head)))
                         {
+                            //last_sector = i;
                             if (head[2] == sec_0_ID) { sector_zero = i - a; s_zero = true; }
-                            if (!start_found) { data_start = i - a; start_found = true; }
+                            if (!start_found)
+                            {
+                                data_start = i - a;
+                                start_found = true;
+                                if (last_sector != 0) gap_sector = last_sector;
+                            }
+                            if (gap_sector == 0) gap_sector = last_sector;
+                            last_sector = i;
                             ss.Add(Hex_Val(head));
                             hb.Add(head[2]);
                             spos.Add(i - a);
@@ -374,7 +383,7 @@ namespace V_Max_Tool
             {
                 build_list();
             }
-            return (s.ToArray(), data_start, data_end, sector_zero, (data_end - data_start), ss.Count, header_avg);
+            return (s.ToArray(), data_start, data_end, sector_zero, (data_end - data_start), ss.Count, header_avg, gap_sector);
         }
 
         (byte[], int, int) Adjust_Vmax_V3_Sync(byte[] data, int data_start, int data_end, int sector_zero)
@@ -407,7 +416,7 @@ namespace V_Max_Tool
                             while (spos + (a + b) < tdata.Length && tdata[spos + (a + b)] == hd[0]) b++;
                             spos += (a + b);
                             if (b < 15 && V3_Custom.Checked) b = cust;
-                            write.Write(v3_sync_marker);
+                            write.Write(v3_sector_sync);
                             for (int i = 0; i < b; i++) write.Write((byte)hd[0]);
                         }
                     }

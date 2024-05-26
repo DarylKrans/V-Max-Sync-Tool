@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -123,11 +124,28 @@ namespace V_Max_Tool
             return temp;
         }
 
+        byte[] Pad_Loader(byte[] data, byte padding, int Density)
+        {
+            MemoryStream buffer = new MemoryStream();
+            BinaryWriter write = new BinaryWriter(buffer);
+            var pad_len = (density[Density] - data.Length) / 2;
+            pad();
+            write.Write(data);
+            pad();
+            return buffer.ToArray();
+
+            void pad()
+            {
+                for (int i = 0; i < pad_len; i++) write.Write((byte)padding);
+            }
+        }
+
         /// ------------------------ Add Sync to Loader Track --------------------------------------------------
 
-        void Fix_Loader_Option()
+        void Fix_Loader_Option(bool draw)
         {
             int i = 100;
+            var trk_num = 0;
             if (f_load.Checked)
             {
                 var tt = 0;
@@ -136,26 +154,33 @@ namespace V_Max_Tool
                     i = Array.FindIndex(NDS.cbm, s => s == 4);
                     if (i < 100 && i > -1)
                     {
+                        if (tracks > 42) trk_num = (i / 2) + 1; else trk_num = i;
                         Original.G = new byte[NDG.Track_Data[i].Length];
                         Original.A = new byte[NDA.Track_Data[i].Length];
                         Array.Copy(NDG.Track_Data[i], 0, Original.G, 0, NDG.Track_Data[i].Length);
                         Array.Copy(NDA.Track_Data[i], 0, Original.A, 0, NDA.Track_Data[i].Length);
+                        var d = Get_Density(NDG.Track_Data[i].Length);
 
                         if (NDS.cbm.Any(x => x == 3))
                         {
-                            var d = Get_Density(NDG.Track_Data[i].Length);
                             if (NDG.Track_Data[i].Length > density[d]) Shrink_Loader(i);
                             byte[] temp = Rotate_Loader(NDG.Track_Data[i]);
                             NDG.L_Rot = true;
                             Set_Dest_Arrays(Fix_Loader(temp), i);
+                            FL();
                         }
-                        if (!(NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3))) Set_Dest_Arrays(v2ldrcbm, i); // Replaces the loader track with V-Max CBM style loader from DOTC
+                        if (!(NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)))
+                        {
+                            Set_Dest_Arrays(Pad_Loader(v2ldrcbm, loader_padding, density_map[trk_num]), i);
+                            FL();
+                        }
                         if (NDS.cbm.Any(x => x == 2))
                         {
                             for (int x = 0; i < tracks; x++) if (NDS.v2info[x]?.Length > 0) { tt = x; break; }
-                            if (Hex(NDS.v2info[tt], 0, 2) == "4E-64") Set_Dest_Arrays(v24e64pal, i);
-                            if (Hex(NDS.v2info[tt], 0, 2) == "64-46") Set_Dest_Arrays(v26446ntsc, i);
-                            if (Hex(NDS.v2info[tt], 0, 2) == "64-4E") Set_Dest_Arrays(v2644entsc, i);
+                            if (Hex(NDS.v2info[tt], 0, 2) == "4E-64") Set_Dest_Arrays(Pad_Loader(v24e64pal, loader_padding, density_map[trk_num]), i);
+                            if (Hex(NDS.v2info[tt], 0, 2) == "64-46") Set_Dest_Arrays(Pad_Loader(v26446ntsc, loader_padding, density_map[trk_num]), i);
+                            if (Hex(NDS.v2info[tt], 0, 2) == "64-4E") Set_Dest_Arrays(Pad_Loader(v2644entsc, loader_padding, density_map[trk_num]), i);
+                            FL();
                         }
                     }
                     loader_fixed = true;
@@ -164,12 +189,12 @@ namespace V_Max_Tool
             }
             if (!f_load.Checked)
             {
-                f_load.Text = "Fix Loader Sync";
+                f_load.Text = "Fix Loader";
                 if (tracks > 0) i = Array.FindIndex(NDS.cbm, s => s == 4);
                 if (i > -1 && i < 100)
                 {
                     if (Original.A.Length > 0) { NDA.Track_Data[i] = Original.A; }
-                    if (Original.G.Length > 0) { NDG.Track_Data[i] = Original.G; f_load.Text += " ( Restored )"; }
+                    if (Original.G.Length > 0) { NDG.Track_Data[i] = Original.G; f_load.Text += " (Restored)"; }
                     NDG.L_Rot = false;
                 }
                 loader_fixed = false;
@@ -177,10 +202,15 @@ namespace V_Max_Tool
             }
             displayed = false;
             drawn = false;
-            if (!busy && !batch)
+            if (draw)
             {
                 Check_Before_Draw(false);
                 Data_Viewer();
+            }
+
+            void FL()
+            {
+                f_load.Text = "Fix Loader (Fixed)";
             }
         }
 
@@ -203,7 +233,7 @@ namespace V_Max_Tool
                 if (BytesMatch(comp, v4)) { Patch_V2(i - 3); f = true; }
                 if (f) break;
             }
-            if (f) f_load.Text = "Fix Loader Sync ( Fixed )";
+            if (f) f_load.Text = "Fix Loader (Fixed)";
             return tdata;
 
             void Patch_V2(int pos)

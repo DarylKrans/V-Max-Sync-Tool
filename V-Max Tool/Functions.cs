@@ -153,6 +153,7 @@ namespace V_Max_Tool
             NDS.Loader = new byte[0];
             NDS.Total_Sync = new int[len];
             NDS.Disk_ID = new byte[len][];
+            NDS.Gap_Sector = new int[len];
             // NDA is the destination or output array
             NDA.Track_Data = new byte[len][];
             NDA.Sector_Zero = new int[len];
@@ -405,11 +406,6 @@ namespace V_Max_Tool
             return b;
         }
 
-        //public static String Byte_to_Binary(Byte[] data)  // (use this for .NET 4.x build) Note: only 100ms faster
-        //{
-        //    return string.Join(" ", data.Select(byt => Convert.ToString(byt, 2).PadLeft(8, '0')));
-        //}
-
         void Pad_Bits(int position, int count, BitArray bitarray)
         {
             bool flip = !bitarray[position];
@@ -475,17 +471,37 @@ namespace V_Max_Tool
             return (false);
         }
 
-        int Find_Data(string find, byte[] data, int clen)
+        (bool, int) Find_Data(string find, byte[] data, int clen, int start_pos = -1)
         {
-            int i;
+            //int i;
+            if (start_pos < 0) start_pos = 0;
             byte[] comp = new byte[clen];
-            for (i = 0; i < data.Length - find.Length; i++)
+            for (int i = start_pos; i < data.Length - find.Length; i++)
             {
                 Array.Copy(data, i, comp, 0, comp.Length);
-                if (Hex_Val(comp) == find) break;
+                //if (Hex_Val(comp) == find) break;
+                if (Hex_Val(comp) == find) return (true, i);
             }
-            return i;
+            return (false, 0); //i;
         }
+
+        //public static String Byte_to_Binary(Byte[] data)  // (use this for .NET 4.x build) Note: only 100ms faster
+        //{
+        //    return string.Join(" ", data.Select(byt => Convert.ToString(byt, 2).PadLeft(8, '0')));
+        //}
+
+        //byte[] Bit_Rotate_Left(byte[] data, int s)
+        //{
+        //    BitArray temp = new BitArray(Flip_Endian(data));
+        //    BitArray tmp = new BitArray(temp.Length);
+        //    for (int i = 0; i < temp.Length; i++)
+        //    {
+        //        tmp[i] = temp[s++];
+        //        if (s == temp.Length) s = 0;
+        //    }
+        //    tmp.CopyTo(data, 0);
+        //    return Flip_Endian(data);
+        //}
 
         //int Find_bytes(byte[] find, byte[] data)
         //{
@@ -504,35 +520,100 @@ namespace V_Max_Tool
             return (Hex_Val(source) == Hex_Val(target));
         }
 
+        byte[] Shrink_Track(byte[] data, int trk_density)
+        {
+            byte[] temp;
+            if (data.Length > density[trk_density])
+            {
+                int start = 0;
+                int longest = 0;
+                int count = 0;
+                for (int i = 1; i < data.Length; i++)
+                {
+                    if (data[i] != data[i - 1]) count = 0;
+                    count++;
+                    if (count > longest)
+                    {
+                        start = (i + 1) - count;
+                        longest = count;
+                    }
+                }
+                temp = new byte[density[trk_density]];
+                int shrink = data.Length - temp.Length;
+                try
+                {
+                    Array.Copy(data, 0, temp, 0, start);
+                    Array.Copy(data, start + shrink, temp, start, temp.Length - start);
+                }
+                catch { return data; }
+            }
+            else temp = data;
+            return temp;
+        }
+
         byte[] Lengthen_Track(byte[] data) // For track 18 on Vorpal images
         {
-            //Invoke(new Action(() => this.Text = data.Length.ToString()));
             if (data.Length > 0)
             {
                 byte[] temp = new byte[density[1]];
-                int c = 0;
-                int l = 0;
-                int p = 0;
+                int current = 0;
+                int longest = 0;
+                int pos = 0;
                 byte fill = 0x55;
                 int a = temp.Length - data.Length;
                 for (int i = 0; i < data.Length; i++)
                 {
-                    if (data[i] == 0x55 || data[i] == 0xaa) c++;
+                    if (data[i] == 0x55 || data[i] == 0xaa) current++;
                     else
                     {
-                        if (c > l)
+                        if (current > longest)
                         {
-                            p = i - 1;
-                            l = c;
+                            pos = i - 1;
+                            longest = current;
                             fill = data[i - 1];
                         }
-                        c = 0;
+                        current = 0;
                     }
                 }
-                Array.Copy(data, 0, temp, 0, p);
-                for (int i = p; i < p + a; i++) temp[i] = fill;
-                Array.Copy(data, p, temp, p + a, data.Length - p);
-                File.WriteAllBytes($@"C:\test\fff", temp);
+                Array.Copy(data, 0, temp, 0, pos);
+                for (int i = pos; i < pos + a; i++) temp[i] = fill;
+                Array.Copy(data, pos, temp, pos + a, data.Length - pos);
+                //File.WriteAllBytes($@"C:\test\fff", temp);
+                return temp;
+            }
+            else return data;
+        }
+
+        byte[] Lengthen_Loader(byte[] data, int Density)
+        {
+            if (data.Length > 0)
+            {
+                byte[] temp = new byte[density[Density]];
+                int current = 0;
+                int longest = 0;
+                int pos = 0;
+                byte fill = 0x00;
+                byte cur = 0x00;
+                int a = temp.Length - data.Length;
+                for (int i = 0; i < data.Length; i++)
+                {
+                    if (data[i] == cur) current++;
+                    else
+                    {
+                        cur = data[i];
+                        if (current > longest)
+                        {
+                            pos = i - 1;
+                            longest = current;
+                            fill = data[i - 1];
+                        }
+                        current = 0;
+                    }
+                }
+                Array.Copy(data, 0, temp, 0, pos);
+                for (int i = pos; i < pos + a; i++) temp[i] = fill;
+                Array.Copy(data, pos, temp, pos + a, data.Length - pos);
+                //File.WriteAllBytes($@"C:\test\fff", temp);
                 return temp;
             }
             else return data;
@@ -559,7 +640,7 @@ namespace V_Max_Tool
             catch { }
         }
 
-        byte[] Decode_GCR(byte[] gcr)
+        byte[] Decode_CBM_GCR(byte[] gcr)
         {
             byte hnib;
             byte lnib;
@@ -589,7 +670,7 @@ namespace V_Max_Tool
             return plain;
         }
 
-        byte[] Encode_GCR(byte[] plain)
+        byte[] Encode_CBM_GCR(byte[] plain)
         {
             int l = plain.Length / 4;
             byte[] gcr = new byte[l * 5];
@@ -616,7 +697,7 @@ namespace V_Max_Tool
             return gcr;
         }
 
-        byte[] Decode_VPL(byte[] gcr)
+        byte[] Decode_Vorpal_GCR(byte[] gcr)
         {
             byte hnib;
             byte lnib;
@@ -654,7 +735,7 @@ namespace V_Max_Tool
             header[3] = (byte)track;
             Array.Copy(ID, 0, header, 4, 4);
             for (int i = 2; i < 6; i++) header[1] ^= header[i];
-            return Encode_GCR(header);
+            return Encode_CBM_GCR(header);
         }
 
         void Shrink_Short_Sector(int trk)
@@ -700,37 +781,6 @@ namespace V_Max_Tool
             Set_Dest_Arrays(temp, trk);
         }
 
-        byte[] Shrink_Track(byte[] data, int trk_density)
-        {
-            byte[] temp;
-            if (data.Length > density[trk_density])
-            {
-                int start = 0;
-                int longest = 0;
-                int count = 0;
-                for (int i = 1; i < data.Length; i++)
-                {
-                    if (data[i] != data[i - 1]) count = 0;
-                    count++;
-                    if (count > longest)
-                    {
-                        start = (i + 1) - count;
-                        longest = count;
-                    }
-                }
-                temp = new byte[density[trk_density]];
-                int shrink = data.Length - temp.Length;
-                try
-                {
-                    Array.Copy(data, 0, temp, 0, start);
-                    Array.Copy(data, start + shrink, temp, start, temp.Length - start);
-                }
-                catch { return data; }
-            }
-            else temp = data;
-            return temp;
-        }
-
         void Check_Before_Draw(bool dontDrawFlat)
         {
             if (Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"])
@@ -768,18 +818,9 @@ namespace V_Max_Tool
             Other_opts.Visible = false;
             busy = true;
             this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LinkLabel1_LinkClicked);
-            bool flip = false;
-            for (int i = 0; i < leadIn_std.Length; i++)
-            {
-                if (i < 7) leadIn_std[i] = !flip;
-                leadIn_alt[i] = flip;
-                flip = !flip;
-            }
-            leadIn_std[9] = true;
             Tabs.Controls.Remove(Import_File);
             this.Controls.Add(Import_File);
             Import_File.BringToFront();
-            Set_Boxes();
             panel1.Controls.Add(outbox);
             panel1.Controls.Add(inbox);
             Height = PreferredSize.Height;
@@ -807,13 +848,8 @@ namespace V_Max_Tool
             Track_Info.HorizontalScrollbar = true;
             Adj_cbm.Visible = false;
             Tabs.Visible = true;
-            string[] o = { "G64", "NIB", "NIB & G64" };
-            string[] d = { "None", "Tracks", "Sectors" };
-            string[] pt = { "Default", "0x55", "0xAA" };
-            Lead_ptn.DataSource = pt;
-            Lead_ptn.SelectedIndex = 0;
             Data_Box.DetectUrls = false;
-            Data_Sep.DataSource = d;
+            Data_Sep.DataSource = new string[] { "None", "Tracks", "Sectors" }; //d;
             Data_Sep.SelectedIndex = 1;
             VS_hex.Checked = true;
             T_jump.Visible = Jump.Visible = false;
@@ -829,25 +865,45 @@ namespace V_Max_Tool
             DragEnter += new DragEventHandler(Drag_Enter);
             DragDrop += new DragEventHandler(Drag_Drop);
             f_load.Visible = false;
-            Tabs.Controls.Remove(Adv_V2_Opts);
-            Tabs.Controls.Remove(Adv_V3_Opts);
-            Tabs.Controls.Remove(Vpl_adv);
-            V3_hlen.Enabled = false;
-            V2_hlen.Enabled = false;
+            /// ------------------ Vorpal Config --------------
             Lead_In.Enabled = VPL_lead.Checked;
-            Lead_ptn.Enabled = VPL_rb.Checked;
             Lead_In.Value = 50;
-            v2exp.Text = v3exp.Text = $"\u2190 Experimental";
-            v2adv.Text = v3adv.Text = $"\u2193        Advanced users ONLY!        \u2193";
-            vm2_ver[0] = new string[] { "A5-A5", "A4-A5", "A5-A7", "A5-A6", "A9-AD", "AC-A9", "AD-AB", "A9-AE", "A5-AD", "AC-A5", "AD-A7", "A5-AE", "A5-A9",
-            "A4-A9", "A5-AB", "A5-AA", "A5-B5", "B4-A5", "A5-B7", "A5-B6", "A9-BD", "BC-A9" };
-            vm2_ver[1] = new string[] { "A5-A5", "A4-A5", "A5-A7", "A5-A6", "A9-AD", "AC-A9", "A5-A3", "A9-AE", "A5-AD", "AC-A5", "A9-A3", "A5-AE", "A5-A9",
-            "A4-A9", "A5-AB", "A5-AA", "A5-B5", "B4-A5", "A5-B7", "A5-B6", "A9-BD", "BC-A9" };
+            leadIn_std[9] = true;
+            bool flip = false;
+            for (int i = 0; i < leadIn_std.Length; i++)
+            {
+                if (i < 7) leadIn_std[i] = !flip;
+                leadIn_alt[i] = flip;
+                flip = !flip;
+            }
+            Lead_ptn.DataSource = new string[] { "Default", "0x55", "0xAA" };//pt;
+            Lead_ptn.SelectedIndex = 0;
+            Lead_ptn.Enabled = VPL_rb.Checked;
+            Tabs.Controls.Remove(Vpl_adv);
             VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = debug;
             VD0.Value = vpl_density[0];
             VD1.Value = vpl_density[1];
             VD2.Value = vpl_density[2];
             VD3.Value = vpl_density[3];
+            /// ----------------- V-Max v3 Config -------------
+            Tabs.Controls.Remove(Adv_V3_Opts);
+            V3_hlen.Enabled = false;
+            /// ----------------- V-Max v2 Config -------------
+            Tabs.Controls.Remove(Adv_V2_Opts);
+            V2_hlen.Enabled = false;
+            v2exp.Text = v3exp.Text = $"\u2190 Experimental";
+            v2adv.Text = v3adv.Text = $"\u2193        Advanced users ONLY!        \u2193";
+            vm2_ver[0] = new string[] { "A5-A5", "A4-A5", "A5-A7", "A5-A6", "A9-AD", "AC-A9", "AD-AB", "A9-AE", "A5-AD", "AC-A5", "AD-A7", "A5-AE", "A5-A9",
+            "A4-A9", "A5-AB", "A5-AA", "A5-B5", "B4-A5", "A5-B7", "A5-B6", "A9-BD", "BC-A9" };
+            vm2_ver[1] = new string[vm2_ver[0].Length];
+            Array.Copy(vm2_ver[0], 0, vm2_ver[1], 0, vm2_ver[0].Length);
+            vm2_ver[1][6] = "A5-A3"; vm2_ver[1][10] = "A9-A3";
+            /// Loads V-Max Loader track replacements into byte[] arrays
+            v2ldrcbm = Decompress(XOR(Resources.v2cbmla, 0xcb)); // V-Max CBM sectors (DotC, Into the Eagles Nest, Paperboy, etc..)
+            v24e64pal = Decompress(XOR(Resources.v24e64p, 0x64)); // V-Max Custom sectors (PAL Loader)
+            v26446ntsc = Decompress(XOR(Resources.v26446n, 0x46)); // V-Max Custom sectors (NTSC Loader) Older version, headers have weak bits and may be incompatible with some 1541's
+            v2644entsc = Decompress(XOR(Resources.v2644En, 0x4e)); // V-Max Custom sectors (NTSC Loader) Newer version, headers are compatible with all 1541 versions.
+            /// these loaders are guaranteed to work and the loader code has not been modified from original. (these are not "cracked" loaders)
             Img_Q.DataSource = Img_Quality;
             Img_Q.SelectedIndex = 2;
             Width = PreferredSize.Width;
@@ -858,31 +914,24 @@ namespace V_Max_Tool
             Import_File.Visible = false;
             Batch_Box.Visible = false;
             for (int i = 0; i < 8000; i++) { def_bg_text += "10"; }
-            Draw_Init_Img(def_bg_text);
             M_render.Enabled = false;
             Adv_ctrl.Enabled = false;
             VBS_info.Visible = Reg_info.Visible = false;
             Dir_screen.BackColor = C64_screen;
             Dir_screen.ForeColor = c64_text;
             Dir_screen.ReadOnly = true;
-            Default_Dir_Screen();
             Trk_Analysis.Checked = true;
             Dir_screen.Visible = Disk_Dir.Checked;
-            Check_CPU_Speed();
             Tabs.Controls.Remove(Import_File);
             this.Controls.Add(Import_File);
             Import_File.BringToFront();
-            Import_File.Top = 60;
-            Import_File.Left = 15;
+            Import_File.Top = 57;
+            Import_File.Left = 19;
+            Set_Boxes();
+            Draw_Init_Img(def_bg_text);
+            Default_Dir_Screen();
             Set_Auto_Opts();
-            
-            // Loads V-Max Loader track replacements into byte[] arrays
-            v2ldrcbm = Decompress(XOR(Resources.v2cbmla, 0xcb)); // V-Max CBM sectors (DotC, Into the Eagles Nest, Paperboy, etc..)
-            v24e64pal = Decompress(XOR(Resources.v24e64p, 0x64)); // V-Max Custom sectors (PAL Loader)
-            v26446ntsc = Decompress(XOR(Resources.v26446n, 0x46)); // V-Max Custom sectors (NTSC Loader) Older version, headers have weak bits and may be incompatible with some 1541's
-            v2644entsc = Decompress(XOR(Resources.v2644En, 0x4e)); // V-Max Custom sectors (NTSC Loader) Newer version, headers are compatible with all 1541 versions.
-                                                                   // these loaders are guaranteed to work and the loader code has not been modified from original. (these are not "cracked" loaders)
-
+            Check_CPU_Speed();
             //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
             //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
             //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));

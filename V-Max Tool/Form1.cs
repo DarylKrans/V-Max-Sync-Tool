@@ -13,7 +13,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.81 (beta)";
+        private readonly string ver = " v0.9.84 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -32,6 +32,7 @@ namespace V_Max_Tool
         private byte[] v24e64pal = new byte[0];
         private byte[] v26446ntsc = new byte[0];
         private byte[] v2644entsc = new byte[0];
+        private byte loader_padding = 0x55;
         private readonly int min_t_len = 6000;
         Thread w;
 
@@ -46,7 +47,7 @@ namespace V_Max_Tool
         private void Drag_Drop(object sender, DragEventArgs e)
         {
             Source.Visible = Output.Visible = false;
-            f_load.Text = "Fix Loader Sync";
+            f_load.Text = "Fix Loader";
             Save_Disk.Visible = false;
             sl.DataSource = null;
             out_size.DataSource = null;
@@ -393,7 +394,7 @@ namespace V_Max_Tool
 
         private void F_load_CheckedChanged(object sender, EventArgs e)
         {
-            Fix_Loader_Option();
+            Fix_Loader_Option(!busy);
         }
 
         private void V2_Custom_CheckedChanged(object sender, EventArgs e)

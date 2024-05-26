@@ -57,7 +57,10 @@ namespace V_Max_Tool
             int i = Convert.ToInt32(V2_hlen.Value);
             if (i >= V2_hlen.Minimum && i <= V2_hlen.Maximum)
             {
+                bool e = busy;
+                busy = true;
                 f_load.Checked = V2_Auto_Adj.Checked;
+                busy = e;
                 out_track.Items.Clear();
                 out_size.Items.Clear();
                 out_dif.Items.Clear();
@@ -93,10 +96,15 @@ namespace V_Max_Tool
             int gap_pos = 0;
             byte[] compare = new byte[2];
             bool gap_found = false;
+            bool found = false;
+            //Stopwatch w = new Stopwatch();
+            //w.Start();
             for (int i = 0; i < sectors; i++)
             {
                 gap_pos = 0;
-                pos = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][i]}", data, 3);
+                var d = pos;
+                if (d + 320 > data.Length) d = 0;
+                (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][i]}", data, 3, d);
                 while (data[pos] != end_byte && (pos < data.Length - 1)) pos++;
                 pos += 320;
                 while (pos < data.Length)
@@ -108,24 +116,23 @@ namespace V_Max_Tool
                         if (pos > 5 && data[pos] != 0xf7) gap_pos++;
                     }
                     catch { }
-                    if (gap_pos > 20) { gap_found = true; break; }
+                    if (gap_pos > 5) { gap_found = true; break; }
                 }
                 if (gap_found)
                 {
-                    if (data[pos - 20] == 0x52)
+                    if (data[pos - 5] == 0x52)
                     {
-                        t_gap = new byte[10];
-                        Array.Copy(data, pos - 20, t_gap, 0, t_gap.Length);
+                        t_gap = new byte[11];
+                        Array.Copy(data, pos - 5, t_gap, 1, 10);
+                        t_gap[0] = 0xff;
                     }
                     if (i == vm2_ver[vs].Length - 1) gap_pos = 0; else gap_pos += pos;
                     break;
                 }
             }
-            if (gap_pos > 0)
-            {
-                byte[] t = Rotate_Left(data, gap_pos);
-                Array.Copy(t, 0, data, 0, t.Length);
-            }
+            //w.Stop();
+            //Invoke(new Action(()=> Text = w.Elapsed.TotalMilliseconds.ToString() ));
+            if (gap_pos > 0) data = Rotate_Left(data, gap_pos);
             int slen;
             var sec = 1000;
             for (int i = 0; i < data.Length; i++)
@@ -146,7 +153,7 @@ namespace V_Max_Tool
                 sec_dat[sec] = new byte[Sector_len];
                 try
                 {
-                    pos = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][sec]}", data, 3);
+                    (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][sec]}", data, 3);
                 }
                 catch { }
                 Array.Copy(data, pos + 1, header[sec], 0, header[sec].Length);
@@ -165,7 +172,8 @@ namespace V_Max_Tool
                 sec++;
                 if (sec == sectors) sec = 0;
             }
-            int left = trk_density - trk_len - 115;
+            int left = trk_density - trk_len - 15;
+            //int left = trk_density - trk_len - 115;
             int hlen = ((left / sectors) / 2) * 2;
             gap_len = trk_density - ((hlen * sectors) + trk_len) - t_gap.Length;
             var buffer = new MemoryStream();
@@ -212,12 +220,13 @@ namespace V_Max_Tool
             }
         }
 
-        (byte[], int, int, int, int, string[], int, byte[]) Get_V2_Track_Info(byte[] data, int trk)
+        (byte[], int, int, int, int, string[], int, int, byte[]) Get_V2_Track_Info(byte[] data, int trk)
         {
             int data_start = 0;
             int data_end = 0;
             int sec_zero = 0;
             int sectors = 0;
+            int gap_sec = 0;
             bool start_found = false;
             bool end_found = false;
             bool found = false;
@@ -296,6 +305,7 @@ namespace V_Max_Tool
                             var a = Array.FindIndex(vm2_ver[vs], s => s == Hex_Val(comp));
                             if (pos - dif > 370)
                             {
+                                gap_sec = (hd[0] ^ hd[1]);  //- data_start; //(hd[0] ^ hd[1]);
                                 m[5] = (byte)a;
                                 all_headers.Add($"<------------------- (Gap) ------------------->");
                             }
@@ -335,7 +345,7 @@ namespace V_Max_Tool
                 Array.Copy(data, data_start, tdata, (data_end - data_start), 8192 - (data_end - data_start));
             }
             catch { }
-            return (tdata, data_start, data_end, sec_zero, (data_end - data_start) << 3, all_headers.ToArray(), sectors, m);
+            return (tdata, data_start, data_end, sec_zero, (data_end - data_start) << 3, all_headers.ToArray(), sectors, gap_sec, m);
         }
 
         byte[] Adjust_V2_Sync(byte[] data, int data_start, int data_end, byte[] t_info, bool Fix_Sync, int trk = -1)
@@ -435,7 +445,8 @@ namespace V_Max_Tool
                     }
                     s_pos++;
                 }
-                sec_zero = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][0]}", data, 3);
+                bool found = false;
+                (found, sec_zero) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][0]}", data, 3);
                 return buffer.ToArray(); // <- Return new array with sync markers adjusted
 
                 byte[] Build_Header(byte[] s, byte[] e, byte[] f, int len)

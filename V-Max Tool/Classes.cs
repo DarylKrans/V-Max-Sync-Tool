@@ -24,6 +24,7 @@ namespace V_Max_Tool
         public static byte[] Loader = new byte[0];
         public static int[] Total_Sync = new int[0];
         public static byte[][] Disk_ID = new byte[0][];
+        public static int[] Gap_Sector = new int[0];
     }
 
     public static class NDA  // Global variables for adjusted-sync arrays

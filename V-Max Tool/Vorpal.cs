@@ -240,7 +240,7 @@ namespace V_Max_Tool
                                 {
                                     sec_data[i] = source[dep + i];
                                 }
-                                if (dec) return Decode_VPL(Flip_Endian(Bit2Byte(sec_data)));
+                                if (dec) return Decode_Vorpal_GCR(Flip_Endian(Bit2Byte(sec_data)));
                                 else return (Flip_Endian(Bit2Byte(sec_data)));
                             }
                             catch { }
