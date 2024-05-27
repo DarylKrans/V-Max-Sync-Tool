@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -144,6 +146,7 @@ namespace V_Max_Tool
             int pt = 0;
             for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < 6) at++;
             int m = 0;
+            double sub = 1.25;
             Invoke(new Action(() =>
             {
                 m = Img_Q.SelectedIndex + 1;
@@ -154,7 +157,7 @@ namespace V_Max_Tool
             string fi_ext = ".g64";
             string fi_nam = $"{fname}{fnappend}";
             bool v2 = false;
-            //bool v5 = false;
+            sub *= m;
             int width = m * 1000;
             int height = m * 1000;
             int track = 0;
@@ -165,9 +168,9 @@ namespace V_Max_Tool
             int x = width / 2;
             int y = height / 2;
             int r = (int)((width / 2) / 1.0316368638f);
-            r = (width / 2) - (20 * m);
+            r = (width / 2) - (15 * m);
             int len;
-            int t_width = (int)(3f * m);
+            int t_width = (int)(3.1f * m);
             Color col;
             BitArray t_bit = new BitArray(0);
             circle = new FastBitmap(width, height);
@@ -182,7 +185,7 @@ namespace V_Max_Tool
                 a++;
             }
             Draw_Disk(circle, m, width, $"{fi_nam}{fi_ext}", ToBinary(Encoding.ASCII.GetString(NDS.Track_Data[trk], 0, 2000)));
-
+            //Stopwatch sw = Stopwatch.StartNew();
             while (r > 80 && track < tracks)
             {
                 bool v5 = false;
@@ -200,6 +203,7 @@ namespace V_Max_Tool
                             (col, v2, v5) = Get_Color(t_data[i], NDS.v2info[track], track, i, de, NDS.cbm[track], v2, v5);
                             Draw_Arc(circle, x, y, r + j, i, col);
                         }
+                        
                     }
                     if (Circle_View.Checked)
                     {
@@ -210,7 +214,12 @@ namespace V_Max_Tool
                 r -= (t_width * skp);
                 track += 1;
             }
-            Invoke(new Action(() => Set_Circular_Draw_Options(true, width)));
+            Invoke(new Action(() =>
+            {
+                //sw.Stop();
+                //Text = sw.Elapsed.TotalMilliseconds.ToString();
+                Set_Circular_Draw_Options(true, width);
+            }));
 
             void Draw_Arc(FastBitmap d, int cx, int cy, int radius, int startAngle, Color color)
             {
@@ -223,7 +232,7 @@ namespace V_Max_Tool
                 {
                     c = (float)Math.Cos(angle);
                     s = (float)Math.Sin(angle);
-                    for (j = 0; j < (int)(t_width + m); j++) d.SetPixel((int)(cx + (radius + j) * c), (int)(cy + (radius + j) * s), color);
+                    for (j = 0; j < (int)((t_width + m) - (int)sub); j++) d.SetPixel((int)(cx + (radius + j) * c), (int)(cy + (radius + j) * s), color);
                 }
             }
         }

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace V_Max_Tool
 {
@@ -303,7 +304,7 @@ namespace V_Max_Tool
 
             void Get_Fmt(int trk)
             {
-                NDS.cbm[trk] = Get_Data_Format(NDS.Track_Data[trk]);
+                NDS.cbm[trk] = Get_Data_Format(NDS.Track_Data[trk], trk);
                 a--;
                 if (!manualRender)
                 {
@@ -353,7 +354,6 @@ namespace V_Max_Tool
                     if (NDS.cbm[i] == 3) Process_VMAX_V3(i);
                     if (NDS.cbm[i] == 4) Process_Loader(i);
                     if (NDS.cbm[i] == 5) Process_Vorpal(i);
-                    Invoke(new Action(()=> File.WriteAllBytes($@"c:\test\t{i}", NDG.Track_Data[i])));
                     if (!batch && NDA.Track_Length[i] > 0 && NDS.cbm[i] != 6)
                     {
                         out_size.Items.Add((NDA.Track_Length[i] / 8).ToString("N0"));
@@ -485,9 +485,9 @@ namespace V_Max_Tool
                 {
                     if (V3_Auto_Adj.Checked) v3aa = true; else v3aa = false;
                     if (V3_Custom.Checked) v3cc = true; else v3cc = false;
-                    V3_Auto_Adj.Checked = V3_Custom.Checked = false;
+                    Invoke(new Action(()=> V3_Auto_Adj.Checked = V3_Custom.Checked = false));
                 }
-                V3_Auto_Adj.Checked = V3_Custom.Checked = false;
+                Invoke(new Action(()=> V3_Auto_Adj.Checked = V3_Custom.Checked = false));
                 if (rb_vm)
                 {
 
@@ -527,9 +527,9 @@ namespace V_Max_Tool
                 {
                     if (V2_Auto_Adj.Checked) v2aa = true; else v2aa = false;
                     if (V2_Custom.Checked) v2cc = true; else v2cc = false;
-                    V2_Auto_Adj.Checked = V2_Custom.Checked = false;
+                    Invoke(new Action(()=> V2_Auto_Adj.Checked = V2_Custom.Checked = false));
                 }
-                V2_Auto_Adj.Checked = V2_Custom.Checked = V2_Add_Sync.Checked = false;
+                Invoke(new Action(()=> V2_Auto_Adj.Checked = V2_Custom.Checked = V2_Add_Sync.Checked = false));
                 if (V3_Auto_Adj.Checked || V3_Custom.Checked) fnappend = mod;
                 else fnappend = fix;
                 if (rb_vm)
@@ -632,12 +632,13 @@ namespace V_Max_Tool
             return p + 16;
         }
 
-        int Get_Data_Format(byte[] data)
+        int Get_Data_Format(byte[] data, int track)
         {
             int t = 0;
             int csec = 0;
             byte[] comp = new byte[4];
-            if (Check_Loader(data)) return 4;
+            if ((tracks <= 42 && track == 19) || tracks > 42 && track == 38) if (Check_Loader(data)) return 4;
+            BitArray source = new BitArray(Flip_Endian(data));
             for (int i = 0; i < data.Length - comp.Length; i++)
             {
                 Array.Copy(data, i, comp, 0, comp.Length);
@@ -647,25 +648,23 @@ namespace V_Max_Tool
                     for (int j = 0; j < 20; j++) if (data[i + j] == 0xee) return 3;
                     t = 0;
                 }
-
                 if (t != 0) break;
             }
             if (t == 1 || t == 0 && !data.All(ss => ss == 0x00))
             {
                 byte[] temp = new byte[0];
-                bool c;
                 int y = 0;
+                bool c;
                 int p = 0;
                 int ps = 0;
                 for (int i = 0; i < 16; i++)
                 {
-                    (c, ps) = Find_Sector(data, i + 1);
+                    (c, ps) = Find_Sector(source, i + 1);
                     if (c) { y++; p = ps + 320; if (p > data.Length) p = 0; }
                     if (y > 4) return 1;
                 }
                 byte[] ncomp = new byte[vpl_s0.Length];
                 int pos = 0;
-                BitArray source = new BitArray(Flip_Endian(data));
                 BitArray scomp = new BitArray(vpl_s0.Length * 8);
                 while (pos < source.Length - vpl_s0.Length * 8)
                 {
@@ -710,13 +709,12 @@ namespace V_Max_Tool
                 byte[] blank = new byte[] { 0x00, 0x11, 0x22, 0x44, 0x45, 0x14, 0x12, 0x51, 0x88 };
                 for (int i = 0; i < d.Length; i++)
                 {
-                    if (blank.Any(s => s == d[i])) b++;
+                    if (blank.Any(x => x == d[i])) b++;
                     if (d[i] == 0xff) snc++;
-                    //if (b > 4000) break;
+                    if (b > 1000) return 6;
+                    if (snc > 10) return 0;
                 }
-                if (snc > 10) return 0;
-                if (b > 4000) return 6;
-                else return 0;
+                return 0;
             }
 
             bool Check_Loader(byte[] d)
@@ -931,8 +929,6 @@ namespace V_Max_Tool
                     for (int ii = 0; ii < NDS.sectors[t]; ii++)
                     {
                         temp[ii] = Decode_Vorpal(tdata, ii);
-                        //if (track == 22 && ii == 3) File.WriteAllBytes($@"c:\test\T{track}-s{ii}", Decode_Vorpal(tdata, ii, false));
-                        //File.WriteAllBytes($@"c:\test\T{track}-s{ii}", Decode_Vorpal(tdata, ii, false));
                         total += temp[ii].Length;
                     }
                     if (tr) db_Text += $"\n\nTrack ({track}) {secF[NDS.cbm[t]]} Sectors ({NDS.sectors[t]}) Length ({total}) bytes\n\n";

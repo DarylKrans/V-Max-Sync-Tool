@@ -176,7 +176,6 @@ namespace V_Max_Tool
                         }
                         if (NDS.cbm.Any(x => x == 2))
                         {
-                            Invoke(new Action(() => Text = "4c"));
                             for (int x = 0; i < tracks; x++) if (NDS.v2info[x]?.Length > 0) { tt = x; break; }
                             if (Hex(NDS.v2info[tt], 0, 2) == "4E-64") Set_Dest_Arrays(Pad_Loader(v24e64pal, loader_padding, density_map[trk_num]), i);
                             if (Hex(NDS.v2info[tt], 0, 2) == "64-46") Set_Dest_Arrays(Pad_Loader(v26446ntsc, loader_padding, density_map[trk_num]), i);
@@ -190,16 +189,15 @@ namespace V_Max_Tool
             }
             if (!f_load.Checked)
             {
-                f_load.Text = "Fix Loader";
+                Invoke(new Action(()=> f_load.Text = "Fix Loader"));
                 if (tracks > 0) i = Array.FindIndex(NDS.cbm, s => s == 4);
                 if (i > -1 && i < 100)
                 {
                     if (Original.A.Length > 0) { NDA.Track_Data[i] = Original.A; }
-                    if (Original.G.Length > 0) { NDG.Track_Data[i] = Original.G; f_load.Text += " (Restored)"; }
+                    if (Original.G.Length > 0) { NDG.Track_Data[i] = Original.G; Invoke(new Action(() => f_load.Text += " (Restored)")); }
                     NDG.L_Rot = false;
                 }
                 loader_fixed = false;
-                //Check_Before_Draw(false);
             }
             displayed = false;
             drawn = false;
@@ -211,7 +209,7 @@ namespace V_Max_Tool
 
             void FL()
             {
-                f_load.Text = "Fix Loader (Fixed)";
+                Invoke(new Action(() => f_load.Text = "Fix Loader (Fixed)"));
             }
         }
 

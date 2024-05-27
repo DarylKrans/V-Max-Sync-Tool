@@ -13,12 +13,12 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.85 (beta)";
+        private readonly string ver = " v0.9.86 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
+        private readonly byte loader_padding = 0x55;
         private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        //private int[] vpl_density = { 7760, 7204, 6723, 6302 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private bool error = false;
         private bool cancel = false;
@@ -32,7 +32,6 @@ namespace V_Max_Tool
         private byte[] v24e64pal = new byte[0];
         private byte[] v26446ntsc = new byte[0];
         private byte[] v2644entsc = new byte[0];
-        private byte loader_padding = 0x55;
         private readonly int min_t_len = 6000;
         Thread w;
 
@@ -52,7 +51,6 @@ namespace V_Max_Tool
             sl.DataSource = null;
             out_size.DataSource = null;
             string[] File_List = (string[])e.Data.GetData(DataFormats.FileDrop);
-            //Process_New_Image(File_List[0]);
             if (File_List.Length > 1)
             {
                 using (Message_Center center = new Message_Center(this)) // center message box
@@ -105,14 +103,19 @@ namespace V_Max_Tool
             Batch_Bar.Maximum = 100;
             Batch_Bar.Maximum *= 100;
             Batch_Bar.Value = Batch_Bar.Maximum / 100;
+            listBox1.Items.Clear();
+            listBox1.HorizontalScrollbar = true;
+            listBox1.Visible = true;
             Task.Run(delegate
             {
                 for (int i = 0; i < batch_list.Length; i++)
                 {
+                    long fsize = 0;
                     loader_fixed = false;
                     NDG.L_Rot = false;
                     if (!cancel)
                     {
+
                         if (System.IO.File.Exists(batch_list[i]))
                         {
                             Invoke(new Action(() =>
@@ -124,6 +127,20 @@ namespace V_Max_Tool
                             fname = Path.GetFileNameWithoutExtension(batch_list[i]);
                             fext = Path.GetExtension(batch_list[0]);
                             if (fext.ToLower() == supported[0]) Batch_NIB(batch_list[i]);
+                            Invoke(new Action(() =>
+                            {
+                                var status = "OK!";
+                                if (error)
+                                {
+                                    if (System.IO.File.Exists($@"{path}\{fname}{fnappend}.g64")) status = "Completed with errors";
+                                    else status = "Error, file not saved";
+                                }
+                                if (System.IO.File.Exists($@"{path}\{fname}{fnappend}.g64")) fsize = new FileInfo($@"{path}\{fname}{fnappend}.g64").Length / 1024;
+                                error = false;
+                                listBox1.Items.Add($"{fname}.g64 ({status}) {fsize:N0}kb");
+                                listBox1.SelectedIndex = listBox1.Items.Count - 1;
+                                listBox1.SelectedIndex = -1;
+                            }));
                             //if (fext.ToLower() == supported[1]) Batch_G64(batch_list[i]);
                         }
                     }
@@ -131,10 +148,6 @@ namespace V_Max_Tool
                 }
                 Invoke(new Action(() =>
                 {
-                    Import_File.Visible = false;
-                    Import_Progress_Bar.Value = 0;
-                    Batch_Bar.Value = 0;
-                    Batch_Box.Visible = false;
                     using (Message_Center center = new Message_Center(this)) // center message box
                     {
                         string t = "";
@@ -151,11 +164,16 @@ namespace V_Max_Tool
                         }
                         MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
+                    Import_File.Visible = false;
+                    Import_Progress_Bar.Value = 0;
+                    Batch_Bar.Value = 0;
+                    Batch_Box.Visible = false;
                     cancel = false;
                     busy = true;
                     Auto_Adjust = temp;
-                    Set_Auto_Opts();
                     busy = false;
+                    listBox1.Visible = false;
+                    Set_Auto_Opts();
                     Reset_to_Defaults();
                 }));
                 batch = false;
@@ -168,8 +186,6 @@ namespace V_Max_Tool
                 tracks = (int)(length - 256) / 8192;
                 if ((tracks * 8192) + 256 == length)
                 {
-                    //Track_Info.Items.Clear();
-                    //Set_ListBox_Items(true, false);
                     nib_header = new byte[256];
                     Stream.Seek(0, SeekOrigin.Begin);
                     Stream.Read(nib_header, 0, 256);
@@ -191,7 +207,7 @@ namespace V_Max_Tool
                             Process_Nib_Data(true, false, true);
                             Make_G64($@"{path}\{fname}{fnappend}.g64");
                         }
-                        else error = false;
+                        //else error = false;
                     }
                 }
                 GC.Collect();
@@ -341,13 +357,6 @@ namespace V_Max_Tool
                             Process_Nib_Data(true, false, true);
                             Set_ListBox_Items(false, false);
                             Get_Disk_Directory();
-                            //listBox1.Visible = true;
-                            //byte[] g = new byte[256];
-                            //for (int i = 0; i < 256; i++)
-                            //{
-                            //    g[i] = (byte)i;
-                            //    listBox1.Items.Add($"{i} {Hex(g, i, 1)} {Encoding.ASCII.GetString(g, i, 1)}\n");
-                            //}
                             linkLabel1.Visible = false;
                             if (Disk_Dir.Checked) Disk_Dir.Focus();
                             Out_Type = get;

@@ -377,9 +377,8 @@ namespace V_Max_Tool
             }
         }
 
-        (bool, int) Find_Sector(byte[] data, int sector, int pos = -1)
+        (bool, int) Find_Sector(BitArray source, int sector, int pos = -1)
         {
-            BitArray source = new BitArray(Flip_Endian(data));
             bool sector_found;
             bool sync = false;
             int sync_count = 0;

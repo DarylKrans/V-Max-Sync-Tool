@@ -180,7 +180,8 @@ namespace V_Max_Tool
         public static byte[] Compress(byte[] data)
         {
             MemoryStream output = new MemoryStream();
-            using (DeflateStream dstream = new DeflateStream(output, CompressionLevel.Optimal))
+            //using (DeflateStream dstream = new DeflateStream(output, CompressionMode.Compress)) // .net 3.5
+            using (DeflateStream dstream = new DeflateStream(output, CompressionLevel.Optimal)) // .net 4.x
             {
                 dstream.Write(data, 0, data.Length);
             }

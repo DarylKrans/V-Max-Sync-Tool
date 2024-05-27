@@ -67,6 +67,8 @@ namespace V_Max_Tool
             //if (!Directory.Exists($@"{dirname}\Output")) Directory.CreateDirectory($@"{dirname}\Output");
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
+            byte[] watermark = Encoding.ASCII.GetBytes($"    ReMaster Utility{ver}    5/27/2024    ");
+            for (int i = 0; i < watermark.Length; i++) if (watermark[i] == 0x20) watermark[i] = 0x00;
             byte[] head = Encoding.ASCII.GetBytes("GCR-1541");
             byte z = 0;
             List<int> len = new List<int>(0);
@@ -81,7 +83,7 @@ namespace V_Max_Tool
             write.Write(z);
             write.Write((byte)84);
             write.Write(m);
-            int offset = 684;
+            int offset = 684 + watermark.Length;
             int th = 0;
             int[] td = new int[84];
             int tr = tracks;
@@ -98,6 +100,7 @@ namespace V_Max_Tool
                 Small(tr);
             }
             for (int i = 0; i < 84; i++) write.Write(td[i]);
+            write.Write(watermark);
             for (int i = 0; i < tr; i++) // tracks; i++)
             {
                 if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] > 0 && NDS.cbm[i] < 6)
