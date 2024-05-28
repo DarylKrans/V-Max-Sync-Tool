@@ -8,7 +8,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace V_Max_Tool
 {
@@ -485,9 +484,9 @@ namespace V_Max_Tool
                 {
                     if (V3_Auto_Adj.Checked) v3aa = true; else v3aa = false;
                     if (V3_Custom.Checked) v3cc = true; else v3cc = false;
-                    Invoke(new Action(()=> V3_Auto_Adj.Checked = V3_Custom.Checked = false));
+                    Invoke(new Action(() => V3_Auto_Adj.Checked = V3_Custom.Checked = false));
                 }
-                Invoke(new Action(()=> V3_Auto_Adj.Checked = V3_Custom.Checked = false));
+                Invoke(new Action(() => V3_Auto_Adj.Checked = V3_Custom.Checked = false));
                 if (rb_vm)
                 {
 
@@ -527,9 +526,9 @@ namespace V_Max_Tool
                 {
                     if (V2_Auto_Adj.Checked) v2aa = true; else v2aa = false;
                     if (V2_Custom.Checked) v2cc = true; else v2cc = false;
-                    Invoke(new Action(()=> V2_Auto_Adj.Checked = V2_Custom.Checked = false));
+                    Invoke(new Action(() => V2_Auto_Adj.Checked = V2_Custom.Checked = false));
                 }
-                Invoke(new Action(()=> V2_Auto_Adj.Checked = V2_Custom.Checked = V2_Add_Sync.Checked = false));
+                Invoke(new Action(() => V2_Auto_Adj.Checked = V2_Custom.Checked = V2_Add_Sync.Checked = false));
                 if (V3_Auto_Adj.Checked || V3_Custom.Checked) fnappend = mod;
                 else fnappend = fix;
                 if (rb_vm)

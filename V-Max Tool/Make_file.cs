@@ -64,7 +64,7 @@ namespace V_Max_Tool
 
         void Make_G64(string fname)
         {
-            //if (!Directory.Exists($@"{dirname}\Output")) Directory.CreateDirectory($@"{dirname}\Output");
+            if (!Directory.Exists(Path.GetDirectoryName(fname))) Directory.CreateDirectory(Path.GetDirectoryName(fname));
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
             byte[] watermark = Encoding.ASCII.GetBytes($"    ReMaster Utility{ver}    5/27/2024    ");

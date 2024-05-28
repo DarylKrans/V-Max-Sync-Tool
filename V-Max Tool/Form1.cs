@@ -13,7 +13,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.86 (beta)";
+        private readonly string ver = " v0.9.87 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -51,7 +51,7 @@ namespace V_Max_Tool
             sl.DataSource = null;
             out_size.DataSource = null;
             string[] File_List = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (File_List.Length > 1)
+            if (File_List.Length > 1 || Directory.Exists(File_List[0]))
             {
                 using (Message_Center center = new Message_Center(this)) // center message box
                 {
@@ -60,19 +60,35 @@ namespace V_Max_Tool
                     DialogResult uc = MessageBox.Show(s, t, MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
                     if (uc.ToString() == "OK")
                     {
+                        var folder = Path.GetDirectoryName(File_List[0]);
+                        var SaveFolder = new FolderBrowserDialog()
+                        {
+                            Description = "Select a folder for output files.",
+                            SelectedPath = folder,
+
+                        };
                         if (SaveFolder.ShowDialog() == DialogResult.OK)
                         {
-                            string sel_path = SaveFolder.SelectedPath.ToString();
-                            if (sel_path != "")
+                            string parent = "";
+                            string[] batch_list;
+                            (batch_list, parent) = Populate_File_List(File_List);
+                            
+                            if (batch_list?.Length != 0)
                             {
-                                List<string> f = new List<string>();
-                                for (int i = 0; i < File_List.Length; i++)
-                                {
-                                    string ext = Path.GetExtension(File_List[i]);
-                                    if (ext.ToLower() == supported[0]) f.Add(File_List[i]); // || ext.ToLower() == supported[1]) f.Add(File_List[i]);
-                                }
-                                Process_Batch(f.ToArray(), sel_path);
+                                string sel_path = SaveFolder.SelectedPath.ToString();
+                                //File.WriteAllLines($@"C:\test\list", batch_list);
+                                if (sel_path != "") Process_Batch(batch_list, sel_path, parent);
                             }
+                            else
+                            {
+                                using (Message_Center centerr = new Message_Center(this)) // center message box
+                                {
+                                    t = "Nothing to do!";
+                                    s = "No valid files to process";
+                                    MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                }
+                            }
+
                         }
                     }
                 }
@@ -88,7 +104,8 @@ namespace V_Max_Tool
             }
         }
 
-        void Process_Batch(string[] batch_list, string path)
+        //void Process_Batch(string[] batch_list, string path)
+        void Process_Batch(string[] batch_list, string path, string basedir)
         {
             bool temp = Auto_Adjust;
             Reset_to_Defaults();
@@ -106,6 +123,8 @@ namespace V_Max_Tool
             listBox1.Items.Clear();
             listBox1.HorizontalScrollbar = true;
             listBox1.Visible = true;
+            var based = "";
+            if (basedir != "") based += @"\";
             Task.Run(delegate
             {
                 for (int i = 0; i < batch_list.Length; i++)
@@ -115,7 +134,8 @@ namespace V_Max_Tool
                     NDG.L_Rot = false;
                     if (!cancel)
                     {
-
+                        string parent = Path.GetFileName(Path.GetDirectoryName(batch_list[i]));
+                        if (parent == basedir) parent = "";
                         if (System.IO.File.Exists(batch_list[i]))
                         {
                             Invoke(new Action(() =>
@@ -124,9 +144,9 @@ namespace V_Max_Tool
                                 label9.Text = $"{Path.GetFileName(batch_list[i])}";
                                 Batch_Bar.Maximum = (int)((double)Batch_Bar.Value / (double)(i + 1) * batch_list.Length);
                             }));
-                            fname = Path.GetFileNameWithoutExtension(batch_list[i]);
+                            fname = $@"{parent}\{Path.GetFileNameWithoutExtension(batch_list[i])}";
                             fext = Path.GetExtension(batch_list[0]);
-                            if (fext.ToLower() == supported[0]) Batch_NIB(batch_list[i]);
+                            if (fext.ToLower() == supported[0]) Batch_NIB(batch_list[i], parent);
                             Invoke(new Action(() =>
                             {
                                 var status = "OK!";
@@ -141,7 +161,6 @@ namespace V_Max_Tool
                                 listBox1.SelectedIndex = listBox1.Items.Count - 1;
                                 listBox1.SelectedIndex = -1;
                             }));
-                            //if (fext.ToLower() == supported[1]) Batch_G64(batch_list[i]);
                         }
                     }
                     else break;
@@ -179,7 +198,7 @@ namespace V_Max_Tool
                 batch = false;
             });
 
-            void Batch_NIB(string fn)
+            void Batch_NIB(string fn, string lfn)
             {
                 FileStream Stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 long length = new System.IO.FileInfo(fn).Length;

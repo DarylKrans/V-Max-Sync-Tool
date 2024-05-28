@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -203,7 +201,7 @@ namespace V_Max_Tool
                             (col, v2, v5) = Get_Color(t_data[i], NDS.v2info[track], track, i, de, NDS.cbm[track], v2, v5);
                             Draw_Arc(circle, x, y, r + j, i, col);
                         }
-                        
+
                     }
                     if (Circle_View.Checked)
                     {

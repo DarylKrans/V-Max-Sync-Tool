@@ -1,15 +1,15 @@
 ﻿using ReMaster_Utility.Properties;
 using System;
 using System.Collections;
-using System.ComponentModel;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using System.Collections.Generic;
 
 namespace V_Max_Tool
 {
@@ -263,6 +263,96 @@ namespace V_Max_Tool
             else Tabs.Controls.Remove(Vpl_adv);
             if (NDS.cbm.Any(s => s == 1)) Adj_cbm.Visible = true; else Adj_cbm.Visible = false;
             VBS_info.Visible = Reg_info.Visible = Other_opts.Visible = true;
+        }
+
+        (string[], string) Populate_File_List(string[] File_List)
+        {
+            string parent = "";
+            List<string> files = new List<string>();
+            for (int r = 0; r < File_List.Length; r++)
+            {
+                try
+                {
+                    if (!Directory.Exists(File_List[r]))
+                    {
+                        if (Path.GetExtension(File_List[r]).ToLower() == ".nib")
+                            if (CheckFile(File_List[r]))
+                            {
+                                files.Add($@"{System.IO.Path.GetDirectoryName(File_List[r])}\{System.IO.Path.GetFileName(File_List[r])}");
+                                if (parent == "") parent = Path.GetFileName(Path.GetDirectoryName(File_List[0]));
+                                //files.Add(File_List[r]);
+                            }
+                    }
+                    else
+                    {
+                        var Folder_files = Get(File_List[r]).ToArray();
+                        for (int s = 0; s < Folder_files.Length; s++)
+                        {
+                            if (!Directory.Exists(Folder_files[s])) if (CheckFile(Folder_files[s]))
+                                {
+                                    //files.Add(Folder_files[s]);
+                                    files.Add($@"{System.IO.Path.GetDirectoryName(Folder_files[s])}\{System.IO.Path.GetFileName(Folder_files[s])}");
+                                    if (parent == "") parent = Path.GetFileName(Path.GetDirectoryName(File_List[0]));
+                                }
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            return (files.ToArray(), parent);
+
+            bool CheckFile(string file)
+            {
+                if (File.Exists(file))
+                {
+                    FileStream Stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    long length = new System.IO.FileInfo(file).Length;
+                    int ttrks = (int)(length - 256) / 8192;
+                    if ((ttrks * 8192) + 256 == length)
+                    {
+                        byte[] nhead = new byte[256];
+                        Stream.Seek(0, SeekOrigin.Begin);
+                        Stream.Read(nhead, 0, 256);
+                        Stream.Close();
+                        var head = Encoding.ASCII.GetString(nhead, 0, 13);
+                        if (head == "MNIB-1541-RAW") return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        public IEnumerable<string> Get(string path)
+        {
+            IEnumerable<string> files = Enumerable.Empty<string>();
+            IEnumerable<string> directories = Enumerable.Empty<string>();
+            try
+            {
+                var permission = new FileIOPermission(FileIOPermissionAccess.Read, path);
+                permission.Demand();
+                files = Directory.GetFiles(path);
+                directories = Directory.GetDirectories(path);
+            }
+            catch
+            {
+                path = null;
+            }
+
+            if (path != null)
+            {
+                yield return path;
+            }
+
+            foreach (var file in files)
+            {
+                yield return file;
+            }
+            var subdirectoryItems = directories.SelectMany(Get);
+            foreach (var result in subdirectoryItems)
+            {
+                yield return result;
+            }
         }
 
         void Check_CPU_Speed()

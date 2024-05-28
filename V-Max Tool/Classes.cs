@@ -321,5 +321,4 @@ namespace V_Max_Tool
             e.Graphics.DrawString(this.Text, this.Font, new SolidBrush(this.ForeColor), textRect);
         }
     }
-
 }

@@ -189,7 +189,7 @@ namespace V_Max_Tool
             }
             if (!f_load.Checked)
             {
-                Invoke(new Action(()=> f_load.Text = "Fix Loader"));
+                Invoke(new Action(() => f_load.Text = "Fix Loader"));
                 if (tracks > 0) i = Array.FindIndex(NDS.cbm, s => s == 4);
                 if (i > -1 && i < 100)
                 {
@@ -232,7 +232,7 @@ namespace V_Max_Tool
                 if (Match(comp, v4)) { Patch_V2(i - 3); f = true; }
                 if (f) break;
             }
-            if (f) Invoke(new Action(()=> f_load.Text = "Fix Loader (Fixed)"));
+            if (f) Invoke(new Action(() => f_load.Text = "Fix Loader (Fixed)"));
             return tdata;
 
             void Patch_V2(int pos)

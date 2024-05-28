@@ -146,7 +146,6 @@
             this.sl = new System.Windows.Forms.ListBox();
             this.ss = new System.Windows.Forms.ListBox();
             this.sf = new System.Windows.Forms.ListBox();
-            this.SaveFolder = new System.Windows.Forms.FolderBrowserDialog();
             ((System.ComponentModel.ISupportInitialize)(this.V2_hlen)).BeginInit();
             this.Tabs.SuspendLayout();
             this.Main.SuspendLayout();
@@ -1791,7 +1790,6 @@
         private System.Windows.Forms.NumericUpDown VD1;
         private System.Windows.Forms.NumericUpDown VD0;
         private System.Windows.Forms.CheckBox VPL_presync;
-        private System.Windows.Forms.FolderBrowserDialog SaveFolder;
         private System.Windows.Forms.GroupBox Batch_Box;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Label label9;
