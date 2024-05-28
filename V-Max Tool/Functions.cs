@@ -267,7 +267,6 @@ namespace V_Max_Tool
 
         (string[], string) Populate_File_List(string[] File_List)
         {
-            string parent = "";
             List<string> files = new List<string>();
             for (int r = 0; r < File_List.Length; r++)
             {
@@ -279,8 +278,6 @@ namespace V_Max_Tool
                             if (CheckFile(File_List[r]))
                             {
                                 files.Add($@"{System.IO.Path.GetDirectoryName(File_List[r])}\{System.IO.Path.GetFileName(File_List[r])}");
-                                if (parent == "") parent = Path.GetFileName(Path.GetDirectoryName(File_List[0]));
-                                //files.Add(File_List[r]);
                             }
                     }
                     else
@@ -290,17 +287,14 @@ namespace V_Max_Tool
                         {
                             if (!Directory.Exists(Folder_files[s])) if (CheckFile(Folder_files[s]))
                                 {
-                                    //files.Add(Folder_files[s]);
                                     files.Add($@"{System.IO.Path.GetDirectoryName(Folder_files[s])}\{System.IO.Path.GetFileName(Folder_files[s])}");
-                                    if (parent == "") parent = Path.GetFileName(Path.GetDirectoryName(File_List[0]));
                                 }
                         }
                     }
                 }
                 catch { }
             }
-
-            return (files.ToArray(), parent);
+            return (files.ToArray(), Directory.GetParent(File_List[0]).ToString());
 
             bool CheckFile(string file)
             {

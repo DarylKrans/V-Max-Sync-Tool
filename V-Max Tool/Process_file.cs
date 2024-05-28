@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,7 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace V_Max_Tool
 {
@@ -37,6 +39,133 @@ namespace V_Max_Tool
         private readonly int[] invalid_char = { 0, 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 95,
             128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139 };
         private int[] jt = new int[42];
+
+        void Process_Batch(string[] batch_list, string path, string basedir)
+        {
+            bool temp = Auto_Adjust;
+            Reset_to_Defaults();
+            busy = true;
+            Auto_Adjust = true;
+            Set_Auto_Opts();
+            busy = false;
+            Drag_pic.Visible = Adv_ctrl.Enabled = false;
+            Batch_Box.Visible = true;
+            batch = true;
+            Batch_Bar.Value = 0;
+            Batch_Bar.Maximum = 100;
+            Batch_Bar.Maximum *= 100;
+            Batch_Bar.Value = Batch_Bar.Maximum / 100;
+            listBox1.Items.Clear();
+            listBox1.Visible = true;
+            Task.Run(delegate
+            {
+                for (int i = 0; i < batch_list.Length; i++)
+                {
+                    loader_fixed = false;
+                    NDG.L_Rot = false;
+                    if (!cancel)
+                    {
+
+                        if (System.IO.File.Exists(batch_list[i]))
+                        {
+                            Invoke(new Action(() =>
+                            {
+                                label8.Text = $"Processing file {i + 1} of {batch_list.Length}";
+                                label9.Text = $"{Path.GetFileName(batch_list[i])}";
+                                Batch_Bar.Maximum = (int)((double)Batch_Bar.Value / (double)(i + 1) * batch_list.Length);
+                            }));
+                            fname = $@"{path}\{Path.GetDirectoryName(batch_list[i]).Replace(basedir, "")}\{Path.GetFileName(batch_list[i])}.g64";
+                            fext = Path.GetExtension(batch_list[0]);
+                            if (fext.ToLower() == supported[0]) Batch_NIB(batch_list[i]);
+                            Invoke(new Action(() =>
+                            {
+                                var status = "OK!";
+                                if (error)
+                                {
+                                    if (System.IO.File.Exists(fname)) status = "Completed with errors";
+                                    else status = "Error, file not saved";
+                                }
+                                if (System.IO.File.Exists(fname))
+                                {
+                                    long sz = new System.IO.FileInfo(fname).Length / 1024;
+                                    status = $"(OK!) {sz:N0}kb";
+                                }
+                                else status = "Error, file not saved";
+                                error = false;
+                                listBox1.Items.Add($@"{Path.GetDirectoryName(fname).Replace(path, "")}\{Path.GetFileName(fname)} ({status})");
+                                listBox1.SelectedIndex = listBox1.Items.Count - 1;
+                                listBox1.SelectedIndex = -1;
+                            }));
+                        }
+                    }
+                    else break;
+                }
+                Invoke(new Action(() =>
+                {
+                    using (Message_Center center = new Message_Center(this)) // center message box
+                    {
+                        string t = "";
+                        string s = "";
+                        if (!cancel)
+                        {
+                            t = "Done!";
+                            s = "Batch processing completed..";
+                        }
+                        else
+                        {
+                            t = "Canceled!";
+                            s = "Batch processing canceled by user";
+                        }
+                        MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    Import_File.Visible = false;
+                    Import_Progress_Bar.Value = 0;
+                    Batch_Bar.Value = 0;
+                    Batch_Box.Visible = false;
+                    cancel = false;
+                    busy = true;
+                    Auto_Adjust = temp;
+                    busy = false;
+                    listBox1.Visible = false;
+                    Set_Auto_Opts();
+                    Reset_to_Defaults();
+                }));
+                batch = false;
+            });
+
+            void Batch_NIB(string fn)
+            {
+                FileStream Stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                long length = new System.IO.FileInfo(fn).Length;
+                tracks = (int)(length - 256) / 8192;
+                if ((tracks * 8192) + 256 == length)
+                {
+                    nib_header = new byte[256];
+                    Stream.Seek(0, SeekOrigin.Begin);
+                    Stream.Read(nib_header, 0, 256);
+                    Set_Arrays(tracks);
+                    for (int i = 0; i < tracks; i++)
+                    {
+                        NDS.Track_Data[i] = new byte[8192];
+                        Stream.Seek(256 + (8192 * i), SeekOrigin.Begin);
+                        Stream.Read(NDS.Track_Data[i], 0, 8192);
+                        Original.OT[i] = new byte[0];
+                    }
+                    Stream.Close();
+                    var head = Encoding.ASCII.GetString(nib_header, 0, 13);
+                    if (head == "MNIB-1541-RAW")
+                    {
+                        Parse_Nib_Data();
+                        if (!error)
+                        {
+                            Process_Nib_Data(true, false, true);
+                            Make_G64(fname);
+                        }
+                    }
+                }
+                GC.Collect();
+            }
+        }
 
         void Parse_Nib_Data()
         {
@@ -652,8 +781,8 @@ namespace V_Max_Tool
             if (t == 1 || t == 0 && !data.All(ss => ss == 0x00))
             {
                 byte[] temp = new byte[0];
-                int y = 0;
                 bool c;
+                int y = 0;
                 int p = 0;
                 int ps = 0;
                 for (int i = 0; i < 16; i++)
@@ -928,6 +1057,8 @@ namespace V_Max_Tool
                     for (int ii = 0; ii < NDS.sectors[t]; ii++)
                     {
                         temp[ii] = Decode_Vorpal(tdata, ii);
+                        //if (track == 22 && ii == 3) File.WriteAllBytes($@"c:\test\T{track}-s{ii}", Decode_Vorpal(tdata, ii, false));
+                        //File.WriteAllBytes($@"c:\test\T{track}-s{ii}", Decode_Vorpal(tdata, ii, false));
                         total += temp[ii].Length;
                     }
                     if (tr) db_Text += $"\n\nTrack ({track}) {secF[NDS.cbm[t]]} Sectors ({NDS.sectors[t]}) Length ({total}) bytes\n\n";
