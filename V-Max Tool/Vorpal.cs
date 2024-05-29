@@ -29,7 +29,7 @@ namespace V_Max_Tool
                             if (Original.OT[t].Length == 0)
                             {
                                 Original.OT[t] = new byte[NDG.Track_Data[t].Length];
-                                Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
+                                Buffer.BlockCopy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
                             }
                         }
                     }
@@ -45,9 +45,9 @@ namespace V_Max_Tool
                         if (Original.OT[t].Length != 0)
                         {
                             NDG.Track_Data[t] = new byte[Original.OT[t].Length];
-                            Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
-                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
-                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, NDA.Track_Data[t].Length - Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, NDA.Track_Data[t].Length - Original.OT[t].Length);
                         }
                         NDG.Track_Length[t] = NDG.Track_Data[t].Length;
                         NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
@@ -165,7 +165,7 @@ namespace V_Max_Tool
             void Write_Lead(int li, int lo)
             {
                 for (int i = temp.Length - lo; i < temp.Length; i++) temp[i] = lead_out;
-                for (int i = 0; i < li; i++) Array.Copy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
+                for (int i = 0; i < li; i++) Buffer.BlockCopy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
                 temp[temp.Length - 1] = stop;
             }
 

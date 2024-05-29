@@ -550,7 +550,7 @@ namespace V_Max_Tool
             byte[] comp = new byte[clen];
             for (i = 0; i < sdat.Length - find.Length; i++)
             {
-                Array.Copy(sdat, i, comp, 0, comp.Length);
+                Buffer.BlockCopy(sdat, i, comp, 0, comp.Length);
                 if (Hex_Val(comp) == find) return (true);
             }
             return (false);
@@ -574,7 +574,7 @@ namespace V_Max_Tool
             byte[] comp = new byte[clen];
             for (int i = start_pos; i < data.Length - find.Length; i++)
             {
-                Array.Copy(data, i, comp, 0, comp.Length);
+                Buffer.BlockCopy(data, i, comp, 0, comp.Length);
                 if (Hex_Val(comp) == find) return (true, i);
                 if (Hex(data, i, 2) == find) return (true, i);
             }
@@ -653,8 +653,8 @@ namespace V_Max_Tool
                 int shrink = data.Length - temp.Length;
                 try
                 {
-                    Array.Copy(data, 0, temp, 0, start);
-                    Array.Copy(data, start + shrink, temp, start, temp.Length - start);
+                    Buffer.BlockCopy(data, 0, temp, 0, start);
+                    Buffer.BlockCopy(data, start + shrink, temp, start, temp.Length - start);
                 }
                 catch { return data; }
             }
@@ -686,9 +686,9 @@ namespace V_Max_Tool
                         current = 0;
                     }
                 }
-                Array.Copy(data, 0, temp, 0, pos);
+                Buffer.BlockCopy(data, 0, temp, 0, pos);
                 for (int i = pos; i < pos + a; i++) temp[i] = fill;
-                Array.Copy(data, pos, temp, pos + a, data.Length - pos);
+                Buffer.BlockCopy(data, pos, temp, pos + a, data.Length - pos);
                 //File.WriteAllBytes($@"C:\test\fff", temp);
                 return temp;
             }
@@ -721,9 +721,9 @@ namespace V_Max_Tool
                         current = 0;
                     }
                 }
-                Array.Copy(data, 0, temp, 0, pos);
+                Buffer.BlockCopy(data, 0, temp, 0, pos);
                 for (int i = pos; i < pos + a; i++) temp[i] = fill;
-                Array.Copy(data, pos, temp, pos + a, data.Length - pos);
+                Buffer.BlockCopy(data, pos, temp, pos + a, data.Length - pos);
                 //File.WriteAllBytes($@"C:\test\fff", temp);
                 return temp;
             }
@@ -736,15 +736,15 @@ namespace V_Max_Tool
             Set_Dest_Arrays(temp, trk);
         }
 
-        void Set_Dest_Arrays(byte[] data, int trk)
+        unsafe void Set_Dest_Arrays(byte[] data, int trk)
         {
             try
             {
                 NDG.Track_Data[trk] = new byte[data.Length];
                 NDA.Track_Data[trk] = new byte[8192];
-                Array.Copy(data, 0, NDG.Track_Data[trk], 0, data.Length);
-                Array.Copy(data, 0, NDA.Track_Data[trk], 0, data.Length);
-                Array.Copy(data, 0, NDA.Track_Data[trk], data.Length, 8192 - data.Length);
+                Buffer.BlockCopy(data, 0, NDG.Track_Data[trk], 0, data.Length);
+                Buffer.BlockCopy(data, 0, NDA.Track_Data[trk], 0, data.Length);
+                Buffer.BlockCopy(data, 0, NDA.Track_Data[trk], data.Length, 8192 - data.Length);
                 NDA.Track_Length[trk] = data.Length << 3;
                 NDG.Track_Length[trk] = data.Length;
             }
@@ -844,7 +844,7 @@ namespace V_Max_Tool
             header[0] = 0x08;
             header[2] = (byte)sector;
             header[3] = (byte)track;
-            Array.Copy(ID, 0, header, 4, 4);
+            Buffer.BlockCopy(ID, 0, header, 4, 4);
             for (int i = 2; i < 6; i++) header[1] ^= header[i];
             return Encode_CBM_GCR(header);
         }
@@ -854,7 +854,7 @@ namespace V_Max_Tool
             if (Original.OT[trk].Length == 0)
             {
                 Original.OT[trk] = new byte[NDG.Track_Data[trk].Length];
-                Array.Copy(NDG.Track_Data[trk], 0, Original.OT[trk], 0, NDG.Track_Data[trk].Length);
+                Buffer.BlockCopy(NDG.Track_Data[trk], 0, Original.OT[trk], 0, NDG.Track_Data[trk].Length);
             }
             int d = Get_Density(NDG.Track_Data[trk].Length);
             byte[] temp = Shrink_Track(NDG.Track_Data[trk], d);
@@ -867,7 +867,7 @@ namespace V_Max_Tool
                 int cur = 0;
                 for (int i = 0; i < NDG.Track_Data[trk].Length - 1; i++)
                 {
-                    Array.Copy(NDG.Track_Data[trk], i, pattern, 0, pattern.Length);
+                    Buffer.BlockCopy(NDG.Track_Data[trk], i, pattern, 0, pattern.Length);
                     if (Hex_Val(pattern) == current)
                     {
                         cur++;
@@ -886,8 +886,8 @@ namespace V_Max_Tool
                 }
                 temp = new byte[density[d]];
                 int skip = NDG.Track_Data[trk].Length - density[d];
-                Array.Copy(NDG.Track_Data[trk], 0, temp, 0, start);
-                Array.Copy(NDG.Track_Data[trk], start + skip, temp, start, (temp.Length - 1) - start);
+                Buffer.BlockCopy(NDG.Track_Data[trk], 0, temp, 0, start);
+                Buffer.BlockCopy(NDG.Track_Data[trk], start + skip, temp, start, (temp.Length - 1) - start);
             }
             Set_Dest_Arrays(temp, trk);
         }

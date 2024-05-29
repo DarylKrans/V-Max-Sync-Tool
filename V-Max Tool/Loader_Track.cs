@@ -30,9 +30,9 @@ namespace V_Max_Tool
                 if (dataa != null)
                 {
                     byte[] star = new byte[comp_length];
-                    Array.Copy(dataa, start_pos, star, 0, comp_length);
+                    Buffer.BlockCopy(dataa, start_pos, star, 0, comp_length);
                     byte[] comp = new byte[8192 - (comp_length + start_pos)];
-                    Array.Copy(dataa, comp_length, comp, 0, 8192 - (comp_length + start_pos));
+                    Buffer.BlockCopy(dataa, comp_length, comp, 0, 8192 - (comp_length + start_pos));
 
                     for (p = skip_length; p < comp.Length; p++)
                     {
@@ -62,7 +62,7 @@ namespace V_Max_Tool
                 for (int j = 0; j < 8; j++)
                 {
                     byte[] tmp = new byte[temp.Length];
-                    Array.Copy(temp, 0, tmp, 0, tmp.Length);
+                    Buffer.BlockCopy(temp, 0, tmp, 0, tmp.Length);
                     BitArray s_bArray = new BitArray(Flip_Endian(tmp));
                     BitArray d_bArray = new BitArray(s_bArray.Count);
                     int dp = 0;
@@ -77,7 +77,7 @@ namespace V_Max_Tool
                     for (int i = 0; i < cc.Length - 5; i++)
                     {
 
-                        if (cc[i] == sb[0]) Array.Copy(cc, i + 1, comp, 0, comp.Length);
+                        if (cc[i] == sb[0]) Buffer.BlockCopy(cc, i + 1, comp, 0, comp.Length);
                         if (vm2_ver[vs].Any(s => s == Hex_Val(comp)))
                         {
                             for (int g = (i + 2); g < cc.Length; g++)
@@ -157,8 +157,8 @@ namespace V_Max_Tool
                         if (tracks > 42) trk_num = (i / 2) + 1; else trk_num = i;
                         Original.G = new byte[NDG.Track_Data[i].Length];
                         Original.A = new byte[NDA.Track_Data[i].Length];
-                        Array.Copy(NDG.Track_Data[i], 0, Original.G, 0, NDG.Track_Data[i].Length);
-                        Array.Copy(NDA.Track_Data[i], 0, Original.A, 0, NDA.Track_Data[i].Length);
+                        Buffer.BlockCopy(NDG.Track_Data[i], 0, Original.G, 0, NDG.Track_Data[i].Length);
+                        Buffer.BlockCopy(NDA.Track_Data[i], 0, Original.A, 0, NDA.Track_Data[i].Length);
                         var d = Get_Density(NDG.Track_Data[i].Length);
 
                         if (NDS.cbm.Any(x => x == 3))
@@ -225,7 +225,7 @@ namespace V_Max_Tool
             bool f = false;
             for (int i = 0; i < tdata.Length - 4; i++)
             {
-                Array.Copy(tdata, i, comp, 0, comp.Length);
+                Buffer.BlockCopy(tdata, i, comp, 0, comp.Length);
                 if (Match(comp, v1)) { Patch_V3(i - 4); f = true; }
                 if (Match(comp, v2)) { Patch_V2(i - 3); f = true; }
                 if (Match(comp, v3)) { Patch_V3(i - 4); f = true; }

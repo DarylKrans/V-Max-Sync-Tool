@@ -13,7 +13,9 @@ namespace V_Max_Tool
         private readonly string[][] vm2_ver = new string[2][];
         private readonly string[] v_check = { "A5-A3", "A9-A3", "AD-AB", "AD-A7" };
         private readonly byte[] VM2_Valid = { 0xa5, 0xa4, 0xa9, 0xaC, 0xad, 0xb4, 0xbc };
-        private readonly string v2 = "A5-A5-A5"; // V-MAX v2 sector 0 header (cinemaware)
+        //private readonly string v2 = "A5-A5-A5"; // V-MAX v2 sector 0 header (cinemaware)
+        private readonly byte[] vv2n = { 0x64, 0xa5, 0xa5, 0xa5 };
+        private readonly byte[] vv2p = { 0x4e, 0xa5, 0xa5, 0xa5 };
         //private readonly byte[,][] v2ver = new byte[22,2][];
 
         void V2_Adv_Opts()
@@ -31,7 +33,7 @@ namespace V_Max_Tool
                         if (Original.OT[t].Length == 0)
                         {
                             Original.OT[t] = new byte[NDG.Track_Data[t].Length];
-                            Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
+                            Buffer.BlockCopy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
                         }
                     }
                 }
@@ -45,9 +47,9 @@ namespace V_Max_Tool
                         if (Original.OT[t].Length != 0)
                         {
                             NDG.Track_Data[t] = new byte[Original.OT[t].Length];
-                            Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
-                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
-                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, 8192 - Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, 8192 - Original.OT[t].Length);
                         }
                         NDG.Track_Length[t] = NDG.Track_Data[t].Length;
                         NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
@@ -124,7 +126,7 @@ namespace V_Max_Tool
                     if (data[pos - 5] == 0x52)
                     {
                         t_gap = new byte[11];
-                        Array.Copy(data, pos - 5, t_gap, 1, 10);
+                        Buffer.BlockCopy(data, pos - 5, t_gap, 1, 10);
                         t_gap[0] = 0xff;
                     }
                     if (i == vm2_ver[vs].Length - 1) gap_pos = 0; else gap_pos += pos;
@@ -139,7 +141,7 @@ namespace V_Max_Tool
             for (int i = 0; i < data.Length; i++)
             {
                 while (data[i] != start_byte[0]) i++;
-                Array.Copy(data, i + 1, compare, 0, compare.Length);
+                Buffer.BlockCopy(data, i + 1, compare, 0, compare.Length);
                 if (vm2_ver[vs].Any(s => s == Hex_Val(compare)))
                 {
                     sec = Array.IndexOf(vm2_ver[vs], Hex_Val(compare));
@@ -157,11 +159,11 @@ namespace V_Max_Tool
                     (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][sec]}", data, 3);
                 }
                 catch { }
-                Array.Copy(data, pos + 1, header[sec], 0, header[sec].Length);
+                Buffer.BlockCopy(data, pos + 1, header[sec], 0, header[sec].Length);
                 while (data[pos] != end_byte && (pos + Sector_len + 2) < data.Length) pos++;
                 try
                 {
-                    Array.Copy(data, pos + 1, sec_dat[sec], 0, Sector_len);
+                    Buffer.BlockCopy(data, pos + 1, sec_dat[sec], 0, Sector_len);
                 }
                 catch
                 {
@@ -239,7 +241,7 @@ namespace V_Max_Tool
             List<string> headers = new List<string>();
             for (int i = 0; i < data.Length - 4; i++)
             {
-                try { Array.Copy(data, i, compare, 0, compare.Length); } catch { }
+                try { Buffer.BlockCopy(data, i, compare, 0, compare.Length); } catch { }
                 if (Match(pattern, compare)) // == Hex_Val(pattern))
                 {
                     start_byte[0] = data[i - 1];
@@ -291,7 +293,7 @@ namespace V_Max_Tool
                 List<byte> hd = new List<byte>();
                 if (data[i] == start_byte[0])
                 {
-                    Array.Copy(data, i + 1, comp, 0, comp.Length);
+                    Buffer.BlockCopy(data, i + 1, comp, 0, comp.Length);
                     if (vm2_ver[vs].Any(s => s == Hex_Val(comp)))
                     {
                         var pos = i + 1;
@@ -329,7 +331,7 @@ namespace V_Max_Tool
                         if (rep.Length == 0)
                         {
                             rep = new byte[2];
-                            Array.Copy(comp, 0, rep, 0, comp.Length);
+                            Buffer.BlockCopy(comp, 0, rep, 0, comp.Length);
                         }
                         if (!start_found) data_start = i;
                     }
@@ -340,8 +342,8 @@ namespace V_Max_Tool
             byte[] tdata = new byte[8192];
             try
             {
-                Array.Copy(data, data_start, tdata, 0, data_end - data_start);
-                Array.Copy(data, data_start, tdata, (data_end - data_start), 8192 - (data_end - data_start));
+                Buffer.BlockCopy(data, data_start, tdata, 0, data_end - data_start);
+                Buffer.BlockCopy(data, data_start, tdata, (data_end - data_start), 8192 - (data_end - data_start));
             }
             catch { }
             return (tdata, data_start, data_end, sec_zero, (data_end - data_start) << 3, all_headers.ToArray(), sectors, gap_sec, m);
@@ -362,10 +364,10 @@ namespace V_Max_Tool
             byte[] find = IArray(4, 0xa5);
             find[0] = start_byte[0];
             int vs = Convert.ToInt32(t_info[3]);
-            try { Array.Copy(data, data_start, temp_data, 0, data_end - data_start); } catch { }
+            try { Buffer.BlockCopy(data, data_start, temp_data, 0, data_end - data_start); } catch { }
             for (int i = 0; i < temp_data.Length - 5; i++)
             {
-                Array.Copy(temp_data, i, compare, 0, compare.Length);
+                Buffer.BlockCopy(temp_data, i, compare, 0, compare.Length);
                 if (Match(find, compare)) // == $"{Hex_Val(start_byte)}-{Hex_Val(pattern)}")
                 {
                     if (i > 5)
@@ -406,10 +408,10 @@ namespace V_Max_Tool
                             sf = false;
                             var m = 0;
                             byte[] header_ID = new byte[2];
-                            if (s_pos + 3 < temp_data.Length - 1) Array.Copy(temp_data, s_pos + 2, header_ID, 0, 2); // s_pos + 4, s_pos + 3
+                            if (s_pos + 3 < temp_data.Length - 1) Buffer.BlockCopy(temp_data, s_pos + 2, header_ID, 0, 2); // s_pos + 4, s_pos + 3
                             while (temp_data[s_pos] != start_byte[0]) m++; // s_pos++;
                             s_pos += m + 1; // sets source position 1 byte after the header start byte to get the header pattern data
-                            Array.Copy(temp_data, s_pos, compare, 0, compare.Length);
+                            Buffer.BlockCopy(temp_data, s_pos, compare, 0, compare.Length);
 
                             if (vm2_ver[vs].Any(s => s == Hex_Val(compare))) // <- checks to verify header pattern is in the list of valid headers
                             {

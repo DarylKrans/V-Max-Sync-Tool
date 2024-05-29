@@ -238,7 +238,7 @@ namespace V_Max_Tool
         private Bitmap Draw_Track(Bitmap bmp, int max_Height, byte[] data, int trk, int s, int e, int tf, byte[] v2i, int d, bool w, int[] v)
         {
             byte[] tdata = new byte[data.Length];
-            Array.Copy(data, 0, tdata, 0, data.Length);
+            Buffer.BlockCopy(data, 0, tdata, 0, data.Length);
             Pen pen;
             bool v2 = false;
             bool v5 = false;
@@ -351,24 +351,24 @@ namespace V_Max_Tool
             if (Out_view.Checked)
             {
                 temp = new byte[NDG.Track_Length[track]];
-                Array.Copy(NDG.Track_Data[track], 0, temp, 0, temp.Length);
+                Buffer.BlockCopy(NDG.Track_Data[track], 0, temp, 0, temp.Length);
             }
             if (Src_view.Checked)
             {
                 if (NDS.cbm[track] == 1 && (NDS.D_End[track] - NDS.D_Start[track]) >> 3 >= min_t_len)
                 {
                     temp = new byte[(NDS.D_End[track] - NDS.D_Start[track]) >> 3];
-                    Array.Copy(NDS.Track_Data[track], NDS.D_Start[track] >> 3, temp, 0, (NDS.D_End[track] - NDS.D_Start[track]) >> 3);
+                    Buffer.BlockCopy(NDS.Track_Data[track], NDS.D_Start[track] >> 3, temp, 0, (NDS.D_End[track] - NDS.D_Start[track]) >> 3);
                 }
                 else
                 {
                     temp = new byte[NDS.Track_Data[track].Length];
-                    Array.Copy(NDS.Track_Data[track], 0, temp, 0, NDS.Track_Data[track].Length);
+                    Buffer.BlockCopy(NDS.Track_Data[track], 0, temp, 0, NDS.Track_Data[track].Length);
                 }
                 if ((NDS.cbm[track] > 1 && NDS.cbm[track] < 5) && NDS.D_End[track] - NDS.D_Start[track] > min_t_len)
                 {
                     temp = new byte[NDS.D_End[track] - NDS.D_Start[track]];
-                    Array.Copy(NDS.Track_Data[track], NDS.D_Start[track] >> 3, temp, 0, (NDS.D_End[track] - NDS.D_Start[track]));
+                    Buffer.BlockCopy(NDS.Track_Data[track], NDS.D_Start[track] >> 3, temp, 0, (NDS.D_End[track] - NDS.D_Start[track]));
                 }
             }
             return temp;

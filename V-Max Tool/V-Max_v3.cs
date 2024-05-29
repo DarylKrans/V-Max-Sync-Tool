@@ -13,7 +13,8 @@ namespace V_Max_Tool
         private readonly int v3_min_header = 3;             // adjust the minimum length of the sector header (0x49) bytes
         private readonly int v3_max_header = 7; //12;            // adjust the maximum length of the sector header (0x49) bytes
         private readonly byte[] vm3_pos_sync = { 0x57, 0x5b, 0x5f, 0xff };
-        private readonly string v3 = "49-49-49"; // V-MAX v3 sector header
+        private readonly string v3 = "49-49-49-EE"; // V-MAX v3 sector header
+        private readonly byte[] v3a = { 0x49, 0x49, 0x49, 0xee  };
 
         void V3_Auto_Adjust()
         {
@@ -30,7 +31,7 @@ namespace V_Max_Tool
                             if (Original.OT[t].Length == 0)
                             {
                                 Original.OT[t] = new byte[NDG.Track_Data[t].Length];
-                                Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
+                                Buffer.BlockCopy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
                             }
                         }
                         if (NDS.cbm[t] == 4) Shrink_Short_Sector(t);
@@ -47,8 +48,8 @@ namespace V_Max_Tool
                         {
                             NDG.Track_Data[t] = new byte[Original.SG.Length];
                             NDA.Track_Data[t] = new byte[Original.SA.Length];
-                            Array.Copy(Original.SG, 0, NDG.Track_Data[t], 0, Original.SG.Length);
-                            Array.Copy(Original.SA, 0, NDA.Track_Data[t], 0, Original.SA.Length);
+                            Buffer.BlockCopy(Original.SG, 0, NDG.Track_Data[t], 0, Original.SG.Length);
+                            Buffer.BlockCopy(Original.SA, 0, NDA.Track_Data[t], 0, Original.SA.Length);
                             NDG.Track_Length[t] = NDG.Track_Data[t].Length;
                             NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
                             NDG.L_Rot = false;
@@ -58,9 +59,9 @@ namespace V_Max_Tool
                             if (Original.OT[t].Length != 0)
                             {
                                 NDG.Track_Data[t] = new byte[Original.OT[t].Length];
-                                Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
-                                Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
-                                Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, NDA.Track_Data[t].Length - Original.OT[t].Length);
+                                Buffer.BlockCopy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
+                                Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
+                                Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, NDA.Track_Data[t].Length - Original.OT[t].Length);
                                 p = false;
                                 v = true;
                             }
@@ -114,7 +115,7 @@ namespace V_Max_Tool
                 if ((data[tid] == 0xff || data[tid] == 0xf7) && data[tid + 1] == 0x52)
                 {
                     track_ID = new byte[11];
-                    Array.Copy(data, tid, track_ID, 0, track_ID.Length);
+                    Buffer.BlockCopy(data, tid, track_ID, 0, track_ID.Length);
                     //Invoke(new Action(() => Text = $"tid - gapsec {tid - gap_sector} tid {tid} gapsec {gap_sector}"));
                     break;
                 }
@@ -132,7 +133,7 @@ namespace V_Max_Tool
             data = Rotate_Left(data, a);
             for (int i = 0; i < data.Length - comp.Length; i++)
             {
-                if (data[i] == sb[0]) Array.Copy(data, i, comp, 0, comp.Length);
+                if (data[i] == sb[0]) Buffer.BlockCopy(data, i, comp, 0, comp.Length);
                 if (Match(comp, header))
                 {
                     int b = 0;
@@ -146,7 +147,7 @@ namespace V_Max_Tool
                     i += b;
                     try
                     {
-                        Array.Copy(data, i, comp, 0, comp.Length);
+                        Buffer.BlockCopy(data, i, comp, 0, comp.Length);
                     }
                     catch { };
                     if (comp[0] == eb[0])
@@ -268,7 +269,7 @@ namespace V_Max_Tool
             List<int> hl = new List<int>();
             for (int i = 0; i < data.Length - comp.Length; i++)
             {
-                Array.Copy(data, i, comp, 0, comp.Length);
+                Buffer.BlockCopy(data, i, comp, 0, comp.Length);
                 if (Match(comp, header))
                 {
                     var a = 0;
@@ -276,7 +277,7 @@ namespace V_Max_Tool
                     i += a;
                     if (data[i] == head_end)
                     {
-                        if (i + head.Length < data.Length) Array.Copy(data, i, head, 0, head.Length);
+                        if (i + head.Length < data.Length) Buffer.BlockCopy(data, i, head, 0, head.Length);
                         if (!ss.Any(b => b == Hex_Val(head)))
                         {
                             //last_sector = i;
@@ -389,7 +390,7 @@ namespace V_Max_Tool
         (byte[], int, int) Adjust_Vmax_V3_Sync(byte[] data, int data_start, int data_end, int sector_zero)
         {
             byte[] bdata = new byte[data_end - data_start];
-            Array.Copy(data, data_start, bdata, 0, data_end - data_start);
+            Buffer.BlockCopy(data, data_start, bdata, 0, data_end - data_start);
             byte[] tdata = Rotate_Left(bdata, ((sector_zero >> 3) - (data_start >> 3)));
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
@@ -403,7 +404,7 @@ namespace V_Max_Tool
                 {
                     try
                     {
-                        Array.Copy(tdata, spos + 2, comp, 0, comp.Length);
+                        Buffer.BlockCopy(tdata, spos + 2, comp, 0, comp.Length);
                         if (Match(comp, hd)) // && (spos < tdata.Length - 4))
                         {
                             var a = 0;

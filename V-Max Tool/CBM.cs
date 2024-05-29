@@ -103,7 +103,7 @@ namespace V_Max_Tool
             byte[] dec_hdr;
             byte[] sec_hdr = new byte[10];
             byte[] Disk_ID = new byte[4];
-            Array.Copy(data, 0, pdata, 0, data.Length);
+            Buffer.BlockCopy(data, 0, pdata, 0, data.Length);
             data = Flip_Endian(data);
             BitArray source = new BitArray(data);
             List<string> list = new List<string>();
@@ -164,7 +164,7 @@ namespace V_Max_Tool
                             if (!start_found) { data_start = pos; start_found = true; }
                             if (!sec_zero && h == valid_cbm[0])
                             {
-                                Array.Copy(dec_hdr, 4, Disk_ID, 0, 4);
+                                Buffer.BlockCopy(dec_hdr, 4, Disk_ID, 0, 4);
                                 sector_zero = pos;
                                 sec_zero = true;
                             }
@@ -283,30 +283,28 @@ namespace V_Max_Tool
                         Pad_Bits(dest_pos - (y + expected_sync + 8), (8 - y) + 1, d);
                     }
 
-                    BitArray temp = new BitArray(bcnt << 3);
-                    for (int i = 0; i < (bcnt << 3); i++) temp[i] = d[i];
-                    if (sync)
-                    {
-                        var ver = 0;
-                        for (int i = 0; i < expected_sync; i++) { if (temp[temp.Length - (i + 1)] == true) ver++; }
-                        if (ver < sync_count && ver < expected_sync && ver >= minimum_sync)
-                        {
-                            for (int i = 0; i < expected_sync; i++) temp[(temp.Length - 1) - i] = true;
-                        }
-                        temp[(temp.Length - 1) - expected_sync] = false;
-                        temp[(temp.Length - 2) - expected_sync] = true;
-                    }
-
-                    byte[] dest = Bit2Byte(temp);
-                    dest = Rotate_Right(Flip_Endian(dest), 6);
-                    return dest;
+                    //BitArray temp = new BitArray(bcnt << 3);
+                    //for (int i = 0; i < (bcnt << 3); i++) temp[i] = d[i];
+                    //if (sync)
+                    //{
+                    //    var ver = 0;
+                    //    for (int i = 0; i < expected_sync; i++) { if (temp[temp.Length - (i + 1)] == true) ver++; }
+                    //    if (ver < sync_count && ver < expected_sync && ver >= minimum_sync)
+                    //    {
+                    //        for (int i = 0; i < expected_sync; i++) temp[(temp.Length - 1) - i] = true;
+                    //    }
+                    //    temp[(temp.Length - 1) - expected_sync] = false;
+                    //    temp[(temp.Length - 2) - expected_sync] = true;
+                    //}
+                    //return Rotate_Right(Flip_Endian(Bit2Byte(temp)), 6);
+                    return Rotate_Right(Flip_Endian(Bit2Byte(d, 0, bcnt << 3)), 6);
                 }
             }
             return data;
 
         }
 
-        (byte[], bool) Decode_CBM_GCR(byte[] data, int sector, bool decode, BitArray source = null)
+        (byte[], bool) Decode_CBM_GCR(byte[] data, int sector, bool decode, BitArray source = null, int pos = 0)
         {
             byte[] tmp = new byte[0];
             if (source == null) source = new BitArray(Flip_Endian(data));
@@ -316,7 +314,7 @@ namespace V_Max_Tool
             bool sector_found = false;
             bool sync = false;
             int sync_count = 0;
-            int pos = 0;
+            //int pos = 0;
             Compare();
             while (pos < source.Length - 32)
             {
@@ -337,7 +335,7 @@ namespace V_Max_Tool
                             (dec, chksm) = Decode_Sector();
                             if (!decode) return (dec, chksm);
                             tmp = new byte[dec.Length - 4];
-                            Array.Copy(dec, 1, tmp, 0, tmp.Length);
+                            Buffer.BlockCopy(dec, 1, tmp, 0, tmp.Length);
                             return (tmp, chksm);
                         }
                     }
@@ -443,11 +441,11 @@ namespace V_Max_Tool
                 byte[] last_sector = new byte[2];
                 while (Convert.ToInt32(next_sector[0]) == track)
                 {
-                    Array.Copy(next_sector, 0, last_sector, 0, 2);
+                    Buffer.BlockCopy(next_sector, 0, last_sector, 0, 2);
                     (temp, c) = Decode_CBM_GCR(NDA.Track_Data[halftrack], Convert.ToInt32(next_sector[1]), true);
                     if (temp.Length > 0 && (c || !c))
                     {
-                        Array.Copy(temp, 0, next_sector, 0, next_sector.Length);
+                        Buffer.BlockCopy(temp, 0, next_sector, 0, next_sector.Length);
                         if (tracks <= 42) halftrack = Convert.ToInt32(next_sector[0]) - 1;
                         else
                         {
@@ -495,7 +493,7 @@ namespace V_Max_Tool
                         {
                             for (int j = 0; j < 8; j++)
                             {
-                                Array.Copy(directory, 256 * i + (j * 32), file, 0, file.Length);
+                                Buffer.BlockCopy(directory, 256 * i + (j * 32), file, 0, file.Length);
                                 if (file[2] != 0x00)
                                 {
                                     f_type = Get_DirectoryFileType(file[2]);
@@ -602,7 +600,7 @@ namespace V_Max_Tool
                 wrt.Write(title);
                 while (buff.Length < 256) wrt.Write((byte)0x00);
                 byte[] s = new byte[260];
-                Array.Copy(buff.ToArray(), 0, s, 0, buff.Length);
+                Buffer.BlockCopy(buff.ToArray(), 0, s, 0, (int)buff.Length);
                 for (int i = 1; i < 257; i++) chksum ^= s[i];
                 s[257] = (byte)chksum;
                 return s;

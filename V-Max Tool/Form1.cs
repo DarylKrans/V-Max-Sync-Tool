@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -72,7 +72,7 @@ namespace V_Max_Tool
                             string parent;// = "";
                             string[] batch_list;
                             (batch_list, parent) = Populate_File_List(File_List);
-                            
+
                             if (batch_list?.Length != 0)
                             {
                                 string sel_path = SaveFolder.SelectedPath.ToString();
@@ -170,8 +170,8 @@ namespace V_Max_Tool
                                 Stream.Seek(pos + 2, SeekOrigin.Begin);
                                 Stream.Read(tdata, 0, ts);
                                 NDG.s_len[i] = tdata.Length;
-                                Array.Copy(tdata, 0, NDS.Track_Data[i], 0, ts);
-                                Array.Copy(tdata, 0, NDS.Track_Data[i], ts, 8192 - ts);
+                                Buffer.BlockCopy(tdata, 0, NDS.Track_Data[i], 0, ts);
+                                Buffer.BlockCopy(tdata, 0, NDS.Track_Data[i], ts, 8192 - ts);
                             }
                             else
                             {
@@ -234,17 +234,24 @@ namespace V_Max_Tool
 
             void Process(bool get, string l2)
             {
+                Stopwatch proctime = new Stopwatch();
                 Dir_screen.Clear();
                 Dir_screen.Text = "LOAD\"$\",8\nSEARCHING FOR $\nLOADING";
                 loader_fixed = false;
                 Task.Run(delegate
                 {
+                    if (debug) proctime.Restart();
                     Parse_Nib_Data();
                     if (!error)
                     {
                         Invoke(new Action(() =>
                         {
                             Process_Nib_Data(true, false, true);
+                            if (debug)
+                            {
+                                proctime.Stop();
+                                Invoke(new Action(() => Text = proctime.Elapsed.TotalMilliseconds.ToString()));
+                            }
                             Set_ListBox_Items(false, false);
                             Get_Disk_Directory();
                             linkLabel1.Visible = false;
@@ -542,7 +549,7 @@ namespace V_Max_Tool
                     if (Original.OT[t].Length == 0)
                     {
                         Original.OT[t] = new byte[NDG.Track_Data[t].Length];
-                        Array.Copy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
+                        Buffer.BlockCopy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
                     }
                     if (!NDG.L_Rot)
                     {
@@ -554,9 +561,9 @@ namespace V_Max_Tool
                         if (Original.OT[t].Length != 0)
                         {
                             NDG.Track_Data[t] = new byte[Original.OT[t].Length];
-                            Array.Copy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
-                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
-                            Array.Copy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, 8192 - Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, 8192 - Original.OT[t].Length);
                         }
                         NDG.Track_Length[t] = NDG.Track_Data[t].Length;
                         NDA.Track_Length[t] = NDG.Track_Length[t] * 8;

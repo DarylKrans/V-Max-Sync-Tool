@@ -112,7 +112,7 @@ namespace V_Max_Tool
                         else
                         {
                             byte[] t = new byte[m];
-                            Array.Copy(NDG.Track_Data[i], 0, t, 0, m);
+                            Buffer.BlockCopy(NDG.Track_Data[i], 0, t, 0, m);
                             write.Write(t);
                         }
                         var o = m - NDG.Track_Length[i];
