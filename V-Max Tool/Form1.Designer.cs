@@ -1358,9 +1358,9 @@
             // 
             this.panel1.BackColor = System.Drawing.Color.Gainsboro;
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.Adj_pbar);
             this.panel1.Controls.Add(this.listBox1);
             this.panel1.Controls.Add(this.Batch_Box);
-            this.panel1.Controls.Add(this.Adj_pbar);
             this.panel1.Controls.Add(this.Dir_screen);
             this.panel1.Controls.Add(this.Drag_pic);
             this.panel1.Controls.Add(this.Out_density);

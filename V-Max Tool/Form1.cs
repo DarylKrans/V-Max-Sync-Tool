@@ -13,7 +13,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.87 (beta)";
+        private readonly string ver = " v0.9.90 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -33,6 +33,7 @@ namespace V_Max_Tool
         private byte[] v26446ntsc = new byte[0];
         private byte[] v2644entsc = new byte[0];
         private readonly int min_t_len = 6000;
+        private int Cores = 1;
         Thread w;
 
         public Form1()
@@ -114,7 +115,6 @@ namespace V_Max_Tool
                 FileStream Stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 if (fext.ToLower() == supported[0])
                 {
-                    Show_Progress_Bar();
                     Data_Box.Clear();
                     long length = new System.IO.FileInfo(file).Length;
                     tracks = (int)(length - 256) / 8192;
@@ -141,7 +141,6 @@ namespace V_Max_Tool
                 }
                 if (fext.ToLower() == supported[1])
                 {
-                    Show_Progress_Bar();
                     Data_Box.Clear();
                     Track_Info.Items.Clear();
                     Set_ListBox_Items(true, false);
@@ -234,24 +233,18 @@ namespace V_Max_Tool
 
             void Process(bool get, string l2)
             {
-                Stopwatch proctime = new Stopwatch();
                 Dir_screen.Clear();
                 Dir_screen.Text = "LOAD\"$\",8\nSEARCHING FOR $\nLOADING";
                 loader_fixed = false;
                 Task.Run(delegate
                 {
-                    if (debug) proctime.Restart();
-                    Parse_Nib_Data();
+                    Stopwatch parse = Parse_Nib_Data();
                     if (!error)
                     {
                         Invoke(new Action(() =>
                         {
-                            Process_Nib_Data(true, false, true);
-                            if (debug)
-                            {
-                                proctime.Stop();
-                                Invoke(new Action(() => Text = proctime.Elapsed.TotalMilliseconds.ToString()));
-                            }
+                            Stopwatch proc = Process_Nib_Data(true, false, true);
+                            if (debug) Invoke(new Action(() => Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} Process time : {proc.Elapsed.TotalMilliseconds} Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds}"));
                             Set_ListBox_Items(false, false);
                             Get_Disk_Directory();
                             linkLabel1.Visible = false;
@@ -280,12 +273,6 @@ namespace V_Max_Tool
                         }));
                     }
                 });
-            }
-            void Show_Progress_Bar()
-            {
-                Import_Progress_Bar.Value = 0;
-                Import_File.Visible = true;
-                Update();
             }
         }
 

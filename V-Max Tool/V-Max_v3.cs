@@ -13,8 +13,8 @@ namespace V_Max_Tool
         private readonly int v3_min_header = 3;             // adjust the minimum length of the sector header (0x49) bytes
         private readonly int v3_max_header = 7; //12;            // adjust the maximum length of the sector header (0x49) bytes
         private readonly byte[] vm3_pos_sync = { 0x57, 0x5b, 0x5f, 0xff };
-        private readonly string v3 = "49-49-49-EE"; // V-MAX v3 sector header
-        private readonly byte[] v3a = { 0x49, 0x49, 0x49, 0xee  };
+        //private readonly string v3 = "49-49-49-EE"; // V-MAX v3 sector header
+        private readonly byte[] v3a = { 0x49, 0x49, 0x49, 0xee };
 
         void V3_Auto_Adjust()
         {

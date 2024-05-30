@@ -349,21 +349,6 @@ namespace V_Max_Tool
             }
         }
 
-        void Check_CPU_Speed()
-        {
-            int cpu = 0;
-            Thread perf = new Thread(new ThreadStart(() => Perf()));
-            perf.Start();
-            Thread.Sleep(100);
-            perf.Abort();
-            if (cpu < 300000000) Img_Q.SelectedIndex = 1;
-            if (cpu < 200000000) Img_Q.SelectedIndex = 0;
-            if (cpu < 150000000) M_render.Visible = manualRender = true;
-            else M_render.Visible = manualRender = false;
-
-            void Perf() { while (true) cpu++; }
-        }
-
         void Out_Density_Color(object sender, DrawItemEventArgs e)
         {
             try
@@ -581,55 +566,15 @@ namespace V_Max_Tool
             return (false, 0);
         }
 
-        //(bool, int) Find_D(byte[] find, byte[] data, int clen, int start_pos = -1)
-        //{
-        //    if (start_pos < 0) start_pos = 0;
-        //    byte[] comp = new byte[clen];
-        //    for (int i = start_pos; i < data.Length - find.Length; i++)
-        //    {
-        //        Array.Copy(data, i, comp, 0, comp.Length);
-        //        if (Match(comp, find)) return (true, i);
-        //    }
-        //    return (false, 0);
-        //}
-
-        //byte[] StringToByteArray(string hex)
-        //{
-        //    return Enumerable.Range(0, hex.Length)
-        //                     .Where(x => x % 2 == 0)
-        //                     .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
-        //                     .ToArray();
-        //}
-
-        //public static String Byte_to_Binary(Byte[] data)  // (use this for .NET 4.x build) Note: only 100ms faster
-        //{
-        //    return string.Join(" ", data.Select(byt => Convert.ToString(byt, 2).PadLeft(8, '0')));
-        //}
-
-        //byte[] Bit_Rotate_Left(byte[] data, int s)
-        //{
-        //    BitArray temp = new BitArray(Flip_Endian(data));
-        //    BitArray tmp = new BitArray(temp.Length);
-        //    for (int i = 0; i < temp.Length; i++)
-        //    {
-        //        tmp[i] = temp[s++];
-        //        if (s == temp.Length) s = 0;
-        //    }
-        //    tmp.CopyTo(data, 0);
-        //    return Flip_Endian(data);
-        //}
-
-        //int Find_bytes(byte[] find, byte[] data)
-        //{
-        //    int i;
-        //    byte[] comp = new byte[find.Length];
-        //    for (i = 0; i < data.Length - find.Length; i++)
-        //    {
-        //        Array.Copy(data, i, comp, 0, comp.Length);
-        //        if (BytesMatch(comp, find)) break;
-        //    }
-        //    return i;
-        //}
+        int Get_Cores()
+        {
+            foreach (var item in new System.Management.ManagementObjectSearcher("Select NumberOfCores from Win32_Processor").Get())
+            {
+                int coreCount = int.Parse(item["NumberOfCores"].ToString());
+                Cores += coreCount;
+            }
+            return Cores -= 1;
+        }
 
         byte[] Shrink_Track(byte[] data, int trk_density)
         {
@@ -724,7 +669,6 @@ namespace V_Max_Tool
                 Buffer.BlockCopy(data, 0, temp, 0, pos);
                 for (int i = pos; i < pos + a; i++) temp[i] = fill;
                 Buffer.BlockCopy(data, pos, temp, pos + a, data.Length - pos);
-                //File.WriteAllBytes($@"C:\test\fff", temp);
                 return temp;
             }
             else return data;
@@ -736,7 +680,7 @@ namespace V_Max_Tool
             Set_Dest_Arrays(temp, trk);
         }
 
-        unsafe void Set_Dest_Arrays(byte[] data, int trk)
+        void Set_Dest_Arrays(byte[] data, int trk)
         {
             try
             {
@@ -1001,15 +945,6 @@ namespace V_Max_Tool
             V3_hlen.Enabled = false;
             /// ----------------- V-Max v2 Config -------------
             Tabs.Controls.Remove(Adv_V2_Opts);
-            //byte[] vhead = Resources.v2h;
-            //for (int i = 0; i < vhead.Length / 2; i++)
-            //{
-            //    v2ver[i,0] = new byte[2];
-            //    v2ver[i,1] = new byte[2];
-            //    Array.Copy(vhead, i * 2, v2ver[i, 0], 0, 2);
-            //    Array.Copy(vhead, i * 2, v2ver[i, 1], 0, 2);
-            //}
-            //v2ver[6, 1] = new byte[] { 0xa5, 0xa3 }; v2ver[10, 1] = new byte[] { 0xa9, 0xa3 };
             V2_hlen.Enabled = false;
             v2exp.Text = v3exp.Text = $"\u2190 Experimental";
             v2adv.Text = v3adv.Text = $"\u2193        Advanced users ONLY!        \u2193";
@@ -1051,7 +986,10 @@ namespace V_Max_Tool
             Draw_Init_Img(def_bg_text);
             Default_Dir_Screen();
             Set_Auto_Opts();
-            Check_CPU_Speed();
+            manualRender = M_render.Visible = Get_Cores() < 2;
+            if (Cores < 2) Img_Q.SelectedIndex = 0;
+
+            //Check_CPU_Speed();
             //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
             //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
             //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
