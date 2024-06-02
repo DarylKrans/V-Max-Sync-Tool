@@ -59,10 +59,10 @@ namespace V_Max_Tool
             out_dif.Items.Clear();
             Out_density.Items.Clear();
             out_rpm.Items.Clear();
-            Process_Nib_Data(p, false, false); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
+            Process_Nib_Data(p, false, false, true); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
         }
 
-        byte[] Rebuild_Vorpal(byte[] data, int trk = -1)
+        byte[] Rebuild_Vorpal(byte[] data, int trk = -1, int leadptn = 0)
         {
             int esb = 164; // # of bytes to read when last sector found
             if (trk == -1) trk -= 0;
@@ -84,14 +84,17 @@ namespace V_Max_Tool
             byte lead_out = 0xb5;
             byte stop = 0xbd;
             //if (Lead_ptn.SelectedIndex == 0) lead_in = new byte[] { 0xaa, 0x6a, 0x9a, 0xa6, 0xa9 };
-            if (Lead_ptn.SelectedIndex == 0) lead_in = new byte[] { 0xd5, 0x35, 0x4d, 0x53, 0x54 };
-            if (Lead_ptn.SelectedIndex == 1)
+            //if (Lead_ptn.SelectedIndex == 0) lead_in = new byte[] { 0xd5, 0x35, 0x4d, 0x53, 0x54 };
+            //if (Lead_ptn.SelectedIndex == 1)
+            if (leadptn == 0) lead_in = new byte[] { 0xd5, 0x35, 0x4d, 0x53, 0x54 };
+            if (leadptn == 1)
             {
                 lead_in = IArray(5, 0x55); // new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55 };
                 lead_out = 0x55;
                 stop = 0x55;
             }
-            if (Lead_ptn.SelectedIndex == 2)
+            //if (Lead_ptn.SelectedIndex == 2)
+            if (leadptn == 2)
             {
                 lead_in = IArray(5, 0xaa); // new byte[] { 0xaa, 0xaa, 0xaa, 0xaa, 0xaa };
                 lead_out = 0xaa;
@@ -194,7 +197,8 @@ namespace V_Max_Tool
             }
             void Check_Sync()
             {
-                if (Lead_ptn.SelectedIndex > 0)
+                //if (Lead_ptn.SelectedIndex > 0)
+                if (leadptn > 0)
                 {
                     temp[(offset / 8) - 4] = 0xff;
                     temp[(offset / 8) - 3] = 0xff;

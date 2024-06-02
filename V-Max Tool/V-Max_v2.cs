@@ -69,7 +69,7 @@ namespace V_Max_Tool
                 out_dif.Items.Clear();
                 Out_density.Items.Clear();
                 out_rpm.Items.Clear();
-                Process_Nib_Data(c, false, p); // false flag instructs the routine NOT to process CBM tracks again
+                Process_Nib_Data(c, false, p, true); // false flag instructs the routine NOT to process CBM tracks again
             }
         }
 

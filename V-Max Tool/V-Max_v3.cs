@@ -27,7 +27,7 @@ namespace V_Max_Tool
                     {
                         if (NDS.cbm[t] == 1 || NDS.cbm[t] == 3)
                         {
-                            if (Original.OT[t].Length == 0)
+                            if (Original.OT[t]?.Length == 0)
                             {
                                 Original.OT[t] = new byte[NDG.Track_Data[t].Length];
                                 Buffer.BlockCopy(NDG.Track_Data[t], 0, Original.OT[t], 0, NDG.Track_Data[t].Length);
@@ -55,7 +55,7 @@ namespace V_Max_Tool
                         }
                         if (NDS.cbm[t] == 1 || (NDS.cbm[t] == 3)) // && NDS.sectors[t] < 16))
                         {
-                            if (Original.OT[t].Length != 0)
+                            if (Original.OT[t]?.Length != 0)
                             {
                                 NDG.Track_Data[t] = new byte[Original.OT[t].Length];
                                 Buffer.BlockCopy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);

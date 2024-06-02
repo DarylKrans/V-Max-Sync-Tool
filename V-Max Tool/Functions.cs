@@ -119,6 +119,7 @@ namespace V_Max_Tool
             Draw_Init_Img(def_bg_text);
             Data_Box.Clear();
             Default_Dir_Screen();
+            label2.Text = string.Empty;
             busy = false;
         }
 
@@ -896,6 +897,10 @@ namespace V_Max_Tool
 
         void Init()
         {
+            //if (debug && !Tabs.TabPages.Contains(D_Bug)) Adv_ctrl.Controls.Add(D_Bug);
+            string[] args = Environment.GetCommandLineArgs();
+            if (args.Length > 1 && args[1] == "-debug") debug = true;
+            if (!debug) Tabs.TabPages.Remove(D_Bug);
             listBox1.Visible = false; // set to true for debugging that requires a listbox
             Debug_Button.Visible = debug;
             Other_opts.Visible = false;
@@ -963,7 +968,7 @@ namespace V_Max_Tool
             Lead_ptn.SelectedIndex = 0;
             Lead_ptn.Enabled = VPL_rb.Checked;
             Tabs.Controls.Remove(Vpl_adv);
-            VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = debug;
+            VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = DB_vpl.Visible;
             VD0.Value = vpl_density[0];
             VD1.Value = vpl_density[1];
             VD2.Value = vpl_density[2];
@@ -974,7 +979,8 @@ namespace V_Max_Tool
             /// ----------------- V-Max v2 Config -------------
             Tabs.Controls.Remove(Adv_V2_Opts);
             V2_hlen.Enabled = false;
-            v2exp.Text = v3exp.Text = $"\u2190 Experimental";
+            //v2exp.Text = v3exp.Text = $"\u2190 Experimental";
+            v2exp.Text = v3exp.Text = string.Empty;
             v2adv.Text = v3adv.Text = $"\u2193        Advanced users ONLY!        \u2193";
             vm2_ver[0] = new string[] { "A5-A5", "A4-A5", "A5-A7", "A5-A6", "A9-AD", "AC-A9", "AD-AB", "A9-AE", "A5-AD", "AC-A5", "AD-A7", "A5-AE", "A5-A9",
             "A4-A9", "A5-AB", "A5-AA", "A5-B5", "B4-A5", "A5-B7", "A5-B6", "A9-BD", "BC-A9" };

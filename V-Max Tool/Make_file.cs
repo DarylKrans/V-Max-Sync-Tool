@@ -106,7 +106,7 @@ namespace V_Max_Tool
                 if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] > 0 && NDS.cbm[i] < 6)
                 {
                     write.Write((short)NDG.Track_Length[i]);
-                    if (debug)
+                    if (DB_g64.Checked)
                     {
                         if (NDG.Track_Data[i].Length < m) write.Write(NDG.Track_Data[i]);
                         else
@@ -139,7 +139,7 @@ namespace V_Max_Tool
                     {
                         if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
                         th += 2;
-                        if (debug) offset += m; else offset += NDG.Track_Data[i].Length;
+                        if (DB_g64.Checked) offset += m; else offset += NDG.Track_Data[i].Length;
                         if (i <= trk) td[i] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[i] = 0;
                     }
                     else write.Write((int)0);
@@ -155,7 +155,7 @@ namespace V_Max_Tool
                     {
                         if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
                         th += 2;
-                        if (debug) offset += m; else offset += NDG.Track_Data[i].Length;
+                        if (DB_g64.Checked) offset += m; else offset += NDG.Track_Data[i].Length;
                         if (i <= trk) td[r] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[i] = 0;
                         r++; td[r] = 0; r++;
                     }

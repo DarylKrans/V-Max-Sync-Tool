@@ -28,7 +28,7 @@ namespace V_Max_Tool
         private bool loader_fixed = false;
         private byte[] nib_header = new byte[0];
         private byte[] g64_header = new byte[684];
-        private readonly string[] supported = { ".nib", ".g64" }; // Supported file extensions list
+        private readonly string[] supported = { ".nib", ".g64", ".nbz" }; // Supported file extensions list
         // vsec = the CBM sector header values & against byte[] sz
         private readonly string[] valid_cbm = { "52-40-05-28", "52-40-05-2C", "52-40-05-48", "52-40-05-4C", "52-40-05-38", "52-40-05-3C", "52-40-05-58", "52-40-05-5C",
             "52-40-05-24", "52-40-05-64", "52-40-05-68", "52-40-05-6C", "52-40-05-34", "52-40-05-74", "52-40-05-78", "52-40-05-54", "52-40-05-A8",
@@ -41,6 +41,8 @@ namespace V_Max_Tool
 
         void Process_Batch(string[] batch_list, string path, string basedir)
         {
+            Stopwatch btime = new Stopwatch();
+            btime.Start();
             bool temp = Auto_Adjust;
             Reset_to_Defaults();
             busy = true;
@@ -69,6 +71,7 @@ namespace V_Max_Tool
                         {
                             Invoke(new Action(() =>
                             {
+                                linkLabel1.Visible = false;
                                 label8.Text = $"Processing file {i + 1} of {batch_list.Length}";
                                 label9.Text = $"{Path.GetFileName(batch_list[i])}";
                                 Batch_Bar.Maximum = (int)((double)Batch_Bar.Value / (double)(i + 1) * batch_list.Length);
@@ -102,6 +105,8 @@ namespace V_Max_Tool
                 }
                 Invoke(new Action(() =>
                 {
+                    btime.Stop();
+                    if (DB_timers.Checked) label2.Text = $"Total Batch-Process time {btime.Elapsed.TotalSeconds:N0} seconds";
                     using (Message_Center center = new Message_Center(this)) // center message box
                     {
                         string t = "";
@@ -155,12 +160,25 @@ namespace V_Max_Tool
                     var head = Encoding.ASCII.GetString(nib_header, 0, 13);
                     if (head == "MNIB-1541-RAW")
                     {
-                        Stopwatch parse = Parse_Nib_Data();
-                        if (!error)
+                        try
                         {
-                            Stopwatch proc = Process_Nib_Data(true, false, true);
-                            if (debug) Invoke(new Action(() => Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} Process time : {proc.Elapsed.TotalMilliseconds} Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds}"));
-                            Make_G64(output);
+                            Stopwatch parse = Parse_Nib_Data();
+                            if (!error)
+                            {
+                                Stopwatch proc = Process_Nib_Data(true, false, true);
+                                if (debug) Invoke(new Action(() =>
+                                {
+                                    if (DB_timers.Checked) label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} Process time : {proc.Elapsed.TotalMilliseconds} Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds}";
+                                }));
+                                Make_G64(output);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Invoke(new Action(() =>
+                            {
+                                Text = e.Message;
+                            }));
                         }
                     }
                 }
@@ -168,8 +186,9 @@ namespace V_Max_Tool
             }
         }
 
-        Stopwatch Parse_Nib_Data()
+        Stopwatch Parse_Nib_Data(bool new_disk = false)
         {
+            
             Stopwatch sw = new Stopwatch();
             sw.Start();
             Invoke(new Action(() =>
@@ -202,6 +221,7 @@ namespace V_Max_Tool
                 int x = i;
                 tt[i] = new Thread(new ThreadStart(() => { Get_Fmt(x); Get_Track_Info(x); }));
                 tt[i].Start();
+                if (new_disk) Invoke(new Action(() => { })); // Text = $"{i}"));
                 if (tracks > 42) i++;
             }
             for (int i = 0; i < tracks; i++)
@@ -423,6 +443,7 @@ namespace V_Max_Tool
             bool vpadj = false;
             bool v2cust = false;
             bool v3cust = false;
+            int vpl_lead = 0;
 
             Invoke(new Action(() =>
             {
@@ -470,10 +491,11 @@ namespace V_Max_Tool
                 {
                     if (VPL_auto_adj.Checked || batch || VPL_rb.Checked) vpadj = true;
                     if (VPL_rb.Checked || Adj_cbm.Checked || vpadj) fnappend = mod; else fnappend = vorp;
+                    vpl_lead = Lead_ptn.SelectedIndex;
                 }
                 if (Adj_cbm.Checked || v2a || v3a || vpa || batch)
                 {
-                    cbmadj = Check_tlen();
+                    if (!DB_force.Checked) cbmadj = Check_tlen(); else cbmadj = true;
                 }
                 Adj_pbar.Value = 0;
                 Adj_pbar.Maximum = 100;
@@ -486,12 +508,13 @@ namespace V_Max_Tool
             for (int i = 0; i < tracks; i++)
             {
                 var x = i;
+                var y = vpl_lead;
                 if (NDS.cbm[i] != 4)
                 {
-                    tt[i] = new Thread(new ThreadStart(() => Process_Track(x, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, fl, sl, rb_vm, cbm, short_sector)));
+                    tt[i] = new Thread(new ThreadStart(() => Process_Track(x, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, y, fl, sl, rb_vm, cbm, short_sector)));
                     tt[i].Start();
                 }
-                else Process_Track(x, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, fl, sl, rb_vm, cbm, short_sector);
+                else Process_Track(x, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, y, fl, sl, rb_vm, cbm, short_sector);
             }
             for (int i = 0; i < tracks; i++)
             {
@@ -560,7 +583,7 @@ namespace V_Max_Tool
                     }));
             }
 
-            void Process_Track(int trk, bool acbm, bool av2, bool cv2, bool av3, bool cv3, bool avp, bool fix, bool sol, bool rvb, bool cmb, bool s_sec)
+            void Process_Track(int trk, bool acbm, bool av2, bool cv2, bool av3, bool cv3, bool avp, int vplead, bool fix, bool sol, bool rvb, bool cmb, bool s_sec)
             {
                 if (NDS.Track_Length[trk] > 0 && NDS.cbm[trk] > 0 && NDS.cbm[trk] < 6)
                 {
@@ -568,7 +591,7 @@ namespace V_Max_Tool
                     if (NDS.cbm[trk] == 2) Process_VMAX_V2(trk, av2, cv2, rvb);
                     if (NDS.cbm[trk] == 3) Process_VMAX_V3(trk, av3, cv3, rvb, s_sec);
                     if (NDS.cbm[trk] == 4) Process_Loader(trk, fix, sol);
-                    if (NDS.cbm[trk] == 5) Process_Vorpal(trk, avp);
+                    if (NDS.cbm[trk] == 5) Process_Vorpal(trk, avp, vpl_lead);
                 }
                 else { NDA.Track_Data[trk] = NDS.Track_Data[trk]; }
             }
@@ -598,7 +621,7 @@ namespace V_Max_Tool
                         temp = Adjust_Sync_CBM(NDS.Track_Data[trk], exp_snc, min_snc, ign_snc, NDS.D_Start[trk], NDS.D_End[trk], NDS.Sector_Zero[trk], NDS.Track_Length[trk], trk);
                         if (temp != null)
                         {
-                            if (Original.OT[trk].Length == 0)
+                            if (Original.OT[trk]?.Length == 0)
                             {
                                 Original.OT[trk] = new byte[temp.Length];
                                 Buffer.BlockCopy(temp, 0, Original.OT[trk], 0, temp.Length);
@@ -726,11 +749,11 @@ namespace V_Max_Tool
                 Set_Dest_Arrays(NDG.Track_Data[trk], trk);
             }
 
-            void Process_Vorpal(int trk, bool avp)
+            void Process_Vorpal(int trk, bool avp, int lead)
             {
                 byte[] temp = new byte[NDG.Track_Data[trk].Length]; // + s - 1];
                 Buffer.BlockCopy(NDG.Track_Data[trk], 0, temp, 0, NDG.Track_Data[trk].Length);
-                if (avp) temp = Rebuild_Vorpal(temp, trk);
+                if (avp) temp = Rebuild_Vorpal(temp, trk, lead);
                 Set_Dest_Arrays(temp, trk);
             }
 
@@ -856,6 +879,8 @@ namespace V_Max_Tool
 
         void Display_Data()
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            sw.Start();
             jt = new int[42];
             int jmp = 0;
             var buffer = new MemoryStream();
@@ -893,40 +918,37 @@ namespace V_Max_Tool
                         jmp++;
                         try
                         {
-                            Invoke(new Action(() =>
+                            jt[(int)trk] = db_Text.Length;
+                            if (tr) db_Text += $"\n\nTrack ({trk})  Data Format: {secF[NDS.cbm[i]]} {NDG.Track_Data[i].Length} Bytes\n\n";
+                            if (VS_dat.Checked) db_Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}";
+                            if (VS_hex.Checked)
                             {
-                                jt[(int)trk] = db_Text.Length;
-                                if (tr) db_Text += $"\n\nTrack ({trk})  Data Format: {secF[NDS.cbm[i]]} {NDG.Track_Data[i].Length} Bytes\n\n";
-                                if (VS_dat.Checked) db_Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}";
-                                if (VS_hex.Checked)
+                                string temp = "";
+                                for (int j = 0; j < NDG.Track_Data[i].Length / hex; j++)
                                 {
-                                    string temp = "";
-                                    for (int j = 0; j < NDG.Track_Data[i].Length / hex; j++)
-                                    {
-                                        temp += Append_Hex(NDG.Track_Data[i], j * hex, hex);
-                                    }
-                                    var y = (NDG.Track_Data[i].Length / hex) * hex;
-                                    if (y < NDG.Track_Data[i].Length)
-                                    {
-                                        temp += Append_Hex(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, hex);
-                                    }
-                                    db_Text += temp;
+                                    temp += Append_Hex(NDG.Track_Data[i], j * hex, hex);
                                 }
-                                if (VS_bin.Checked)
+                                var y = (NDG.Track_Data[i].Length / hex) * hex;
+                                if (y < NDG.Track_Data[i].Length)
                                 {
-                                    string temp = "";
-                                    for (int j = 0; j < NDG.Track_Data[i].Length / bin; j++)
-                                    {
-                                        temp += Append_Bin(NDG.Track_Data[i], j * bin, bin);
-                                    }
-                                    var y = (NDG.Track_Data[i].Length / bin) * bin;
-                                    if (y < NDG.Track_Data[i].Length)
-                                    {
-                                        temp += Append_Bin(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, bin);
-                                    }
-                                    db_Text += temp;
+                                    temp += Append_Hex(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, hex);
                                 }
-                            }));
+                                db_Text += temp;
+                            }
+                            if (VS_bin.Checked)
+                            {
+                                string temp = "";
+                                for (int j = 0; j < NDG.Track_Data[i].Length / bin; j++)
+                                {
+                                    temp += Append_Bin(NDG.Track_Data[i], j * bin, bin);
+                                }
+                                var y = (NDG.Track_Data[i].Length / bin) * bin;
+                                if (y < NDG.Track_Data[i].Length)
+                                {
+                                    temp += Append_Bin(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, bin);
+                                }
+                                db_Text += temp;
+                            }
                         }
                         catch { }
                     }
@@ -948,6 +970,8 @@ namespace V_Max_Tool
                 DV_pbar.Value = 0;
                 displayed = true;
                 busy = false;
+                sw.Stop();
+                if (DB_timers.Checked) label2.Text = sw.Elapsed.TotalMilliseconds.ToString();
                 GC.Collect();
                 View_Jump();
                 Data_Box.Visible = true;
@@ -1007,6 +1031,12 @@ namespace V_Max_Tool
                             }
                             write.Write(temp[i]);
                         }
+
+                        //void DCS(int sector)
+                        //{
+                        //    (temp[sector], nul[sector]) = Decode_CBM_Sector(NDG.Track_Data[t], sector, true, tdata);
+                        //    total += temp[sector].Length;
+                        //}
                     }
                     catch { }
                 }

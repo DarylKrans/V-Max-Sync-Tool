@@ -50,7 +50,6 @@
             this.Cust_Density = new System.Windows.Forms.Label();
             this.VM_Ver = new System.Windows.Forms.Label();
             this.Reg_info = new System.Windows.Forms.Panel();
-            this.Debug_Button = new System.Windows.Forms.Button();
             this.Protected_Tracks = new System.Windows.Forms.Label();
             this.CBM_Tracks = new System.Windows.Forms.Label();
             this.Loader_Track = new System.Windows.Forms.Label();
@@ -81,6 +80,17 @@
             this.VPL_lead = new System.Windows.Forms.CheckBox();
             this.VPL_rb = new System.Windows.Forms.CheckBox();
             this.VP_Export = new System.Windows.Forms.Button();
+            this.D_Bug = new System.Windows.Forms.TabPage();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.BD_name = new System.Windows.Forms.TextBox();
+            this.label11 = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
+            this.BD_tracks = new System.Windows.Forms.NumericUpDown();
+            this.Debug_Button = new System.Windows.Forms.Button();
+            this.DB_force = new System.Windows.Forms.CheckBox();
+            this.DB_g64 = new System.Windows.Forms.CheckBox();
+            this.DB_vpl = new System.Windows.Forms.CheckBox();
+            this.DB_timers = new System.Windows.Forms.CheckBox();
             this.Adv_ctrl = new System.Windows.Forms.TabControl();
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.M_render = new System.Windows.Forms.Button();
@@ -162,6 +172,9 @@
             ((System.ComponentModel.ISupportInitialize)(this.VD1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.VD0)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.Lead_In)).BeginInit();
+            this.D_Bug.SuspendLayout();
+            this.groupBox2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.BD_tracks)).BeginInit();
             this.Adv_ctrl.SuspendLayout();
             this.tabPage2.SuspendLayout();
             this.Img_opts.SuspendLayout();
@@ -279,6 +292,7 @@
             this.Tabs.Controls.Add(this.Adv_V2_Opts);
             this.Tabs.Controls.Add(this.Adv_V3_Opts);
             this.Tabs.Controls.Add(this.Vpl_adv);
+            this.Tabs.Controls.Add(this.D_Bug);
             this.Tabs.Location = new System.Drawing.Point(12, 10);
             this.Tabs.Name = "Tabs";
             this.Tabs.SelectedIndex = 0;
@@ -312,7 +326,7 @@
             this.Import_File.Controls.Add(this.label5);
             this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(19, 50);
+            this.Import_File.Location = new System.Drawing.Point(23, 56);
             this.Import_File.Name = "Import_File";
             this.Import_File.Size = new System.Drawing.Size(863, 108);
             this.Import_File.TabIndex = 59;
@@ -424,7 +438,6 @@
             // Reg_info
             // 
             this.Reg_info.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.Reg_info.Controls.Add(this.Debug_Button);
             this.Reg_info.Controls.Add(this.Protected_Tracks);
             this.Reg_info.Controls.Add(this.CBM_Tracks);
             this.Reg_info.Controls.Add(this.Loader_Track);
@@ -432,16 +445,6 @@
             this.Reg_info.Name = "Reg_info";
             this.Reg_info.Size = new System.Drawing.Size(291, 97);
             this.Reg_info.TabIndex = 21;
-            // 
-            // Debug_Button
-            // 
-            this.Debug_Button.Location = new System.Drawing.Point(213, 4);
-            this.Debug_Button.Name = "Debug_Button";
-            this.Debug_Button.Size = new System.Drawing.Size(73, 42);
-            this.Debug_Button.TabIndex = 38;
-            this.Debug_Button.Text = "No!";
-            this.Debug_Button.UseVisualStyleBackColor = true;
-            this.Debug_Button.Click += new System.EventHandler(this.Button1_Click);
             // 
             // Protected_Tracks
             // 
@@ -784,9 +787,9 @@
             this.VPL_auto_adj.AutoSize = true;
             this.VPL_auto_adj.Location = new System.Drawing.Point(10, 9);
             this.VPL_auto_adj.Name = "VPL_auto_adj";
-            this.VPL_auto_adj.Size = new System.Drawing.Size(337, 29);
+            this.VPL_auto_adj.Size = new System.Drawing.Size(225, 29);
             this.VPL_auto_adj.TabIndex = 66;
-            this.VPL_auto_adj.Text = "Auto Adjust Tracks for optimal ";
+            this.VPL_auto_adj.Text = "Auto Adjust Tracks";
             this.VPL_auto_adj.UseVisualStyleBackColor = true;
             this.VPL_auto_adj.CheckedChanged += new System.EventHandler(this.VPL_Auto_CheckedChanged);
             // 
@@ -856,6 +859,134 @@
             this.VP_Export.Text = "Export";
             this.VP_Export.UseVisualStyleBackColor = true;
             this.VP_Export.Click += new System.EventHandler(this.Make);
+            // 
+            // D_Bug
+            // 
+            this.D_Bug.Controls.Add(this.groupBox2);
+            this.D_Bug.Controls.Add(this.DB_force);
+            this.D_Bug.Controls.Add(this.DB_g64);
+            this.D_Bug.Controls.Add(this.DB_vpl);
+            this.D_Bug.Controls.Add(this.DB_timers);
+            this.D_Bug.Location = new System.Drawing.Point(4, 37);
+            this.D_Bug.Name = "D_Bug";
+            this.D_Bug.Padding = new System.Windows.Forms.Padding(3);
+            this.D_Bug.Size = new System.Drawing.Size(910, 185);
+            this.D_Bug.TabIndex = 4;
+            this.D_Bug.Text = "Debugging";
+            this.D_Bug.UseVisualStyleBackColor = true;
+            // 
+            // groupBox2
+            // 
+            this.groupBox2.Controls.Add(this.BD_name);
+            this.groupBox2.Controls.Add(this.label11);
+            this.groupBox2.Controls.Add(this.label10);
+            this.groupBox2.Controls.Add(this.BD_tracks);
+            this.groupBox2.Controls.Add(this.Debug_Button);
+            this.groupBox2.Location = new System.Drawing.Point(629, 6);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(272, 167);
+            this.groupBox2.TabIndex = 40;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "Create Blank Disk";
+            // 
+            // BD_name
+            // 
+            this.BD_name.Location = new System.Drawing.Point(78, 46);
+            this.BD_name.MaxLength = 16;
+            this.BD_name.Name = "BD_name";
+            this.BD_name.Size = new System.Drawing.Size(188, 31);
+            this.BD_name.TabIndex = 43;
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(14, 52);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(65, 25);
+            this.label11.TabIndex = 42;
+            this.label11.Text = "name";
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(14, 87);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(119, 25);
+            this.label10.TabIndex = 41;
+            this.label10.Text = "# of Tracks";
+            // 
+            // BD_tracks
+            // 
+            this.BD_tracks.Location = new System.Drawing.Point(144, 84);
+            this.BD_tracks.Maximum = new decimal(new int[] {
+            41,
+            0,
+            0,
+            0});
+            this.BD_tracks.Minimum = new decimal(new int[] {
+            35,
+            0,
+            0,
+            0});
+            this.BD_tracks.Name = "BD_tracks";
+            this.BD_tracks.Size = new System.Drawing.Size(120, 31);
+            this.BD_tracks.TabIndex = 40;
+            this.BD_tracks.Value = new decimal(new int[] {
+            35,
+            0,
+            0,
+            0});
+            // 
+            // Debug_Button
+            // 
+            this.Debug_Button.Location = new System.Drawing.Point(154, 121);
+            this.Debug_Button.Name = "Debug_Button";
+            this.Debug_Button.Size = new System.Drawing.Size(110, 40);
+            this.Debug_Button.TabIndex = 39;
+            this.Debug_Button.Text = "Create";
+            this.Debug_Button.UseVisualStyleBackColor = true;
+            this.Debug_Button.Click += new System.EventHandler(this.Debug_Button_Click);
+            // 
+            // DB_force
+            // 
+            this.DB_force.AutoSize = true;
+            this.DB_force.Location = new System.Drawing.Point(15, 124);
+            this.DB_force.Name = "DB_force";
+            this.DB_force.Size = new System.Drawing.Size(588, 29);
+            this.DB_force.TabIndex = 3;
+            this.DB_force.Text = "Ignore condition checks on Auto-Adjusting of CBM tracks";
+            this.DB_force.UseVisualStyleBackColor = true;
+            // 
+            // DB_g64
+            // 
+            this.DB_g64.AutoSize = true;
+            this.DB_g64.Location = new System.Drawing.Point(15, 89);
+            this.DB_g64.Name = "DB_g64";
+            this.DB_g64.Size = new System.Drawing.Size(463, 29);
+            this.DB_g64.TabIndex = 2;
+            this.DB_g64.Text = "Pad empty track-space in G64 output tracks";
+            this.DB_g64.UseVisualStyleBackColor = true;
+            // 
+            // DB_vpl
+            // 
+            this.DB_vpl.AutoSize = true;
+            this.DB_vpl.Location = new System.Drawing.Point(15, 54);
+            this.DB_vpl.Name = "DB_vpl";
+            this.DB_vpl.Size = new System.Drawing.Size(562, 29);
+            this.DB_vpl.TabIndex = 1;
+            this.DB_vpl.Text = "Allow custom track-size adjustments in Vorpal Options";
+            this.DB_vpl.UseVisualStyleBackColor = true;
+            this.DB_vpl.CheckedChanged += new System.EventHandler(this.DB_vpl_CheckedChanged);
+            // 
+            // DB_timers
+            // 
+            this.DB_timers.AutoSize = true;
+            this.DB_timers.Location = new System.Drawing.Point(15, 19);
+            this.DB_timers.Name = "DB_timers";
+            this.DB_timers.Size = new System.Drawing.Size(245, 29);
+            this.DB_timers.TabIndex = 0;
+            this.DB_timers.Text = "Show Process Times";
+            this.DB_timers.UseVisualStyleBackColor = true;
             // 
             // Adv_ctrl
             // 
@@ -1648,6 +1779,11 @@
             ((System.ComponentModel.ISupportInitialize)(this.VD1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.VD0)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.Lead_In)).EndInit();
+            this.D_Bug.ResumeLayout(false);
+            this.D_Bug.PerformLayout();
+            this.groupBox2.ResumeLayout(false);
+            this.groupBox2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.BD_tracks)).EndInit();
             this.Adv_ctrl.ResumeLayout(false);
             this.tabPage2.ResumeLayout(false);
             this.tabPage2.PerformLayout();
@@ -1753,7 +1889,6 @@
         private System.Windows.Forms.RichTextBox Dir_screen;
         private System.Windows.Forms.RadioButton Disk_Dir;
         private System.Windows.Forms.RadioButton Trk_Analysis;
-        private System.Windows.Forms.Button Debug_Button;
         private System.Windows.Forms.Panel Other_opts;
         private System.Windows.Forms.Button V2_export;
         private System.Windows.Forms.Button V3_Export;
@@ -1796,6 +1931,17 @@
         private System.Windows.Forms.Button B_cancel;
         private System.Windows.Forms.ProgressBar Batch_Bar;
         private System.Windows.Forms.ListBox listBox1;
+        private System.Windows.Forms.TabPage D_Bug;
+        private System.Windows.Forms.CheckBox DB_vpl;
+        private System.Windows.Forms.CheckBox DB_timers;
+        private System.Windows.Forms.CheckBox DB_g64;
+        private System.Windows.Forms.CheckBox DB_force;
+        private System.Windows.Forms.Button Debug_Button;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.TextBox BD_name;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.NumericUpDown BD_tracks;
     }
 }
 

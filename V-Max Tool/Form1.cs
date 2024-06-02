@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -8,13 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+
 namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
         private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
-        private readonly bool debug = false;
-        private readonly string ver = " v0.9.91 (beta)";
+        private bool debug = false; // Shows function timers and other adjustment options
+        private readonly string ver = " v0.9.92 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -43,32 +43,6 @@ namespace V_Max_Tool
             this.Text = $"Re-Master V-Max/Vorpal Utility {ver}";
             Init();
             Set_ListBox_Items(true, true);
-        }
-
-        void Test()
-        {
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            for (int i = 0; i < tracks; i++)
-            {
-                if (NDS.cbm[i] == 1)
-                {
-                    BitArray s = new BitArray(Flip_Endian(NDG.Track_Data[i]));
-                    var x = i;
-                    var sec = NDS.sectors[i];
-                    Thread[] tt = new Thread[sec];
-                    for (int j = 0; j < tt.Length; j++)
-                    {
-                        var ss = j;
-                        //Text = $"{NDS.sectors[x]} {tt.Length} {ss} {i}"; //.ToString();
-                        tt[j] = new Thread(new ThreadStart(() => Decode_CBM_Sector(NDS.Track_Data[x], ss - 1, true, s)));
-                        tt[j].Start();
-                    }
-                    for (int j = 0; j < tt.Length - 1; j++) tt?[j].Join();
-                }
-            }
-            sw.Stop();
-            this.Text = sw.Elapsed.TotalMilliseconds.ToString();
         }
 
         private void Drag_Drop(object sender, DragEventArgs e)
@@ -229,7 +203,6 @@ namespace V_Max_Tool
                         }
                     }
                 }
-
             }
             catch (Exception ex)
             {
@@ -271,7 +244,7 @@ namespace V_Max_Tool
                         Invoke(new Action(() =>
                         {
                             Stopwatch proc = Process_Nib_Data(true, false, true);
-                            if (debug) Invoke(new Action(() => Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} Process time : {proc.Elapsed.TotalMilliseconds} Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds}"));
+                            if (DB_timers.Checked) Invoke(new Action(() => label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} Process time : {proc.Elapsed.TotalMilliseconds} Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds}"));
                             Set_ListBox_Items(false, false);
                             Get_Disk_Directory();
                             linkLabel1.Visible = false;
@@ -280,7 +253,7 @@ namespace V_Max_Tool
                             Save_Disk.Visible = true;
                             Source.Visible = Output.Visible = true;
                             label1.Text = $"{fname}{fext}";
-                            label2.Text = l2;
+                            //label2.Text = l2;
                             M_render.Enabled = true;
                             Import_File.Visible = false;
                             Adv_ctrl.Enabled = true;
@@ -418,11 +391,6 @@ namespace V_Max_Tool
         private void Dir_View_CheckedChanged(object sender, EventArgs e)
         {
             Dir_screen.Visible = Disk_Dir.Checked;
-        }
-
-        private void Button1_Click(object sender, EventArgs e)
-        {
-            Create_Blank_Disk();
         }
 
         private void LinkLabel1_LinkClicked(object sender, System.Windows.Forms.LinkLabelLinkClickedEventArgs e)
@@ -600,6 +568,16 @@ namespace V_Max_Tool
                     }
                 }
             }
+        }
+
+        private void DB_vpl_CheckedChanged(object sender, EventArgs e)
+        {
+            VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = DB_vpl.Checked;
+        }
+
+        private void Debug_Button_Click(object sender, EventArgs e)
+        {
+            Create_Blank_Disk();
         }
     }
 }

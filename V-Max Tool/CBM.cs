@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Threading;
-using System.Drawing;
 
 /// CBM Block Header structure
 /// 8 plain bytes converted to 10 GCR bytes
@@ -548,17 +546,24 @@ namespace V_Max_Tool
 
         void Create_Blank_Disk()
         {
-            byte[] name = Encoding.ASCII.GetBytes("TEST DISK");
+            if (BD_name.Text == "") BD_name.Text = "BLANK DISK";
+            byte[] name = Encoding.ASCII.GetBytes($"{BD_name.Text}");
+            fname = BD_name.Text;
+            tracks = Convert.ToInt32(BD_tracks.Value);
+            sl.DataSource = null;
+            out_size.DataSource = null;
+            Data_Box.Clear();
+            Track_Info.Items.Clear();
+            Set_Arrays(tracks);
+            Set_ListBox_Items(true, false);
             byte[] id = Encoding.ASCII.GetBytes("00 2A");
             byte[] Disk_ID = new byte[] { id[1], id[0], 0x0f, 0x0f };
             byte[] sync = new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff };
             byte[] dir_s0 = Encode_CBM_GCR(T18S0());
             byte[] dir_s1 = Encode_CBM_GCR(T18S1());
             byte[] blank = Encode_CBM_GCR(Empty_Sector());
-            int ht;
-            for (int i = 0; i < 40; i++)
+            for (int i = 0; i < Convert.ToInt32(BD_tracks.Value); i++)
             {
-                if (tracks > 42) ht = i * 2; else ht = i;
                 MemoryStream buffer = new MemoryStream();
                 BinaryWriter write = new BinaryWriter(buffer); // = new BinaryWriter(buffer);
                 for (int j = 0; j < Available_Sectors[i]; j++)
@@ -575,8 +580,17 @@ namespace V_Max_Tool
                 }
                 while (buffer.Length < density[density_map[i]]) write.Write((byte)0x55);
                 byte[] nt = buffer.ToArray();
-                Set_Dest_Arrays(nt, ht);
+                Set_Dest_Arrays(nt, i);
+                NDS.Track_Data[i] = new byte[8192];
+                Buffer.BlockCopy(NDA.Track_Data[i], 0, NDS.Track_Data[i], 0, 8192);
             }
+            Parse_Nib_Data(true);
+            Process_Nib_Data(true, false, false);
+            Get_Disk_Directory();
+            Set_ListBox_Items(false, false);
+            Import_File.Visible = false;
+            Adv_ctrl.Enabled = true;
+            Save_Disk.Visible = true;
 
             byte[] T18S0()
             {
