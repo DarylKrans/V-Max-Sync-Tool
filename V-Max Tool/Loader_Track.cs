@@ -142,62 +142,59 @@ namespace V_Max_Tool
 
         /// ------------------------ Add Sync to Loader Track --------------------------------------------------
 
-        void Fix_Loader_Option(bool draw)
+        void Fix_Loader_Option(bool draw, int i)
         {
-            int i = 100;
             var trk_num = 0;
             if (f_load.Checked)
             {
                 var tt = 0;
-                if (tracks > 0 && NDS.Track_Data.Length > 0)
+                if (tracks > 42) trk_num = (i / 2) + 1; else trk_num = i;
+                Original.G = new byte[NDG.Track_Data[i].Length];
+                Original.A = new byte[NDA.Track_Data[i].Length];
+                Buffer.BlockCopy(NDG.Track_Data[i], 0, Original.G, 0, NDG.Track_Data[i].Length);
+                Buffer.BlockCopy(NDA.Track_Data[i], 0, Original.A, 0, NDA.Track_Data[i].Length);
+                var d = Get_Density(NDG.Track_Data[i].Length);
+                if (NDS.cbm.Any(x => x == 3))
                 {
-                    i = Array.FindIndex(NDS.cbm, s => s == 4);
-                    if (i < 100 && i > -1)
-                    {
-                        if (tracks > 42) trk_num = (i / 2) + 1; else trk_num = i;
-                        Original.G = new byte[NDG.Track_Data[i].Length];
-                        Original.A = new byte[NDA.Track_Data[i].Length];
-                        Buffer.BlockCopy(NDG.Track_Data[i], 0, Original.G, 0, NDG.Track_Data[i].Length);
-                        Buffer.BlockCopy(NDA.Track_Data[i], 0, Original.A, 0, NDA.Track_Data[i].Length);
-                        var d = Get_Density(NDG.Track_Data[i].Length);
-
-                        if (NDS.cbm.Any(x => x == 3))
-                        {
-                            if (NDG.Track_Data[i].Length > density[d]) Shrink_Loader(i);
-                            byte[] temp = Rotate_Loader(NDG.Track_Data[i]);
-                            NDG.L_Rot = true;
-                            Set_Dest_Arrays(Fix_Loader(temp), i);
-                            FL();
-                        }
-                        if (!(NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)))
-                        {
-                            Set_Dest_Arrays(Pad_Loader(v2ldrcbm, loader_padding, density_map[trk_num]), i);
-                            FL();
-                        }
-                        if (NDS.cbm.Any(x => x == 2))
-                        {
-                            for (int x = 0; i < tracks; x++) if (NDS.v2info[x]?.Length > 0) { tt = x; break; }
-                            if (Hex(NDS.v2info[tt], 0, 2) == "4E-64") Set_Dest_Arrays(Pad_Loader(v24e64pal, loader_padding, density_map[trk_num]), i);
-                            if (Hex(NDS.v2info[tt], 0, 2) == "64-46") Set_Dest_Arrays(Pad_Loader(v26446ntsc, loader_padding, density_map[trk_num]), i);
-                            if (Hex(NDS.v2info[tt], 0, 2) == "64-4E") Set_Dest_Arrays(Pad_Loader(v2644entsc, loader_padding, density_map[trk_num]), i);
-                            FL();
-                        }
-                    }
-                    loader_fixed = true;
+                    if (NDG.Track_Data[i].Length > density[d]) Shrink_Loader(i);
+                    byte[] temp = Rotate_Loader(NDG.Track_Data[i]);
+                    NDG.L_Rot = true;
+                    Set_Dest_Arrays(Fix_Loader(temp), i);
+                    FL();
                 }
-
+                if (!(NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)))
+                {
+                    Set_Dest_Arrays(Pad_Loader(v2ldrcbm, loader_padding, density_map[trk_num]), i);
+                    FL();
+                }
+                if (NDS.cbm.Any(x => x == 2))
+                {
+                    for (int x = 0; i < tracks; x++) if (NDS.v2info[x]?.Length > 0) { tt = x; break; }
+                    if (Hex_Val(NDS.v2info[tt], 0, 2) == "4E-64") Set_Dest_Arrays(Pad_Loader(v24e64pal, loader_padding, density_map[trk_num]), i);
+                    if (Hex_Val(NDS.v2info[tt], 0, 2) == "64-46") Set_Dest_Arrays(Pad_Loader(v26446ntsc, loader_padding, density_map[trk_num]), i);
+                    if (Hex_Val(NDS.v2info[tt], 0, 2) == "64-4E") Set_Dest_Arrays(Pad_Loader(v2644entsc, loader_padding, density_map[trk_num]), i);
+                    FL();
+                }
+                loader_fixed = true;
             }
             if (!f_load.Checked)
             {
-                Invoke(new Action(() => f_load.Text = "Fix Loader"));
-                if (tracks > 0) i = Array.FindIndex(NDS.cbm, s => s == 4);
-                if (i > -1 && i < 100)
+                Invoke(new Action(() =>
                 {
-                    if (Original.A.Length > 0) { NDA.Track_Data[i] = Original.A; }
-                    if (Original.G.Length > 0) { NDG.Track_Data[i] = Original.G; Invoke(new Action(() => f_load.Text += " (Restored)")); }
-                    NDG.L_Rot = false;
-                }
-                loader_fixed = false;
+                    f_load.Text = "Fix Loader";
+                    if (tracks > 0) i = Array.FindIndex(NDS.cbm, s => s == 4);
+                    if (i > -1 && i < 100)
+                    {
+                        if (Original.A.Length > 0) { NDA.Track_Data[i] = Original.A; }
+                        if (Original.G.Length > 0)
+                        {
+                            NDG.Track_Data[i] = Original.G; f_load.Text += " (Restored)";
+                            NDG.L_Rot = false;
+                        }
+                        loader_fixed = false;
+
+                    }
+                }));
             }
             displayed = false;
             drawn = false;

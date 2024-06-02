@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -13,7 +14,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private readonly bool debug = false;
-        private readonly string ver = " v0.9.90 (beta)";
+        private readonly string ver = " v0.9.91 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -42,6 +43,32 @@ namespace V_Max_Tool
             this.Text = $"Re-Master V-Max/Vorpal Utility {ver}";
             Init();
             Set_ListBox_Items(true, true);
+        }
+
+        void Test()
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            for (int i = 0; i < tracks; i++)
+            {
+                if (NDS.cbm[i] == 1)
+                {
+                    BitArray s = new BitArray(Flip_Endian(NDG.Track_Data[i]));
+                    var x = i;
+                    var sec = NDS.sectors[i];
+                    Thread[] tt = new Thread[sec];
+                    for (int j = 0; j < tt.Length; j++)
+                    {
+                        var ss = j;
+                        //Text = $"{NDS.sectors[x]} {tt.Length} {ss} {i}"; //.ToString();
+                        tt[j] = new Thread(new ThreadStart(() => Decode_CBM_Sector(NDS.Track_Data[x], ss - 1, true, s)));
+                        tt[j].Start();
+                    }
+                    for (int j = 0; j < tt.Length - 1; j++) tt?[j].Join();
+                }
+            }
+            sw.Stop();
+            this.Text = sw.Elapsed.TotalMilliseconds.ToString();
         }
 
         private void Drag_Drop(object sender, DragEventArgs e)
@@ -288,7 +315,15 @@ namespace V_Max_Tool
 
         private void F_load_CheckedChanged(object sender, EventArgs e)
         {
-            Fix_Loader_Option(!busy);
+            int i = 100;
+            if (tracks > 0 && NDS.Track_Data.Length > 0)
+            {
+                i = Array.FindIndex(NDS.cbm, s => s == 4);
+                if (i < 100 && i > -1)
+                {
+                    Fix_Loader_Option(!busy, i);
+                }
+            }
         }
 
         private void V2_Custom_CheckedChanged(object sender, EventArgs e)
@@ -560,7 +595,7 @@ namespace V_Max_Tool
                     drawn = false;
                     if (!busy && !batch)
                     {
-                        Check_Before_Draw(false);
+                        Check_Before_Draw(false, true);
                         Data_Viewer();
                     }
                 }

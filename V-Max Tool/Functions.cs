@@ -15,6 +15,7 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
+        private Thread Draw;
         private Thread circ;  // Thread for drawing circle disk image
         private Thread flat;  // Thread for drawing flat tracks image
         private Thread check_alive;
@@ -431,15 +432,14 @@ namespace V_Max_Tool
             return data.Skip(data.Length - s).Concat(data.Take(data.Length - s)).ToArray();
         }
 
-        string Hex_Val(byte[] data)
+        string Hex_Val(byte[] data, int start = 0, int end = -1)
         {
-            return BitConverter.ToString(data);
-        }
-
-        string Hex(byte[] data, int a, int b)
-        {
-            if (data != null) return BitConverter.ToString(data, a, b);
-            else return "";
+            if (data != null)
+            {
+                if (end == -1) end = data.Length;
+                return BitConverter.ToString(data, start, end);
+            }
+            else return string.Empty;
         }
 
         byte[] Bit2Byte(BitArray bits, int start = 0, int length = -1)
@@ -529,14 +529,45 @@ namespace V_Max_Tool
             return n;
         }
 
+        //bool Find_vpl_sec(BitArray source, int pos)
+        //{
+        //    int snc = 0;
+        //    bool sncc = false;
+        //    for (int j = pos; j < (pos + 1600); j++)
+        //    {
+        //        if (source[j])
+        //        {
+        //            snc++;
+        //            if (snc == 8) sncc = true;
+        //        }
+        //        else
+        //        {
+        //            if (sncc)
+        //            {
+        //                if (snc == 8)
+        //                {
+        //                    bool flip = false;
+        //                    for (int k = j; k < (j + 7); k++)
+        //                    {
+        //                        if (!source[k] == flip) { return false; }
+        //                        flip = !flip;
+        //                    }
+        //                    return true;
+        //                }
+        //            }
+        //            sncc = false;
+        //            snc = 0;
+        //        }
+        //    }
+        //    return false;
+        //}
+
         bool Check_Version(string find, byte[] sdat, int clen)
         {
             int i;
-            byte[] comp = new byte[clen];
             for (i = 0; i < sdat.Length - find.Length; i++)
             {
-                Buffer.BlockCopy(sdat, i, comp, 0, comp.Length);
-                if (Hex_Val(comp) == find) return (true);
+                if (Hex_Val(sdat, i, clen) == find) return (true);
             }
             return (false);
         }
@@ -556,12 +587,9 @@ namespace V_Max_Tool
         (bool, int) Find_Data(string find, byte[] data, int clen, int start_pos = -1)
         {
             if (start_pos < 0) start_pos = 0;
-            byte[] comp = new byte[clen];
             for (int i = start_pos; i < data.Length - find.Length; i++)
             {
-                Buffer.BlockCopy(data, i, comp, 0, comp.Length);
-                if (Hex_Val(comp) == find) return (true, i);
-                if (Hex(data, i, 2) == find) return (true, i);
+                if (Hex_Val(data, i, clen) == find) return (true, i);
             }
             return (false, 0);
         }
@@ -634,7 +662,6 @@ namespace V_Max_Tool
                 Buffer.BlockCopy(data, 0, temp, 0, pos);
                 for (int i = pos; i < pos + a; i++) temp[i] = fill;
                 Buffer.BlockCopy(data, pos, temp, pos + a, data.Length - pos);
-                //File.WriteAllBytes($@"C:\test\fff", temp);
                 return temp;
             }
             else return data;
@@ -804,15 +831,15 @@ namespace V_Max_Tool
             byte[] temp = Shrink_Track(NDG.Track_Data[trk], d);
             if (temp.Length > density[d])
             {
-                byte[] pattern = new byte[2];
+                string pattern;
                 string current = "";
                 int start = 0;
                 int run = 0;
                 int cur = 0;
                 for (int i = 0; i < NDG.Track_Data[trk].Length - 1; i++)
                 {
-                    Buffer.BlockCopy(NDG.Track_Data[trk], i, pattern, 0, pattern.Length);
-                    if (Hex_Val(pattern) == current)
+                    pattern = Hex_Val(NDG.Track_Data[trk], i, 2);
+                    if (pattern == current)
                     {
                         cur++;
                         if (cur > run)
@@ -824,7 +851,7 @@ namespace V_Max_Tool
                     else
                     {
                         cur = 0;
-                        current = Hex_Val(pattern);
+                        current = pattern;
                     }
                     i++;
                 }
@@ -836,12 +863,12 @@ namespace V_Max_Tool
             Set_Dest_Arrays(temp, trk);
         }
 
-        void Check_Before_Draw(bool dontDrawFlat)
+        void Check_Before_Draw(bool dontDrawFlat, bool timeout = false)
         {
             if (Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"])
             {
-                busy = true;
                 this.Update();
+                Draw?.Abort();
                 circ?.Abort();
                 flat?.Abort();
                 check_alive?.Abort();
@@ -851,18 +878,19 @@ namespace V_Max_Tool
                     if (!dontDrawFlat)
                     {
                         flat_large?.Dispose();
-                        flat = new Thread(new ThreadStart(() => Draw_Flat_Tracks(false)));
+                        flat = new Thread(new ThreadStart(() => Draw_Flat_Tracks(false, timeout)));
                         flat.Start();
                     }
                     circle?.Dispose();
-                    circ = new Thread(new ThreadStart(() => Draw_Circular_Tracks()));
+                    circ = new Thread(new ThreadStart(() => Draw_Circular_Tracks(timeout)));
                     circ.Start();
                 }
                 catch { }
                 drawn = true;
                 GC.Collect();
                 busy = false;
-                Progress_Thread_Check();
+                Draw = new Thread(new ThreadStart(() => Progress_Thread_Check(timeout)));
+                Draw.Start();
             }
         }
 

@@ -46,8 +46,9 @@ namespace V_Max_Tool
             Disk_Image.Image = Resize_Image(circle.Bitmap, panPic.Width, panPic.Height, false, true);
         }
 
-        private void Draw_Flat_Tracks(bool interpolate)
+        private void Draw_Flat_Tracks(bool interpolate, bool wait)
         {
+            if (wait) Thread.Sleep(1000);
             string ext = "";
             var d = 0;
             Font font = new Font("Ariel", 11);
@@ -138,8 +139,9 @@ namespace V_Max_Tool
             GC.Collect();
         }
 
-        private void Draw_Circular_Tracks()
+        private void Draw_Circular_Tracks(bool wait)
         {
+            if (wait) Thread.Sleep(1000);
             int at = 0;
             int pt = 0;
             for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < 6) at++;
@@ -712,7 +714,7 @@ namespace V_Max_Tool
                 interp = !interp;
                 flat?.Abort();
                 flat?.Join();
-                flat = new Thread(new ThreadStart(() => Draw_Flat_Tracks(false)));
+                flat = new Thread(new ThreadStart(() => Draw_Flat_Tracks(false, true)));
                 flat.Start();
                 vm_reverse = !vm_reverse;
                 Check_Before_Draw(true);
@@ -764,8 +766,9 @@ namespace V_Max_Tool
             label4.Visible = Img_Q.Visible = Circle_View.Checked;
         }
 
-        private void Progress_Thread_Check()
+        private void Progress_Thread_Check(bool wait)
         {
+            if (wait) Thread.Sleep(1000);
             if (flat.IsAlive || circ.IsAlive)
             {
                 check_alive = new Thread(new ThreadStart(monitor_threads));
@@ -787,7 +790,7 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                Draw_Flat_Tracks(true);
+                Draw_Flat_Tracks(true, false);
             }
         }
     }

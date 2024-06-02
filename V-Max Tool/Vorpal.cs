@@ -275,6 +275,7 @@ namespace V_Max_Tool
             int track_lead_in = 0;
             int sectors = 0;
             int snc_cnt = 0;
+            string sid = string.Empty;
             List<string> sec_header = new List<string>();
             List<string> sec_hdr = new List<string>();
             List<int> sec_pos = new List<int>();
@@ -288,22 +289,24 @@ namespace V_Max_Tool
                 {
                     if (snc_cnt == 8)
                     {
-                        if (k - ((com * 8) + 8) > 0)
+                        if (k - ((com << 3) + 8) > 0)
                         {
                             // checking for [00110011 00 11111111] sector 0 marker
-                            if (!lead_in_Found && (source[k - 10] == false && source[k - 9] == false)) (lead_in_Found, track_lead_in) = Get_LeadIn_Position(k);
-                            byte[] sec_ID = Flip_Endian(Bit2Byte(source, k - ((com * 8) / 2), com * 8));
-                            if (!sec_header.Any(x => x == Hex_Val(sec_ID)))
+                            if (!lead_in_Found && (!source[k - 10] && !source[k - 9])) (lead_in_Found, track_lead_in) = Get_LeadIn_Position(k);
+                            byte[] sec_ID = Flip_Endian(Bit2Byte(source, k - ((com << 3) >> 1), com << 3));
+                            sid = Hex_Val(sec_ID);
+                            if (!sec_header.Any(x => x == sid))
                             {
-                                sec_header.Add(Hex_Val(sec_ID));
+                                sec_header.Add(sid);
                                 sec_pos.Add(k >> 3);
-                                sec_hdr.Add($"pos {k >> 3} {Hex_Val(sec_ID)} ({sec_size / 8}) ({sec_size})");
+                                sec_hdr.Add($"pos {k >> 3} {sid} ({sec_size >> 3}) ({sec_size})");
                                 sec_size = 0;
                                 if (!start_found)
                                 {
                                     data_start = k;
                                     start_found = true;
                                 }
+                                k += 1100;
                             }
                             else
                             {
@@ -362,25 +365,27 @@ namespace V_Max_Tool
                     }
                     if (l != 0)
                     {
+                        byte[] te;
                         var u = l;
                         for (int i = 0; i < 32; i++)
                         {
-                            byte[] te = Bit2Byte(source, u - i, 8);
+                            te = Bit2Byte(source, u - i, 8);
                             if (te[0] == 0xbd) { l = u - (i + 1); break; }
                         }
                     }
                     leadin = l + leadIn_std.Count - 1;
-                    isRealend = Flip_Endian(Bit2Byte(source, l, 16 * 8));
+                    isRealend = Flip_Endian(Bit2Byte(source, l, 16 << 3));
                 }
 
-                if (leadin + (max_track_size * 8) < source.Length)
+                if (leadin + (max_track_size << 3) < source.Length)
                 {
                     data_start = leadin;
                     start_found = true;
-                    int q = min_skip_len * 8;
-                    while (q < source.Length - (compare_len * 8))
+                    int q = min_skip_len << 3;
+                    byte[] rcomp;
+                    while (q < source.Length - (compare_len << 3))
                     {
-                        byte[] rcomp = Flip_Endian(Bit2Byte(source, q, isRealend.Length * 8));
+                        rcomp = Flip_Endian(Bit2Byte(source, q, isRealend.Length << 3));
                         if (Match(isRealend, rcomp)) // == Hex_Val(isRealend))
                         {
                             end_found = true;

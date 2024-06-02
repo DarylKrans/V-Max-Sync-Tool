@@ -11,9 +11,8 @@ namespace V_Max_Tool
         // V-Max v3 sync and header variables for "Rebuild tracks" options
         private readonly byte[] v3_sector_sync = { 0x5b, 0xff };  // change the sync marker placed before sector headers (0x57, 0xff known working)
         private readonly int v3_min_header = 3;             // adjust the minimum length of the sector header (0x49) bytes
-        private readonly int v3_max_header = 7; //12;            // adjust the maximum length of the sector header (0x49) bytes
+        private readonly int v3_max_header = 8; //12;            // adjust the maximum length of the sector header (0x49) bytes
         private readonly byte[] vm3_pos_sync = { 0x57, 0x5b, 0x5f, 0xff };
-        //private readonly string v3 = "49-49-49-EE"; // V-MAX v3 sector header
         private readonly byte[] v3a = { 0x49, 0x49, 0x49, 0xee };
 
         void V3_Auto_Adjust()
@@ -81,7 +80,7 @@ namespace V_Max_Tool
             Out_density.Items.Clear();
             out_rpm.Items.Clear();
             if (Adj_cbm.Checked && !V3_Auto_Adj.Checked) p = false;
-            Process_Nib_Data(true, p, v); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
+            Process_Nib_Data(true, p, v, true); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
         }
 
         byte[] Rebuild_V3(byte[] data, int gap_sector, int trk = -1)
@@ -116,7 +115,6 @@ namespace V_Max_Tool
                 {
                     track_ID = new byte[11];
                     Buffer.BlockCopy(data, tid, track_ID, 0, track_ID.Length);
-                    //Invoke(new Action(() => Text = $"tid - gapsec {tid - gap_sector} tid {tid} gapsec {gap_sector}"));
                     break;
                 }
                 tid++;
@@ -155,7 +153,7 @@ namespace V_Max_Tool
                         sectors++;
                         headers.Add($"{Hex_Val(comp)} ({header_len}) sectors {sectors}");
                         h2.Add(Hex_Val(comp));
-                        hdr_ID.Add(Hex(comp, 2, 1));
+                        hdr_ID.Add(Hex_Val(comp, 2, 1));
                     }
                 }
             }
@@ -197,7 +195,7 @@ namespace V_Max_Tool
             {
                 while ((tlen + gap_len + track_ID.Length + (header_len * sectors)) < density[d])
                 {
-                    if (header_len == v3_max_header) break;
+                    if (header_len >= v3_max_header) { header_len = v3_max_header; break; }
                     else header_len += 1;
                 }
             }
@@ -280,7 +278,6 @@ namespace V_Max_Tool
                         if (i + head.Length < data.Length) Buffer.BlockCopy(data, i, head, 0, head.Length);
                         if (!ss.Any(b => b == Hex_Val(head)))
                         {
-                            //last_sector = i;
                             if (head[2] == sec_0_ID) { sector_zero = i - a; s_zero = true; }
                             if (!start_found)
                             {
@@ -395,7 +392,8 @@ namespace V_Max_Tool
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
             int spos = 0;
-            byte[] hd = new byte[] { 0x49, 0x49 };
+            //byte[] hd = new byte[] { 0x49, 0x49 };
+            byte[] hd = IArray(2, 0x49);
             byte[] comp = new byte[2];
             int cust = (int)V3_hlen.Value;
             while (spos < tdata.Length)

@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Threading;
+using System.Drawing;
 
 /// CBM Block Header structure
 /// 8 plain bytes converted to 10 GCR bytes
@@ -71,7 +74,7 @@ namespace V_Max_Tool
                 write.Write(Build_BlockHeader(trk, i, Disk_ID));
                 write.Write(gap);
                 write.Write(sync);
-                (current_sector, c) = Decode_CBM_GCR(data, i, false, tk);
+                (current_sector, c) = Decode_CBM_Sector(data, i, false, tk);
                 if (c || !c) write.Write(current_sector);
                 if (i != sectors - 1) write.Write(gap);
             }
@@ -79,7 +82,6 @@ namespace V_Max_Tool
             if (gap_len > 0) write.Write(tail_gap);
             return buffer.ToArray();
         }
-
 
         (int, int, int, int, string[], int, int[], int, byte[], int[]) CBM_Track_Info(byte[] data, bool checksums)
         {
@@ -99,11 +101,9 @@ namespace V_Max_Tool
             bool sync = false;
             bool start_found = false;
             bool end_found = false;
-            byte[] pdata = new byte[data.Length];
             byte[] dec_hdr;
             byte[] sec_hdr = new byte[10];
             byte[] Disk_ID = new byte[4];
-            Buffer.BlockCopy(data, 0, pdata, 0, data.Length);
             data = Flip_Endian(data);
             BitArray source = new BitArray(data);
             List<string> list = new List<string>();
@@ -119,10 +119,10 @@ namespace V_Max_Tool
                     sync_count++;
                     if (sync_count == 15) sync = true;
                 }
-                if (sync) Compare(pos);
-                if (end_found) { add_total(); break; }
                 if (!source[pos])
                 {
+                    if (sync) Compare(pos);
+                    if (end_found) { add_total(); break; }
                     add_total();
                     sync = false;
                     sync_count = 0;
@@ -131,7 +131,6 @@ namespace V_Max_Tool
             }
             var len = (data_end - data_start);
             list.Add($"{(len) / 8} {data_start} {data_end}");
-            //this.Text = $"{data_start} {data_end} {sector_zero} {Math.Abs(len)} {start_found} {end_found}";  // for testing
             return (data_start, data_end, sector_zero, len, headers.ToArray(), sectors, s_st, total_sync, Disk_ID, s_pos);
 
             void add_total()
@@ -173,7 +172,7 @@ namespace V_Max_Tool
                             {
                                 byte[] s_dat;
                                 bool c;
-                                (s_dat, c) = Decode_CBM_GCR(pdata, a, true);
+                                (s_dat, c) = Decode_CBM_Sector(data, a, true, source);
                                 if (!c) sec_c = csm[1];
                             }
                             headers.Add($"Sector ({a}){sz} Checksum ({sec_c}) pos ({p / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})");
@@ -196,7 +195,7 @@ namespace V_Max_Tool
                                 {
                                     byte[] s_dat;
                                     bool c;
-                                    (s_dat, c) = Decode_CBM_GCR(pdata, a, true);
+                                    (s_dat, c) = Decode_CBM_Sector(data, a, true, source);
                                     if (!c) sec_c = csm[1];
                                 }
                                 headers[0] = $"Sector ({a}){sz} Checksum ({sec_c}) pos ({data_start / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})";
@@ -304,7 +303,7 @@ namespace V_Max_Tool
 
         }
 
-        (byte[], bool) Decode_CBM_GCR(byte[] data, int sector, bool decode, BitArray source = null, int pos = 0)
+        (byte[], bool) Decode_CBM_Sector(byte[] data, int sector, bool decode, BitArray source = null, int pos = 0)
         {
             byte[] tmp = new byte[0];
             if (source == null) source = new BitArray(Flip_Endian(data));
@@ -314,7 +313,6 @@ namespace V_Max_Tool
             bool sector_found = false;
             bool sync = false;
             int sync_count = 0;
-            //int pos = 0;
             Compare();
             while (pos < source.Length - 32)
             {
@@ -421,7 +419,6 @@ namespace V_Max_Tool
             }
         }
 
-
         void Get_Disk_Directory()
         {
             int l = 0;
@@ -442,7 +439,7 @@ namespace V_Max_Tool
                 while (Convert.ToInt32(next_sector[0]) == track)
                 {
                     Buffer.BlockCopy(next_sector, 0, last_sector, 0, 2);
-                    (temp, c) = Decode_CBM_GCR(NDA.Track_Data[halftrack], Convert.ToInt32(next_sector[1]), true);
+                    (temp, c) = Decode_CBM_Sector(NDA.Track_Data[halftrack], Convert.ToInt32(next_sector[1]), true);
                     if (temp.Length > 0 && (c || !c))
                     {
                         Buffer.BlockCopy(temp, 0, next_sector, 0, next_sector.Length);
@@ -463,7 +460,7 @@ namespace V_Max_Tool
                     {
                         if (buff.Length < 257)
                         {
-                            (temp, c) = Decode_CBM_GCR(NDA.Track_Data[halftrack], 1, true);
+                            (temp, c) = Decode_CBM_Sector(NDA.Track_Data[halftrack], 1, true);
                             if (c || !c) wrt.Write(temp);
                         }
                     }

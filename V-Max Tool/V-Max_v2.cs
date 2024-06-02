@@ -97,11 +97,9 @@ namespace V_Max_Tool
             int g_sec = Convert.ToInt32(t_info[5]);
             int vs = Convert.ToInt32(t_info[3]);
             int gap_pos = 0;
-            byte[] compare = new byte[2];
+            string compare;
             bool gap_found = false;
             bool found = false;
-            //Stopwatch w = new Stopwatch();
-            //w.Start();
             for (int i = 0; i < sectors; i++)
             {
                 gap_pos = 0;
@@ -133,22 +131,21 @@ namespace V_Max_Tool
                     break;
                 }
             }
-            //w.Stop();
-            //Invoke(new Action(()=> Text = w.Elapsed.TotalMilliseconds.ToString() ));
             if (gap_pos > 0) data = Rotate_Left(data, gap_pos);
             int slen;
             var sec = 1000;
             for (int i = 0; i < data.Length; i++)
             {
                 while (data[i] != start_byte[0]) i++;
-                Buffer.BlockCopy(data, i + 1, compare, 0, compare.Length);
-                if (vm2_ver[vs].Any(s => s == Hex_Val(compare)))
+                compare = Hex_Val(data, i + 1, 2);
+                if (vm2_ver[vs].Any(s => s == compare))
                 {
-                    sec = Array.IndexOf(vm2_ver[vs], Hex_Val(compare));
+                    sec = Array.IndexOf(vm2_ver[vs], compare);
                 }
                 if (sec > 0 && sec < 1000) break;
             }
             int ssec = sec;
+            int ls_pos = 0;
             for (int i = 0; i < sectors; i++)
             {
                 slen = v2_sync_marker.Length;
@@ -156,7 +153,11 @@ namespace V_Max_Tool
                 sec_dat[sec] = new byte[Sector_len];
                 try
                 {
-                    (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][sec]}", data, 3);
+                    (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][sec]}", data, 3, ls_pos);
+                    /// ---------- remove this if errors occur --------------------
+                    ls_pos = pos + 320;
+                    if (ls_pos >= data.Length - 320) ls_pos = 0;
+                    /// -----------------------------------------------------------
                 }
                 catch { }
                 Buffer.BlockCopy(data, pos + 1, header[sec], 0, header[sec].Length);
@@ -234,15 +235,21 @@ namespace V_Max_Tool
             byte[] start_byte = new byte[1];
             byte[] end_byte = new byte[1];
             byte[] pattern = IArray(6, 0xa5); // new byte[] { 0xa5, 0xa5, 0xa5, 0xa5, 0xa5, 0xa5 };
+
             byte[] ignore = new byte[] { 0x7e, 0x7f, 0xff, 0x5f, 0xbf, 0x57 };
-            byte[] compare = new byte[6];
+            string ptn = Hex_Val(pattern);
+            string compare = string.Empty;
             byte[] m = new byte[6];
             List<string> all_headers = new List<string>();
             List<string> headers = new List<string>();
             for (int i = 0; i < data.Length - 4; i++)
             {
-                try { Buffer.BlockCopy(data, i, compare, 0, compare.Length); } catch { }
-                if (Match(pattern, compare)) // == Hex_Val(pattern))
+                try
+                {
+                    compare = Hex_Val(data, i, 6);
+                }
+                catch { }
+                if (ptn == compare)
                 {
                     start_byte[0] = data[i - 1];
                     m[0] = data[i - 1];
@@ -314,7 +321,7 @@ namespace V_Max_Tool
                             m[2] = (byte)hd.Count;
                             string sz = "";
                             if (a == 0) { sz = "*"; sec_zero = i; }
-                            all_headers.Add($"Sector ({hd[0] ^ hd[1]}){sz} pos ({i}) {Hex(start_byte, 0, 1)}-{Hex_Val(hd.ToArray())}-{Hex(end_byte, 0, 1)}");
+                            all_headers.Add($"Sector ({hd[0] ^ hd[1]}){sz} pos ({i}) {Hex_Val(start_byte, 0, 1)}-{Hex_Val(hd.ToArray())}-{Hex_Val(end_byte, 0, 1)}");
                             if (!start_found) { data_start = i; start_found = true; }
                             sectors++;
                             dif = pos;
@@ -323,7 +330,7 @@ namespace V_Max_Tool
                         {
                             data_end = i;
                             end_found = true;
-                            all_headers.Add($"pos {i} ** Repeat ** {Hex(start_byte, 0, 1)}-{Hex_Val(hd.ToArray())}-{Hex(end_byte, 0, 1)}");
+                            all_headers.Add($"pos {i} ** Repeat ** {Hex_Val(start_byte, 0, 1)}-{Hex_Val(hd.ToArray())}-{Hex_Val(end_byte, 0, 1)}");
                             all_headers.Add($"Track length ({data_end - data_start}){snc} Sectors ({sectors}) Sector 0 ({sec_zero}) Header length ({hd.Count + 2})");
                             all_headers.Add(" ");
                             break;

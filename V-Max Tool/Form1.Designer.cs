@@ -125,13 +125,13 @@
             this.DV_gcr = new System.Windows.Forms.RadioButton();
             this.Save_Dialog = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.Adj_pbar = new System.Windows.Forms.ProgressBar();
             this.listBox1 = new System.Windows.Forms.ListBox();
             this.Batch_Box = new System.Windows.Forms.GroupBox();
             this.label9 = new System.Windows.Forms.Label();
             this.B_cancel = new System.Windows.Forms.Button();
             this.Batch_Bar = new System.Windows.Forms.ProgressBar();
             this.label8 = new System.Windows.Forms.Label();
-            this.Adj_pbar = new System.Windows.Forms.ProgressBar();
             this.Dir_screen = new System.Windows.Forms.RichTextBox();
             this.Drag_pic = new System.Windows.Forms.PictureBox();
             this.Out_density = new System.Windows.Forms.ListBox();
@@ -1380,6 +1380,13 @@
             this.panel1.Size = new System.Drawing.Size(900, 1123);
             this.panel1.TabIndex = 37;
             // 
+            // Adj_pbar
+            // 
+            this.Adj_pbar.Location = new System.Drawing.Point(-11, 1100);
+            this.Adj_pbar.Name = "Adj_pbar";
+            this.Adj_pbar.Size = new System.Drawing.Size(917, 15);
+            this.Adj_pbar.TabIndex = 38;
+            // 
             // listBox1
             // 
             this.listBox1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -1438,13 +1445,6 @@
             this.label8.Size = new System.Drawing.Size(70, 25);
             this.label8.TabIndex = 0;
             this.label8.Text = "label8";
-            // 
-            // Adj_pbar
-            // 
-            this.Adj_pbar.Location = new System.Drawing.Point(-11, 1100);
-            this.Adj_pbar.Name = "Adj_pbar";
-            this.Adj_pbar.Size = new System.Drawing.Size(917, 15);
-            this.Adj_pbar.TabIndex = 38;
             // 
             // Dir_screen
             // 
