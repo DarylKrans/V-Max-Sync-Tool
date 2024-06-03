@@ -142,7 +142,7 @@ namespace V_Max_Tool
 
         /// ------------------------ Add Sync to Loader Track --------------------------------------------------
 
-        void Fix_Loader_Option(bool draw, int i)
+        void Fix_Loader_Option(bool draw, int i) //, bool swap = false)
         {
             var trk_num = 0;
             if (f_load.Checked)
@@ -170,9 +170,18 @@ namespace V_Max_Tool
                 if (NDS.cbm.Any(x => x == 2))
                 {
                     for (int x = 0; i < tracks; x++) if (NDS.v2info[x]?.Length > 0) { tt = x; break; }
-                    if (Hex_Val(NDS.v2info[tt], 0, 2) == "4E-64") Set_Dest_Arrays(Pad_Loader(v24e64pal, loader_padding, density_map[trk_num]), i);
-                    if (Hex_Val(NDS.v2info[tt], 0, 2) == "64-46") Set_Dest_Arrays(Pad_Loader(v26446ntsc, loader_padding, density_map[trk_num]), i);
-                    if (Hex_Val(NDS.v2info[tt], 0, 2) == "64-4E") Set_Dest_Arrays(Pad_Loader(v2644entsc, loader_padding, density_map[trk_num]), i);
+                    if (!V2_swap_headers.Checked)
+                    {
+                        if (Hex_Val(NDS.v2info[tt], 0, 2) == "4E-64") Set_Dest_Arrays(Pad_Loader(v24e64pal, loader_padding, density_map[trk_num]), i);
+                        if (Hex_Val(NDS.v2info[tt], 0, 2) == "64-46") Set_Dest_Arrays(Pad_Loader(v26446ntsc, loader_padding, density_map[trk_num]), i);
+                        if (Hex_Val(NDS.v2info[tt], 0, 2) == "64-4E") Set_Dest_Arrays(Pad_Loader(v2644entsc, loader_padding, density_map[trk_num]), i);
+                    }
+                    else
+                    {
+                        if (Hex_Val(NDG.newheader, 0, 2) == "4E-64") Set_Dest_Arrays(Pad_Loader(v24e64pal, loader_padding, density_map[trk_num]), i);
+                        if (Hex_Val(NDG.newheader, 0, 2) == "64-46") Set_Dest_Arrays(Pad_Loader(v26446ntsc, loader_padding, density_map[trk_num]), i);
+                        if (Hex_Val(NDG.newheader, 0, 2) == "64-4E") Set_Dest_Arrays(Pad_Loader(v2644entsc, loader_padding, density_map[trk_num]), i);
+                    }
                     FL();
                 }
                 loader_fixed = true;

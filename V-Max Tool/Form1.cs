@@ -233,6 +233,7 @@ namespace V_Max_Tool
 
             void Process(bool get, string l2)
             {
+                listBox1.Visible = false;
                 Dir_screen.Clear();
                 Dir_screen.Text = "LOAD\"$\",8\nSEARCHING FOR $\nLOADING";
                 loader_fixed = false;
@@ -244,7 +245,7 @@ namespace V_Max_Tool
                         Invoke(new Action(() =>
                         {
                             Stopwatch proc = Process_Nib_Data(true, false, true);
-                            if (DB_timers.Checked) Invoke(new Action(() => label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} Process time : {proc.Elapsed.TotalMilliseconds} Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds}"));
+                            if (DB_timers.Checked) Invoke(new Action(() => label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} ms, Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms"));
                             Set_ListBox_Items(false, false);
                             Get_Disk_Directory();
                             linkLabel1.Visible = false;
@@ -253,23 +254,9 @@ namespace V_Max_Tool
                             Save_Disk.Visible = true;
                             Source.Visible = Output.Visible = true;
                             label1.Text = $"{fname}{fext}";
-                            //label2.Text = l2;
                             M_render.Enabled = true;
                             Import_File.Visible = false;
                             Adv_ctrl.Enabled = true;
-                            if (Encoding.ASCII.GetString(g64_header, 0, 8) == "GCR-1541" && NDS.cbm.Any(s => s == 5))
-                            {
-                                using (Message_Center center = new Message_Center(this)) // center message box
-                                {
-                                    string t = "Output integrity warning!";
-
-                                    string s = "Vorpal tracks detected.\n\nIt is advised to use NIB files when processing Vorpal images\nWhen processing G64's, the output file may not work correctly.";
-                                    if (s.ToLower().Contains("source array")) s = "Image is corrupt and cannot be opened";
-                                    MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                                    error = true;
-                                }
-                            }
-
                         }));
                     }
                 });
@@ -396,7 +383,7 @@ namespace V_Max_Tool
         private void LinkLabel1_LinkClicked(object sender, System.Windows.Forms.LinkLabelLinkClickedEventArgs e)
         {
             this.linkLabel1.LinkVisited = true;
-            System.Diagnostics.Process.Start("https://github.com/DarylKrans/V-Max-Sync-Tool");
+            Process.Start("https://github.com/DarylKrans/V-Max-Sync-Tool");
         }
 
         private void VPL_lead_CheckedChanged(object sender, EventArgs e)
@@ -578,6 +565,26 @@ namespace V_Max_Tool
         private void Debug_Button_Click(object sender, EventArgs e)
         {
             Create_Blank_Disk();
+        }
+
+        private void V2_Swap_Headers_CheckedChanged(object sender, EventArgs e)
+        {
+            V2_swap.Enabled = V2_swap_headers.Checked;
+        }
+
+        private void V2_swap_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!busy)
+            {
+                busy = true;
+                V2_Auto_Adj.Checked = true;
+                V2_Custom.Checked = V2_Add_Sync.Checked = false;
+                if (V2_swap.SelectedIndex == 0) { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x4e; }
+                if (V2_swap.SelectedIndex == 1) { NDG.newheader[0] = 0x46; NDG.newheader[1] = 0x46; }
+                if (V2_swap.SelectedIndex == 2) { NDG.newheader[0] = 0x4e; NDG.newheader[1] = 0x64; }
+                busy = false;
+                V2_Adv_Opts();
+            }
         }
     }
 }

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-using System.Threading;
 
 /// CBM Block Header structure
 /// 8 plain bytes converted to 10 GCR bytes
@@ -49,7 +48,6 @@ namespace V_Max_Tool
             int gap_sync = 0;
             byte s = 0x00;
             byte[] sync = new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff };
-            //(s, gap_sync) = Find_Longest_Sync(data);  // <- uncomment to add sync to end of track if source has sync at the end
             if (s != 0xff || gap_sync <= 10) gap_sync = 0;
             int sector_gap = (density[t_density] - ((sector_len * sectors) + gap_len + gap_sync)) / (sectors * 2);
             gap_len = density[t_density] - gap_sync - ((sector_len + (sector_gap * 2)) * sectors);
@@ -173,7 +171,7 @@ namespace V_Max_Tool
                                 (s_dat, c) = Decode_CBM_Sector(data, a, true, source);
                                 if (!c) sec_c = csm[1];
                             }
-                            headers.Add($"Sector ({a}){sz} Checksum ({sec_c}) pos ({p / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})");
+                            if (!batch) headers.Add($"Sector ({a}){sz} Checksum ({sec_c}) pos ({p / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})");
                         }
                         else
                         {
@@ -196,12 +194,15 @@ namespace V_Max_Tool
                                     (s_dat, c) = Decode_CBM_Sector(data, a, true, source);
                                     if (!c) sec_c = csm[1];
                                 }
-                                headers[0] = $"Sector ({a}){sz} Checksum ({sec_c}) pos ({data_start / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})";
-                                headers.Add($"pos {p / 8} ** repeat ** {h}");
+                                if (!batch)
+                                {
+                                    headers[0] = $"Sector ({a}){sz} Checksum ({sec_c}) pos ({data_start / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})";
+                                    headers.Add($"pos {p / 8} ** repeat ** {h}");
+                                }
                                 if (data_start == 0) data_end = pos;
                                 else data_end = pos;
                                 end_found = true;
-                                headers.Add($"Track length ({(data_end - data_start) >> 3}) Sectors ({list.Count}) Avg sync length ({(total_sync + sync_count) / (list.Count * 2)} bits)");
+                                if (!batch) headers.Add($"Track length ({(data_end - data_start) >> 3}) Sectors ({list.Count}) Avg sync length ({(total_sync + sync_count) / (list.Count * 2)} bits)");
                                 sectors = list.Count;
                             }
                         }
@@ -279,21 +280,6 @@ namespace V_Max_Tool
                         }
                         Pad_Bits(dest_pos - (y + expected_sync + 8), (8 - y) + 1, d);
                     }
-
-                    //BitArray temp = new BitArray(bcnt << 3);
-                    //for (int i = 0; i < (bcnt << 3); i++) temp[i] = d[i];
-                    //if (sync)
-                    //{
-                    //    var ver = 0;
-                    //    for (int i = 0; i < expected_sync; i++) { if (temp[temp.Length - (i + 1)] == true) ver++; }
-                    //    if (ver < sync_count && ver < expected_sync && ver >= minimum_sync)
-                    //    {
-                    //        for (int i = 0; i < expected_sync; i++) temp[(temp.Length - 1) - i] = true;
-                    //    }
-                    //    temp[(temp.Length - 1) - expected_sync] = false;
-                    //    temp[(temp.Length - 2) - expected_sync] = true;
-                    //}
-                    //return Rotate_Right(Flip_Endian(Bit2Byte(temp)), 6);
                     return Rotate_Right(Flip_Endian(Bit2Byte(d, 0, bcnt << 3)), 6);
                 }
             }
@@ -305,8 +291,8 @@ namespace V_Max_Tool
         {
             byte[] tmp = new byte[0];
             if (source == null) source = new BitArray(Flip_Endian(data));
-            BitArray sector_data = new BitArray(325 * 8);
-            byte[] sec;  // = new byte[325];
+            int sector_data = (325 * 8);
+            byte[] sec;
             bool sector_marker = false;
             bool sector_found = false;
             bool sync = false;
@@ -322,7 +308,7 @@ namespace V_Max_Tool
                 if (!source[pos])
                 {
                     if (sync) sector_marker = Compare();
-                    if (pos + sector_data.Count < source.Length)
+                    if (pos + sector_data < source.Length)
                     {
                         if (sync && sector_found && !sector_marker)
                         {
@@ -344,7 +330,7 @@ namespace V_Max_Tool
 
             (byte[], bool) Decode_Sector()
             {
-                sec = Flip_Endian(Bit2Byte(source, pos, sector_data.Count));
+                sec = Flip_Endian(Bit2Byte(source, pos, sector_data));
                 if (!decode) return (sec, false);
                 byte[] d_sec = Decode_CBM_GCR(sec);
                 /// Calculate block checksum
@@ -364,7 +350,7 @@ namespace V_Max_Tool
                     if (g[3] > 0 && g[3] < 43)
                     {
                         if ((g[2] == sector)) { sector_found = true; return true; }
-                        pos += sector_data.Count;
+                        pos += sector_data;
                     }
                 }
                 return false;
@@ -391,7 +377,7 @@ namespace V_Max_Tool
                     if (!source[pos])
                     {
                         if (sync) sector_found = Compare();
-                        if (sector_found) break; // return sector_marker;
+                        if (sector_found) break;
                         sync = false;
                         sync_count = 0;
                     }
@@ -453,7 +439,7 @@ namespace V_Max_Tool
                 }
                 if (buff.Length != 0)
                 {
-                    // Read track 18 sector 1 if sector 0 signals the end of the directory
+                    /// Read track 18 sector 1 if sector 0 signals the end of the directory
                     try
                     {
                         if (buff.Length < 257)
@@ -547,6 +533,7 @@ namespace V_Max_Tool
         void Create_Blank_Disk()
         {
             if (BD_name.Text == "") BD_name.Text = "BLANK DISK";
+            if (BD_id.Text == "") BD_id.Text = "00 2A";
             byte[] name = Encoding.ASCII.GetBytes($"{BD_name.Text}");
             fname = BD_name.Text;
             tracks = Convert.ToInt32(BD_tracks.Value);
@@ -556,7 +543,7 @@ namespace V_Max_Tool
             Track_Info.Items.Clear();
             Set_Arrays(tracks);
             Set_ListBox_Items(true, false);
-            byte[] id = Encoding.ASCII.GetBytes("00 2A");
+            byte[] id = Encoding.ASCII.GetBytes(BD_id.Text);
             byte[] Disk_ID = new byte[] { id[1], id[0], 0x0f, 0x0f };
             byte[] sync = new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff };
             byte[] dir_s0 = Encode_CBM_GCR(T18S0());
@@ -565,7 +552,7 @@ namespace V_Max_Tool
             for (int i = 0; i < Convert.ToInt32(BD_tracks.Value); i++)
             {
                 MemoryStream buffer = new MemoryStream();
-                BinaryWriter write = new BinaryWriter(buffer); // = new BinaryWriter(buffer);
+                BinaryWriter write = new BinaryWriter(buffer);
                 for (int j = 0; j < Available_Sectors[i]; j++)
                 {
                     bool w = true;
@@ -591,6 +578,7 @@ namespace V_Max_Tool
             Import_File.Visible = false;
             Adv_ctrl.Enabled = true;
             Save_Disk.Visible = true;
+
 
             byte[] T18S0()
             {

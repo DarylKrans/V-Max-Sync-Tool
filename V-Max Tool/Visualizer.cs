@@ -186,6 +186,8 @@ namespace V_Max_Tool
             }
             Draw_Disk(circle, m, width, $"{fi_nam}{fi_ext}", ToBinary(Encoding.ASCII.GetString(NDS.Track_Data[trk], 0, 2000)));
             //Stopwatch sw = Stopwatch.StartNew();
+            Thread[] Draw = new Thread[tracks];
+
             while (r > 80 && track < tracks)
             {
                 bool v5 = false;

@@ -8,7 +8,7 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-        // V-Max v3 sync and header variables for "Rebuild tracks" options
+        /// V-Max v3 sync and header variables for "Rebuild tracks" options
         private readonly byte[] v3_sector_sync = { 0x5b, 0xff };  // change the sync marker placed before sector headers (0x57, 0xff known working)
         private readonly int v3_min_header = 3;             // adjust the minimum length of the sector header (0x49) bytes
         private readonly int v3_max_header = 8; //12;            // adjust the maximum length of the sector header (0x49) bytes
@@ -80,7 +80,7 @@ namespace V_Max_Tool
             Out_density.Items.Clear();
             out_rpm.Items.Clear();
             if (Adj_cbm.Checked && !V3_Auto_Adj.Checked) p = false;
-            Process_Nib_Data(true, p, v, true); // false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
+            Process_Nib_Data(true, p, v, true); /// false flag instructs the routine NOT to process CBM tracks again -- p (true/false) process v-max v3 short tracks
         }
 
         byte[] Rebuild_V3(byte[] data, int gap_sector, int trk = -1)
@@ -92,10 +92,10 @@ namespace V_Max_Tool
             int oh_len = 0;
             int tlen = 0;
             int fill = 0;
-            byte[] header = IArray(3, 0x49); //{ 0x49, 0x49, 0x49 };
+            byte[] header = IArray(3, 0x49);
             byte[][] sec_data;
-            byte[] sb = { 0x49 }; // start byte of header
-            byte[] eb = { 0xee }; // end byte of header
+            byte[] sb = { 0x49 }; /// start byte of header
+            byte[] eb = { 0xee }; /// end byte of header
             byte filler = 0xff;
             int sync = v3_sector_sync.Length;
             int gap_len = 50;
@@ -108,7 +108,7 @@ namespace V_Max_Tool
             byte[] comp = new byte[3];
             var tid = gap_sector;
             byte[] track_ID = new byte[0];
-            // Trying to find if a track contains Track-ID marker (helps the 1541/71 find which track it's on)
+            /// Trying to find if a track contains Track-ID marker (helps the 1541/71 find which track it's on)
             while (tid < data.Length - 11)
             {
                 if ((data[tid] == 0xff || data[tid] == 0xf7) && data[tid + 1] == 0x52)
@@ -221,7 +221,7 @@ namespace V_Max_Tool
             }
             int index = hdr_ID.FindIndex(x => x.StartsWith("F3"));
 
-            // Start rebuilding the track
+            /// Start rebuilding the track
             var buff = new MemoryStream();
             var wrt = new BinaryWriter(buff);
             for (int i = 0; i < sectors; i++)
@@ -255,9 +255,9 @@ namespace V_Max_Tool
             bool start_found = false;
             bool end_found = false;
             bool s_zero = false;
-            byte sec_0_ID = 0xf3; // V-Max v3 sector 0 ID marker
-            byte[] header = IArray(2, 0x49); //new byte[] { 0x49, 0x49 }; // V-Max v3 header pattern
-            byte head_end = 0xee; // V-Max v3 header end byte located directly following the 49-49-49 pattern
+            byte sec_0_ID = 0xf3; /// V-Max v3 sector 0 ID marker
+            byte[] header = IArray(2, 0x49); /// V-Max v3 header pattern
+            byte head_end = 0xee; /// V-Max v3 header end byte located directly following the 49-49-49 pattern
             byte[] comp = new byte[2];
             byte[] head = new byte[18];
             List<string> s = new List<string>();
@@ -265,6 +265,7 @@ namespace V_Max_Tool
             List<int> spos = new List<int>();
             List<byte> hb = new List<byte>();
             List<int> hl = new List<int>();
+            string stats = string.Empty;
             for (int i = 0; i < data.Length - comp.Length; i++)
             {
                 Buffer.BlockCopy(data, i, comp, 0, comp.Length);
@@ -297,9 +298,12 @@ namespace V_Max_Tool
                         {
                             end_found = true;
                             data_end = i - a;
-                            build_list();
-                            s.Add($"Pos {i - a} **repeat** {Hex_Val(head).Remove(8, Hex_Val(head).Length - 8)}");
-                            string stats = $"Track Length ({data_end - data_start}) Sectors ({ss.Count})";
+                            if (!batch)
+                            {
+                                build_list();
+                                s.Add($"Pos {i - a} **repeat** {Hex_Val(head).Remove(8, Hex_Val(head).Length - 8)}");
+                                stats = $"Track Length ({data_end - data_start}) Sectors ({ss.Count})";
+                            }
                             if (!s_zero)
                             {
                                 if (hb.Count < 10 && !s_zero)
@@ -312,8 +316,11 @@ namespace V_Max_Tool
                                     }
                                 }
                             }
-                            stats += $" sector 0 ({sector_zero})  Header Length ({a + 3})";
-                            s.Add(stats);
+                            if (!batch)
+                            {
+                                stats += $" sector 0 ({sector_zero})  Header Length ({a + 3})";
+                                s.Add(stats);
+                            }
                         }
                     }
                 }
@@ -329,7 +336,7 @@ namespace V_Max_Tool
                 {
                     Invoke(new Action(() =>
                     {
-                        using (Message_Center centeringService = new Message_Center(this)) // center message box
+                        using (Message_Center centeringService = new Message_Center(this)) /// center message box
                         {
                             string m = "Output image may not work!";
                             string t = $"Error processing track {(trk / 2) + 1}";
@@ -392,7 +399,6 @@ namespace V_Max_Tool
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
             int spos = 0;
-            //byte[] hd = new byte[] { 0x49, 0x49 };
             byte[] hd = IArray(2, 0x49);
             byte[] comp = new byte[2];
             int cust = (int)V3_hlen.Value;
@@ -403,7 +409,7 @@ namespace V_Max_Tool
                     try
                     {
                         Buffer.BlockCopy(tdata, spos + 2, comp, 0, comp.Length);
-                        if (Match(comp, hd)) // && (spos < tdata.Length - 4))
+                        if (Match(comp, hd))
                         {
                             var a = 0;
                             while (tdata[spos + a] != hd[0])

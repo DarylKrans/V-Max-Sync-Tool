@@ -101,15 +101,20 @@ namespace V_Max_Tool
                 //0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
             };
 
-        void Reset_to_Defaults()
+        void Reset_to_Defaults(bool clear_batch_list = true)
         {
             busy = true;
             Img_Q.SelectedIndex = 2;
-            Set_ListBox_Items(true, true);
+            Set_ListBox_Items(true, true, clear_batch_list);
             Import_File.Visible = f_load.Visible = false;
             Tabs.Controls.Remove(Adv_V3_Opts);
             Tabs.Controls.Remove(Adv_V2_Opts);
             Tabs.Controls.Remove(Vpl_adv);
+            if (clear_batch_list)
+            {
+                listBox1.Visible = false;
+                listBox1.Items.Clear();
+            }
             Img_style.Enabled = Img_View.Enabled = Img_opts.Enabled = Save_Circle_btn.Visible = M_render.Visible = Adv_ctrl.Enabled = false;
             VBS_info.Visible = Reg_info.Visible = false;
             Other_opts.Visible = false;
@@ -171,6 +176,7 @@ namespace V_Max_Tool
             NDG.Track_Data = new byte[len][];
             NDG.L_Rot = false;
             NDG.s_len = new int[len];
+            NDG.newheader = new byte[2];
             // Original is the arrays that keep the original track data for the Auto Adjust feature
             Original.A = new byte[0];
             Original.G = new byte[0];
@@ -445,7 +451,7 @@ namespace V_Max_Tool
 
         byte[] Bit2Byte(BitArray bits, int start = 0, int length = -1)
         {
-            BitArray temp = new BitArray(bits);
+            BitArray temp = new BitArray(0);
             if (length < 0) length = bits.Length - start;
             if (start >= 0 && length != -1 && start + length <= bits.Length)
             {
@@ -455,6 +461,18 @@ namespace V_Max_Tool
             byte[] ret = new byte[((temp.Count - 1) / 8) + 1];
             temp.CopyTo(ret, 0);
             return ret;
+        }
+
+        BitArray BitCopy(BitArray bits, int start = 0, int length = -1)
+        {
+            if (length < 0) length = bits.Length - start;
+            if (start >= 0 && length != -1 && start + length <= bits.Length)
+            {
+                BitArray temp = new BitArray(length);
+                for (int i = 0; i < length; i++) temp[i] = bits[start + i];
+                return temp;
+            }
+            else return bits;
         }
 
         public static string ToBinary(string data)
@@ -897,11 +915,11 @@ namespace V_Max_Tool
 
         void Init()
         {
-            //if (debug && !Tabs.TabPages.Contains(D_Bug)) Adv_ctrl.Controls.Add(D_Bug);
             string[] args = Environment.GetCommandLineArgs();
             if (args.Length > 1 && args[1] == "-debug") debug = true;
             if (!debug) Tabs.TabPages.Remove(D_Bug);
             listBox1.Visible = false; // set to true for debugging that requires a listbox
+            listBox1.HorizontalScrollbar = true;
             Debug_Button.Visible = debug;
             Other_opts.Visible = false;
             busy = true;
@@ -942,8 +960,6 @@ namespace V_Max_Tool
             VS_hex.Checked = true;
             T_jump.Visible = Jump.Visible = false;
             DV_pbar.Value = 0;
-            Adj_pbar.Value = 0;
-            Adj_pbar.Visible = false;
             DV_gcr.Checked = true;
             fnappend = fix;
             label1.Text = label2.Text = coords.Text = "";
@@ -987,6 +1003,8 @@ namespace V_Max_Tool
             vm2_ver[1] = new string[vm2_ver[0].Length];
             Array.Copy(vm2_ver[0], 0, vm2_ver[1], 0, vm2_ver[0].Length);
             vm2_ver[1][6] = "A5-A3"; vm2_ver[1][10] = "A9-A3";
+            V2_swap.DataSource = new string[] { "64-4E (newer)", "64-46 (weak bits)", "4E-64 (alt)" };
+            V2_swap.Enabled = V2_swap_headers.Checked;
             /// Loads V-Max Loader track replacements into byte[] arrays
             v2ldrcbm = Decompress(XOR(Resources.v2cbmla, 0xcb)); // V-Max CBM sectors (DotC, Into the Eagles Nest, Paperboy, etc..)
             v24e64pal = Decompress(XOR(Resources.v24e64p, 0x64)); // V-Max Custom sectors (PAL Loader)
@@ -1088,7 +1106,7 @@ namespace V_Max_Tool
             }
         }
 
-        void Set_ListBox_Items(bool r, bool nofile)
+        void Set_ListBox_Items(bool r, bool nofile, bool clear_batch_list = true)
         {
             strack.BeginUpdate();
             ss.BeginUpdate();
@@ -1123,7 +1141,7 @@ namespace V_Max_Tool
             sl.Height = strack.Height = sl.Height = sd.Height = sl.PreferredHeight; // (items * 12);
             outbox.Height = outbox.PreferredSize.Height;
             inbox.Height = inbox.PreferredSize.Height;
-            Drag_pic.Visible = (r && nofile);
+            if (clear_batch_list) Drag_pic.Visible = (r && nofile);
             out_size.EndUpdate();
             out_dif.EndUpdate();
             Out_density.EndUpdate();

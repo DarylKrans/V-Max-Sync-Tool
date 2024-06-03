@@ -38,9 +38,6 @@
             this.V2_Auto_Adj = new System.Windows.Forms.CheckBox();
             this.Tabs = new System.Windows.Forms.TabControl();
             this.Main = new System.Windows.Forms.TabPage();
-            this.Import_File = new V_Max_Tool.Gbox();
-            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
-            this.label5 = new System.Windows.Forms.Label();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.Other_opts = new System.Windows.Forms.Panel();
             this.Disk_Dir = new System.Windows.Forms.RadioButton();
@@ -55,6 +52,9 @@
             this.Loader_Track = new System.Windows.Forms.Label();
             this.Save_Disk = new System.Windows.Forms.Button();
             this.Adv_V2_Opts = new System.Windows.Forms.TabPage();
+            this.label13 = new System.Windows.Forms.Label();
+            this.V2_swap_headers = new System.Windows.Forms.CheckBox();
+            this.V2_swap = new System.Windows.Forms.ComboBox();
             this.V2_export = new System.Windows.Forms.Button();
             this.Re_Align = new System.Windows.Forms.CheckBox();
             this.v2exp = new System.Windows.Forms.Label();
@@ -82,6 +82,8 @@
             this.VP_Export = new System.Windows.Forms.Button();
             this.D_Bug = new System.Windows.Forms.TabPage();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.BD_id = new System.Windows.Forms.TextBox();
+            this.label12 = new System.Windows.Forms.Label();
             this.BD_name = new System.Windows.Forms.TextBox();
             this.label11 = new System.Windows.Forms.Label();
             this.label10 = new System.Windows.Forms.Label();
@@ -135,7 +137,6 @@
             this.DV_gcr = new System.Windows.Forms.RadioButton();
             this.Save_Dialog = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.Adj_pbar = new System.Windows.Forms.ProgressBar();
             this.listBox1 = new System.Windows.Forms.ListBox();
             this.Batch_Box = new System.Windows.Forms.GroupBox();
             this.label9 = new System.Windows.Forms.Label();
@@ -156,10 +157,12 @@
             this.sl = new System.Windows.Forms.ListBox();
             this.ss = new System.Windows.Forms.ListBox();
             this.sf = new System.Windows.Forms.ListBox();
+            this.Import_File = new V_Max_Tool.Gbox();
+            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
+            this.label5 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.V2_hlen)).BeginInit();
             this.Tabs.SuspendLayout();
             this.Main.SuspendLayout();
-            this.Import_File.SuspendLayout();
             this.Other_opts.SuspendLayout();
             this.VBS_info.SuspendLayout();
             this.Reg_info.SuspendLayout();
@@ -191,6 +194,7 @@
             this.panel1.SuspendLayout();
             this.Batch_Box.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).BeginInit();
+            this.Import_File.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -226,7 +230,7 @@
             // V2_Custom
             // 
             this.V2_Custom.AutoSize = true;
-            this.V2_Custom.Location = new System.Drawing.Point(114, 76);
+            this.V2_Custom.Location = new System.Drawing.Point(9, 96);
             this.V2_Custom.Name = "V2_Custom";
             this.V2_Custom.Size = new System.Drawing.Size(295, 29);
             this.V2_Custom.TabIndex = 28;
@@ -241,7 +245,7 @@
             0,
             0,
             0});
-            this.V2_hlen.Location = new System.Drawing.Point(415, 74);
+            this.V2_hlen.Location = new System.Drawing.Point(310, 94);
             this.V2_hlen.Maximum = new decimal(new int[] {
             36,
             0,
@@ -265,7 +269,7 @@
             // V2_Add_Sync
             // 
             this.V2_Add_Sync.AutoSize = true;
-            this.V2_Add_Sync.Location = new System.Drawing.Point(114, 111);
+            this.V2_Add_Sync.Location = new System.Drawing.Point(9, 131);
             this.V2_Add_Sync.Name = "V2_Add_Sync";
             this.V2_Add_Sync.Size = new System.Drawing.Size(311, 29);
             this.V2_Add_Sync.TabIndex = 32;
@@ -317,38 +321,6 @@
             this.Main.Size = new System.Drawing.Size(910, 185);
             this.Main.TabIndex = 0;
             this.Main.Text = "File Info";
-            // 
-            // Import_File
-            // 
-            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
-            this.Import_File.BorderColor = System.Drawing.Color.Black;
-            this.Import_File.Controls.Add(this.Import_Progress_Bar);
-            this.Import_File.Controls.Add(this.label5);
-            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(23, 56);
-            this.Import_File.Name = "Import_File";
-            this.Import_File.Size = new System.Drawing.Size(863, 108);
-            this.Import_File.TabIndex = 59;
-            this.Import_File.TabStop = false;
-            this.Import_File.Text = "Parsing Image Data";
-            // 
-            // Import_Progress_Bar
-            // 
-            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
-            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
-            this.Import_Progress_Bar.Size = new System.Drawing.Size(845, 28);
-            this.Import_Progress_Bar.TabIndex = 39;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(6, 68);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(137, 25);
-            this.label5.TabIndex = 38;
-            this.label5.Text = "Processing...";
             // 
             // linkLabel1
             // 
@@ -488,6 +460,9 @@
             // 
             this.Adv_V2_Opts.BackColor = System.Drawing.Color.Gainsboro;
             this.Adv_V2_Opts.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.Adv_V2_Opts.Controls.Add(this.label13);
+            this.Adv_V2_Opts.Controls.Add(this.V2_swap_headers);
+            this.Adv_V2_Opts.Controls.Add(this.V2_swap);
             this.Adv_V2_Opts.Controls.Add(this.V2_export);
             this.Adv_V2_Opts.Controls.Add(this.Re_Align);
             this.Adv_V2_Opts.Controls.Add(this.v2exp);
@@ -502,6 +477,37 @@
             this.Adv_V2_Opts.Size = new System.Drawing.Size(910, 185);
             this.Adv_V2_Opts.TabIndex = 1;
             this.Adv_V2_Opts.Text = "V-Max v2 Advanced";
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.125F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label13.Location = new System.Drawing.Point(433, 136);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(406, 24);
+            this.label13.TabIndex = 64;
+            this.label13.Text = "*64-46 may not work on older drives. Use 64-4E";
+            // 
+            // V2_swap_headers
+            // 
+            this.V2_swap_headers.AutoSize = true;
+            this.V2_swap_headers.Location = new System.Drawing.Point(451, 96);
+            this.V2_swap_headers.Name = "V2_swap_headers";
+            this.V2_swap_headers.Size = new System.Drawing.Size(184, 29);
+            this.V2_swap_headers.TabIndex = 63;
+            this.V2_swap_headers.Text = "Swap Headers";
+            this.V2_swap_headers.UseVisualStyleBackColor = true;
+            this.V2_swap_headers.CheckedChanged += new System.EventHandler(this.V2_Swap_Headers_CheckedChanged);
+            // 
+            // V2_swap
+            // 
+            this.V2_swap.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.V2_swap.FormattingEnabled = true;
+            this.V2_swap.Location = new System.Drawing.Point(659, 92);
+            this.V2_swap.Name = "V2_swap";
+            this.V2_swap.Size = new System.Drawing.Size(227, 33);
+            this.V2_swap.TabIndex = 62;
+            this.V2_swap.SelectedIndexChanged += new System.EventHandler(this.V2_swap_SelectedIndexChanged);
             // 
             // V2_export
             // 
@@ -538,7 +544,7 @@
             // v2adv
             // 
             this.v2adv.AutoSize = true;
-            this.v2adv.Location = new System.Drawing.Point(257, 41);
+            this.v2adv.Location = new System.Drawing.Point(218, 66);
             this.v2adv.Name = "v2adv";
             this.v2adv.Size = new System.Drawing.Size(240, 25);
             this.v2adv.TabIndex = 34;
@@ -877,6 +883,8 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.BD_id);
+            this.groupBox2.Controls.Add(this.label12);
             this.groupBox2.Controls.Add(this.BD_name);
             this.groupBox2.Controls.Add(this.label11);
             this.groupBox2.Controls.Add(this.label10);
@@ -889,18 +897,37 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Create Blank Disk";
             // 
+            // BD_id
+            // 
+            this.BD_id.Location = new System.Drawing.Point(52, 104);
+            this.BD_id.MaxLength = 5;
+            this.BD_id.Name = "BD_id";
+            this.BD_id.Size = new System.Drawing.Size(81, 31);
+            this.BD_id.TabIndex = 45;
+            this.BD_id.Text = "00 2A";
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(14, 107);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(32, 25);
+            this.label12.TabIndex = 44;
+            this.label12.Text = "ID";
+            // 
             // BD_name
             // 
-            this.BD_name.Location = new System.Drawing.Point(78, 46);
+            this.BD_name.Location = new System.Drawing.Point(68, 62);
             this.BD_name.MaxLength = 16;
             this.BD_name.Name = "BD_name";
             this.BD_name.Size = new System.Drawing.Size(188, 31);
             this.BD_name.TabIndex = 43;
+            this.BD_name.Text = "NEW DISK";
             // 
             // label11
             // 
             this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(14, 52);
+            this.label11.Location = new System.Drawing.Point(4, 68);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(65, 25);
             this.label11.TabIndex = 42;
@@ -909,7 +936,7 @@
             // label10
             // 
             this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(14, 87);
+            this.label10.Location = new System.Drawing.Point(6, 27);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(119, 25);
             this.label10.TabIndex = 41;
@@ -917,7 +944,7 @@
             // 
             // BD_tracks
             // 
-            this.BD_tracks.Location = new System.Drawing.Point(144, 84);
+            this.BD_tracks.Location = new System.Drawing.Point(136, 24);
             this.BD_tracks.Maximum = new decimal(new int[] {
             41,
             0,
@@ -939,7 +966,7 @@
             // 
             // Debug_Button
             // 
-            this.Debug_Button.Location = new System.Drawing.Point(154, 121);
+            this.Debug_Button.Location = new System.Drawing.Point(148, 104);
             this.Debug_Button.Name = "Debug_Button";
             this.Debug_Button.Size = new System.Drawing.Size(110, 40);
             this.Debug_Button.TabIndex = 39;
@@ -1489,7 +1516,6 @@
             // 
             this.panel1.BackColor = System.Drawing.Color.Gainsboro;
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panel1.Controls.Add(this.Adj_pbar);
             this.panel1.Controls.Add(this.listBox1);
             this.panel1.Controls.Add(this.Batch_Box);
             this.panel1.Controls.Add(this.Dir_screen);
@@ -1510,13 +1536,6 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(900, 1123);
             this.panel1.TabIndex = 37;
-            // 
-            // Adj_pbar
-            // 
-            this.Adj_pbar.Location = new System.Drawing.Point(-11, 1100);
-            this.Adj_pbar.Name = "Adj_pbar";
-            this.Adj_pbar.Size = new System.Drawing.Size(917, 15);
-            this.Adj_pbar.TabIndex = 38;
             // 
             // listBox1
             // 
@@ -1743,6 +1762,38 @@
             this.sf.Size = new System.Drawing.Size(115, 1002);
             this.sf.TabIndex = 26;
             // 
+            // Import_File
+            // 
+            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
+            this.Import_File.BorderColor = System.Drawing.Color.Black;
+            this.Import_File.Controls.Add(this.Import_Progress_Bar);
+            this.Import_File.Controls.Add(this.label5);
+            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
+            this.Import_File.Location = new System.Drawing.Point(23, 56);
+            this.Import_File.Name = "Import_File";
+            this.Import_File.Size = new System.Drawing.Size(863, 108);
+            this.Import_File.TabIndex = 59;
+            this.Import_File.TabStop = false;
+            this.Import_File.Text = "Parsing Image Data";
+            // 
+            // Import_Progress_Bar
+            // 
+            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
+            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
+            this.Import_Progress_Bar.Size = new System.Drawing.Size(845, 28);
+            this.Import_Progress_Bar.TabIndex = 39;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Location = new System.Drawing.Point(6, 68);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(137, 25);
+            this.label5.TabIndex = 38;
+            this.label5.Text = "Processing...";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
@@ -1759,8 +1810,6 @@
             this.Tabs.ResumeLayout(false);
             this.Main.ResumeLayout(false);
             this.Main.PerformLayout();
-            this.Import_File.ResumeLayout(false);
-            this.Import_File.PerformLayout();
             this.Other_opts.ResumeLayout(false);
             this.Other_opts.PerformLayout();
             this.VBS_info.ResumeLayout(false);
@@ -1810,6 +1859,8 @@
             this.Batch_Box.ResumeLayout(false);
             this.Batch_Box.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).EndInit();
+            this.Import_File.ResumeLayout(false);
+            this.Import_File.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -1919,7 +1970,6 @@
         private System.Windows.Forms.ProgressBar DV_pbar;
         private System.Windows.Forms.ComboBox Lead_ptn;
         private System.Windows.Forms.Label label7;
-        private System.Windows.Forms.ProgressBar Adj_pbar;
         private System.Windows.Forms.NumericUpDown VD3;
         private System.Windows.Forms.NumericUpDown VD2;
         private System.Windows.Forms.NumericUpDown VD1;
@@ -1942,6 +1992,11 @@
         private System.Windows.Forms.Label label11;
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.NumericUpDown BD_tracks;
+        private System.Windows.Forms.TextBox BD_id;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.ComboBox V2_swap;
+        private System.Windows.Forms.CheckBox V2_swap_headers;
+        private System.Windows.Forms.Label label13;
     }
 }
 
