@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Windows.Forms;
 
 namespace V_Max_Tool
@@ -214,6 +212,156 @@ namespace V_Max_Tool
             }
         }
 
+        //byte[] Rebuild_Vorpal(byte[] data, int trk = -1, int leadptn = 0)
+        //{
+        //    int esb = 164; // # of bytes to read when last sector found
+        //    if (trk == -1) trk -= 0;
+        //    byte[] temp = new byte[0];
+        //    int offset;
+        //    int d = 0;
+        //    int snc_cnt = 0;
+        //    int cur_sec = 0;
+        //    int tlen = data.Length;
+        //    if (VPL_auto_adj.Checked || VPL_rb.Checked) d = VPL_Density(tlen);
+        //    int tstart = 0;
+        //    int tend = 0;
+        //    BitArray source = new BitArray(Flip_Endian(data));
+        //    BitArray comp = new BitArray(Flip_Endian(vpl_s0));
+        //    BitArray cmp = new BitArray(vpl_s0.Length * 8);
+        //    int sectors = Get_VPL_Sectors();
+        //    byte[] ssp = { 0x33 };
+        //    byte[] lead_in = new byte[0];
+        //    byte lead_out = 0xb5;
+        //    byte stop = 0xbd;
+        //    if (leadptn == 0) lead_in = new byte[] { 0xd5, 0x35, 0x4d, 0x53, 0x54 };
+        //    if (leadptn == 1)
+        //    {
+        //        lead_in = IArray(5, 0x55); // new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55 };
+        //        lead_out = 0x55;
+        //        stop = 0x55;
+        //    }
+        //    if (leadptn == 2)
+        //    {
+        //        lead_in = IArray(5, 0xaa); // new byte[] { 0xaa, 0xaa, 0xaa, 0xaa, 0xaa };
+        //        lead_out = 0xaa;
+        //        stop = 0xaa;
+        //
+        //    }
+        //    temp = new byte[tlen];
+        //    if (!VPL_only_sectors.Checked) Write_Lead(150, 400);
+        //    BitArray otmp = new BitArray(Flip_Endian(temp));
+        //    for (int k = 0; k < source.Length - comp.Count; k++)
+        //    {
+        //        for (int j = 0; j < cmp.Count; j++) cmp[j] = source[k + j];
+        //        if (((BitArray)cmp.Clone()).Xor(comp).OfType<bool>().All(e => !e)) { tstart = k; break; }
+        //    }
+        //    for (int k = tstart; k < source.Length; k++)
+        //    {
+        //        if (source[k]) snc_cnt++;
+        //        if (!source[k])
+        //        {
+        //            if (snc_cnt == 8)
+        //            {
+        //                cur_sec++;
+        //                if (cur_sec == sectors)
+        //                {
+        //                    tend = k + 7 + (esb << 3);
+        //                    break;
+        //                }
+        //            }
+        //            snc_cnt = 0;
+        //        }
+        //    }
+        //    offset = (((otmp.Length - (tend - tstart)) >> 1) >> 3) << 3;
+        //    var len = (tend - tstart) / 8;
+        //    if (VPL_lead.Checked) offset = Convert.ToInt32(Lead_In.Value) << 3;
+        //    if (VPL_only_sectors.Checked)
+        //    {
+        //        offset = 0;
+        //        temp = new byte[len + 1];
+        //        otmp = new BitArray(Flip_Endian(temp));
+        //    }
+        //    if (VPL_auto_adj.Checked) // || VPL_rb.Checked)
+        //    {
+        //        offset = ((((vpl_density[d] << 3) - (tend - tstart)) >> 1) >> 3) << 3;
+        //        if (offset > 60 << 3) offset = 60 << 3;
+        //        if (offset < 15 << 3) offset = 15 << 3;
+        //        var r = offset >> 3;
+        //        var e = len + (r << 1);
+        //        if (e < vpl_density[d])
+        //        {
+        //            if (vpl_density[d] - e > 125) len = vpl_density[d] - 70;
+        //            else len = vpl_density[d] - ((r << 1) + 1);
+        //        }
+        //        temp = new byte[vpl_density[d]];
+        //        Write_Lead(150, 400);
+        //        if (VPL_presync.Checked) Add_Pre_Sync();
+        //        otmp = new BitArray(Flip_Endian(temp));
+        //        int os = 0;
+        //        int ts = 0;
+        //        if (!otmp[offset - 1] && !otmp[offset - 2]) ts += 2;
+        //        offset += os; tstart += ts;
+        //    }
+        //    try
+        //    {
+        //        for (int i = 0; i < tend - tstart; i++) otmp[offset + i] = source[tstart + i];
+        //    }
+        //    catch { }
+        //    temp = Flip_Endian(Bit2Byte(otmp));
+        //    Check_Sync();
+        //    return temp;
+        //
+        //    void Write_Lead(int li, int lo)
+        //    {
+        //        for (int i = temp.Length - lo; i < temp.Length; i++) temp[i] = lead_out;
+        //        for (int i = 0; i < li; i++) Array.Copy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
+        //        temp[temp.Length - 1] = stop;
+        //    }
+        //
+        //    int Get_VPL_Sectors()
+        //    {
+        //        snc_cnt = 0;
+        //        sectors = 0;
+        //        List<int> secpos = new List<int>();
+        //        int skip = 160 << 3; // Sets the # of bits to skip when a sector sync is found
+        //        for (int k = 0; k < source.Length; k++)
+        //        {
+        //            if (source[k]) snc_cnt++;
+        //            if (!source[k])
+        //            {
+        //                if (snc_cnt == 8)
+        //                {
+        //                    secpos.Add(k + 7);
+        //                    if (k + skip < source.Count) k += skip;
+        //                    else break;
+        //                    sectors++;
+        //                }
+        //                snc_cnt = 0;
+        //            }
+        //        }
+        //        return sectors;
+        //    }
+        //    void Check_Sync()
+        //    {
+        //        if (leadptn > 0)
+        //        {
+        //            temp[(offset / 8) - 4] = 0xff;
+        //            temp[(offset / 8) - 3] = 0xff;
+        //            temp[(offset / 8) - 2] = 0x55;
+        //            temp[(offset / 8) - 1] = 0x55;
+        //        }
+        //    }
+        //
+        //    void Add_Pre_Sync()
+        //    {
+        //        temp[0] = 0xff;
+        //        temp[1] = 0xff;
+        //        temp[2] = 0x55;
+        //        temp[3] = 0x55;
+        //    }
+        //}
+
+
         byte[] Decode_Vorpal(BitArray source, int sector = -1, bool dec = true)
         {
             int snc_cnt = 0;
@@ -264,8 +412,8 @@ namespace V_Max_Tool
             if (trk < 0) trk = 0;
             int lead_len = 0;
             int sub = 1; /// <- # of bits to subtract from 'data_end' position marker
-            int compare_len = 12; /// <- sets the number of bytes to compare with for finding the end of the track
-            int min_skip_len = vpl_density[density_map[d]] - 50;
+            int compare_len = 16; /// <- sets the number of bytes to compare with for finding the end of the track
+            int min_skip_len = vpl_density[density_map[d]] - 100;
             int max_track_size = 7900;
             int data_start = 0;
             int data_end = 0;
@@ -350,7 +498,7 @@ namespace V_Max_Tool
                 tdata = Flip_Endian(Bit2Byte(temp));
             }
             return (tdata, data_start, data_end, track_len, track_lead_in, sectors, sec_pos.ToArray(), sec_hdr.ToArray());
-
+        
             (bool, int) Get_LeadIn_Position(int position)
             {
                 BitArray isRealend = new BitArray(compare_len << 3);
@@ -385,13 +533,13 @@ namespace V_Max_Tool
                     leadin = l + leadIn_std.Count - 1;
                     isRealend = BitCopy(source, l, 16 << 3);
                 }
-
+        
                 if (leadin + (max_track_size << 3) < source.Length)
                 {
                     data_start = leadin;
                     start_found = true;
                     int q = min_skip_len << 3;
-                    byte[] rcomp;
+                    //byte[] rcomp;
                     BitArray rcompp = new BitArray(isRealend.Count);
                     while (q < source.Length - (rcompp.Length))
                     {

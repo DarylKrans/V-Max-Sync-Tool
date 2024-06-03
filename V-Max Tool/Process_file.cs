@@ -472,7 +472,7 @@ namespace V_Max_Tool
             bool vpadj = false;
             bool v2cust = false;
             bool v3cust = false;
-            bool swap = false;
+            //bool swap = false;
             int vpl_lead = 0;
             Invoke(new Action(() =>
             {
