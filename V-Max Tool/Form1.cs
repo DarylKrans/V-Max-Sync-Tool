@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 
@@ -14,7 +13,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
-        private readonly string ver = " v0.9.93 (beta)";
+        private readonly string ver = " v0.9.94 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -35,7 +34,10 @@ namespace V_Max_Tool
         private byte[] v2644entsc = new byte[0];
         private readonly int min_t_len = 6000;
         private int Cores = 1;
-        Thread w;
+        private Semaphore Thread_Limit = new Semaphore(3, 3);
+        Thread Worker_Main;
+        Thread Worker_Alt;
+        Thread[] Random_Task;
 
         public Form1()
         {
@@ -237,30 +239,37 @@ namespace V_Max_Tool
                 Dir_screen.Clear();
                 Dir_screen.Text = "LOAD\"$\",8\nSEARCHING FOR $\nLOADING";
                 loader_fixed = false;
-                Task.Run(delegate
-                {
-                    Stopwatch parse = Parse_Nib_Data();
-                    if (!error)
-                    {
-                        Invoke(new Action(() =>
-                        {
-                            Stopwatch proc = Process_Nib_Data(true, false, true);
-                            if (DB_timers.Checked) Invoke(new Action(() => label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} ms, Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms"));
-                            Set_ListBox_Items(false, false);
-                            Get_Disk_Directory();
-                            linkLabel1.Visible = false;
-                            if (Disk_Dir.Checked) Disk_Dir.Focus();
-                            Out_Type = get;
-                            Save_Disk.Visible = true;
-                            Source.Visible = Output.Visible = true;
-                            label1.Text = $"{fname}{fext}";
-                            M_render.Enabled = true;
-                            Import_File.Visible = false;
-                            Adv_ctrl.Enabled = true;
-                        }));
-                    }
-                });
+                //Thread Worker_Main = new Thread(new ThreadStart(() => Do_work(get)));
+                Worker_Main?.Abort();
+                Worker_Main = new Thread(new ThreadStart(() => Do_work(get)));
+                Worker_Main.Start();
+                //Do_work(get);
             }
+        }
+
+        void Do_work(bool out_type)
+        {
+            Stopwatch parse = Parse_Nib_Data();
+            if (!error)
+            {
+                Invoke(new Action(() =>
+                {
+                    Stopwatch proc = Process_Nib_Data(true, false, true);
+                    if (DB_timers.Checked) Invoke(new Action(() => label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} ms, Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms"));
+                    Set_ListBox_Items(false, false);
+                    Get_Disk_Directory();
+                    linkLabel1.Visible = false;
+                    if (Disk_Dir.Checked) Disk_Dir.Focus();
+                    Out_Type = out_type;
+                    Save_Disk.Visible = true;
+                    Source.Visible = Output.Visible = true;
+                    label1.Text = $"{fname}{fext}";
+                    M_render.Enabled = true;
+                    Import_File.Visible = false;
+                    Adv_ctrl.Enabled = true;
+                }));
+            }
+
         }
 
         private void Drag_Enter(object sender, DragEventArgs e)
@@ -455,7 +464,8 @@ namespace V_Max_Tool
 
         private void Disp_Data_Click(object sender, EventArgs e)
         {
-            Data_Viewer();
+            if (busy) Data_Viewer(true);
+            else Data_Viewer();
         }
 
         private void Jump_ValueChanged(object sender, EventArgs e)
@@ -465,21 +475,15 @@ namespace V_Max_Tool
 
         private void DV_gcr_CheckedChanged(object sender, EventArgs e)
         {
-            if (!busy)
+            if (((RadioButton)sender).Checked)
             {
-                if (((RadioButton)sender).Checked)
-                {
-                    Data_Viewer();
-                }
+                Data_Viewer();
             }
         }
 
         private void Data_Sep_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!busy)
-            {
-                Data_Viewer();
-            }
+            Data_Viewer();
         }
 
         private void Show_sec_CheckedChanged(object sender, EventArgs e)
@@ -580,7 +584,7 @@ namespace V_Max_Tool
                 V2_Auto_Adj.Checked = true;
                 V2_Custom.Checked = V2_Add_Sync.Checked = false;
                 if (V2_swap.SelectedIndex == 0) { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x4e; }
-                if (V2_swap.SelectedIndex == 1) { NDG.newheader[0] = 0x46; NDG.newheader[1] = 0x46; }
+                if (V2_swap.SelectedIndex == 1) { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x46; }
                 if (V2_swap.SelectedIndex == 2) { NDG.newheader[0] = 0x4e; NDG.newheader[1] = 0x64; }
                 busy = false;
                 V2_Adv_Opts();

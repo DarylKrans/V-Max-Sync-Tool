@@ -38,6 +38,9 @@
             this.V2_Auto_Adj = new System.Windows.Forms.CheckBox();
             this.Tabs = new System.Windows.Forms.TabControl();
             this.Main = new System.Windows.Forms.TabPage();
+            this.Import_File = new V_Max_Tool.Gbox();
+            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
+            this.label5 = new System.Windows.Forms.Label();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.Other_opts = new System.Windows.Forms.Panel();
             this.Disk_Dir = new System.Windows.Forms.RadioButton();
@@ -81,6 +84,7 @@
             this.VPL_rb = new System.Windows.Forms.CheckBox();
             this.VP_Export = new System.Windows.Forms.Button();
             this.D_Bug = new System.Windows.Forms.TabPage();
+            this.CPU_Killer = new System.Windows.Forms.CheckBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.BD_id = new System.Windows.Forms.TextBox();
             this.label12 = new System.Windows.Forms.Label();
@@ -157,12 +161,10 @@
             this.sl = new System.Windows.Forms.ListBox();
             this.ss = new System.Windows.Forms.ListBox();
             this.sf = new System.Windows.Forms.ListBox();
-            this.Import_File = new V_Max_Tool.Gbox();
-            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
-            this.label5 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.V2_hlen)).BeginInit();
             this.Tabs.SuspendLayout();
             this.Main.SuspendLayout();
+            this.Import_File.SuspendLayout();
             this.Other_opts.SuspendLayout();
             this.VBS_info.SuspendLayout();
             this.Reg_info.SuspendLayout();
@@ -194,7 +196,6 @@
             this.panel1.SuspendLayout();
             this.Batch_Box.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).BeginInit();
-            this.Import_File.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -321,6 +322,38 @@
             this.Main.Size = new System.Drawing.Size(910, 185);
             this.Main.TabIndex = 0;
             this.Main.Text = "File Info";
+            // 
+            // Import_File
+            // 
+            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
+            this.Import_File.BorderColor = System.Drawing.Color.Black;
+            this.Import_File.Controls.Add(this.Import_Progress_Bar);
+            this.Import_File.Controls.Add(this.label5);
+            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
+            this.Import_File.Location = new System.Drawing.Point(23, 56);
+            this.Import_File.Name = "Import_File";
+            this.Import_File.Size = new System.Drawing.Size(863, 108);
+            this.Import_File.TabIndex = 59;
+            this.Import_File.TabStop = false;
+            this.Import_File.Text = "Parsing Image Data";
+            // 
+            // Import_Progress_Bar
+            // 
+            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
+            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
+            this.Import_Progress_Bar.Size = new System.Drawing.Size(845, 28);
+            this.Import_Progress_Bar.TabIndex = 39;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Location = new System.Drawing.Point(6, 68);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(137, 25);
+            this.label5.TabIndex = 38;
+            this.label5.Text = "Processing...";
             // 
             // linkLabel1
             // 
@@ -868,6 +901,7 @@
             // 
             // D_Bug
             // 
+            this.D_Bug.Controls.Add(this.CPU_Killer);
             this.D_Bug.Controls.Add(this.groupBox2);
             this.D_Bug.Controls.Add(this.DB_force);
             this.D_Bug.Controls.Add(this.DB_g64);
@@ -880,6 +914,16 @@
             this.D_Bug.TabIndex = 4;
             this.D_Bug.Text = "Debugging";
             this.D_Bug.UseVisualStyleBackColor = true;
+            // 
+            // CPU_Killer
+            // 
+            this.CPU_Killer.AutoSize = true;
+            this.CPU_Killer.Location = new System.Drawing.Point(281, 19);
+            this.CPU_Killer.Name = "CPU_Killer";
+            this.CPU_Killer.Size = new System.Drawing.Size(326, 29);
+            this.CPU_Killer.TabIndex = 41;
+            this.CPU_Killer.Text = "Super Fast mode (CPU Killer)";
+            this.CPU_Killer.UseVisualStyleBackColor = true;
             // 
             // groupBox2
             // 
@@ -1762,38 +1806,6 @@
             this.sf.Size = new System.Drawing.Size(115, 1002);
             this.sf.TabIndex = 26;
             // 
-            // Import_File
-            // 
-            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
-            this.Import_File.BorderColor = System.Drawing.Color.Black;
-            this.Import_File.Controls.Add(this.Import_Progress_Bar);
-            this.Import_File.Controls.Add(this.label5);
-            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(23, 56);
-            this.Import_File.Name = "Import_File";
-            this.Import_File.Size = new System.Drawing.Size(863, 108);
-            this.Import_File.TabIndex = 59;
-            this.Import_File.TabStop = false;
-            this.Import_File.Text = "Parsing Image Data";
-            // 
-            // Import_Progress_Bar
-            // 
-            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
-            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
-            this.Import_Progress_Bar.Size = new System.Drawing.Size(845, 28);
-            this.Import_Progress_Bar.TabIndex = 39;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(6, 68);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(137, 25);
-            this.label5.TabIndex = 38;
-            this.label5.Text = "Processing...";
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
@@ -1810,6 +1822,8 @@
             this.Tabs.ResumeLayout(false);
             this.Main.ResumeLayout(false);
             this.Main.PerformLayout();
+            this.Import_File.ResumeLayout(false);
+            this.Import_File.PerformLayout();
             this.Other_opts.ResumeLayout(false);
             this.Other_opts.PerformLayout();
             this.VBS_info.ResumeLayout(false);
@@ -1859,8 +1873,6 @@
             this.Batch_Box.ResumeLayout(false);
             this.Batch_Box.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).EndInit();
-            this.Import_File.ResumeLayout(false);
-            this.Import_File.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -1997,6 +2009,7 @@
         private System.Windows.Forms.ComboBox V2_swap;
         private System.Windows.Forms.CheckBox V2_swap_headers;
         private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.CheckBox CPU_Killer;
     }
 }
 

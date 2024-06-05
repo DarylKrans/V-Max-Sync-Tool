@@ -50,7 +50,7 @@ namespace V_Max_Tool
 
         byte[] Rotate_Loader(byte[] temp)
         {
-            //------- Checks to see if Loader track contains V-Max Headers (found on Mindscape titles) -----------
+            ///------- Checks to see if Loader track contains V-Max Headers (found on Mindscape titles) -----------
             bool rotated = false;
             if (NDS.Loader.Length > 0)
             {
@@ -99,7 +99,7 @@ namespace V_Max_Tool
                     }
                 }
             }
-        //----------------------------------------------------------------------------------------------------------
+        ///----------------------------------------------------------------------------------------------------------
         End_rotate:
             if (!rotated)
             {
@@ -201,7 +201,6 @@ namespace V_Max_Tool
                             NDG.L_Rot = false;
                         }
                         loader_fixed = false;
-
                     }
                 }));
             }

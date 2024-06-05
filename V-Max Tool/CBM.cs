@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 
 /// CBM Block Header structure
@@ -532,6 +533,7 @@ namespace V_Max_Tool
 
         void Create_Blank_Disk()
         {
+            busy = true;
             if (BD_name.Text == "") BD_name.Text = "BLANK DISK";
             if (BD_id.Text == "") BD_id.Text = "00 2A";
             byte[] name = Encoding.ASCII.GetBytes($"{BD_name.Text}");
@@ -571,14 +573,24 @@ namespace V_Max_Tool
                 NDS.Track_Data[i] = new byte[8192];
                 Buffer.BlockCopy(NDA.Track_Data[i], 0, NDS.Track_Data[i], 0, 8192);
             }
-            Parse_Nib_Data(true);
-            Process_Nib_Data(true, false, false);
-            Get_Disk_Directory();
-            Set_ListBox_Items(false, false);
-            Import_File.Visible = false;
-            Adv_ctrl.Enabled = true;
-            Save_Disk.Visible = true;
+            if (Worker_Alt != null) Worker_Alt?.Abort();
+            Worker_Alt = new Thread(new ThreadStart(() => Parse_Disk()));
+            Worker_Alt.Start();
 
+            void Parse_Disk()
+            {
+                Parse_Nib_Data(true);
+                Invoke(new Action(() =>
+                {
+                    Process_Nib_Data(true, false, false);
+                    Get_Disk_Directory();
+                    Set_ListBox_Items(false, false);
+                    Import_File.Visible = false;
+                    Adv_ctrl.Enabled = true;
+                    Save_Disk.Visible = true;
+                    busy = false;
+                }));
+            }
 
             byte[] T18S0()
             {

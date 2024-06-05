@@ -207,19 +207,20 @@ namespace V_Max_Tool
             return output.ToArray();
         }
 
-        void Data_Viewer()
+        void Data_Viewer(bool stop = false)
         {
             if (Adv_ctrl.Controls[2] == Adv_ctrl.SelectedTab)
             {
-                if (!busy)
+                if (!stop)
                 {
-                    w = new Thread(new ThreadStart(() => Display_Data()));
-                    w.Start();
+                    Worker_Alt?.Abort();
+                    Worker_Alt = new Thread(new ThreadStart(() => Display_Data()));
+                    Worker_Alt.Start();
                     Disp_Data.Text = "Stop";
                 }
                 else
                 {
-                    w?.Abort();
+                    Worker_Alt?.Abort();
                     Disp_Data.Text = "Refresh";
                     busy = false;
                 }
@@ -1040,6 +1041,10 @@ namespace V_Max_Tool
             Set_Auto_Opts();
             manualRender = M_render.Visible = Get_Cores() < 2;
             if (Cores < 2) Img_Q.SelectedIndex = 0;
+            Thread_Limit = new Semaphore(Cores * 2, Cores * 2);
+            ThreadPool.SetMinThreads(5, 5);
+            ThreadPool.SetMaxThreads(200, 200);
+
 
             //Check_CPU_Speed();
             //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));

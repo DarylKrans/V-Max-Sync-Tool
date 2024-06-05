@@ -145,7 +145,7 @@ namespace V_Max_Tool
                 }
                 temp = new byte[vpl_density[d]];
                 //Write_Lead(100, 400);
-                Write_Lead(offset + 5, vpl_density[d] - ((tend - tstart) >> 3) - (offset >> 3)) ;
+                Write_Lead(offset + 5, vpl_density[d] - ((tend - tstart) >> 3) - (offset >> 3));
                 if (VPL_presync.Checked) Add_Pre_Sync();
                 otmp = new BitArray(Flip_Endian(temp));
                 int os = 0;
@@ -498,7 +498,7 @@ namespace V_Max_Tool
                 tdata = Flip_Endian(Bit2Byte(temp));
             }
             return (tdata, data_start, data_end, track_len, track_lead_in, sectors, sec_pos.ToArray(), sec_hdr.ToArray());
-        
+
             (bool, int) Get_LeadIn_Position(int position)
             {
                 BitArray isRealend = new BitArray(compare_len << 3);
@@ -533,7 +533,7 @@ namespace V_Max_Tool
                     leadin = l + leadIn_std.Count - 1;
                     isRealend = BitCopy(source, l, 16 << 3);
                 }
-        
+
                 if (leadin + (max_track_size << 3) < source.Length)
                 {
                     data_start = leadin;

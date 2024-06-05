@@ -67,17 +67,14 @@ namespace V_Max_Tool
             if (!Directory.Exists(Path.GetDirectoryName(fname))) Directory.CreateDirectory(Path.GetDirectoryName(fname));
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
-            byte[] watermark = Encoding.ASCII.GetBytes($"    ReMaster Utility{ver}    5/27/2024    ");
+            //byte[] watermark = Encoding.ASCII.GetBytes($"    ReMaster Utility{ver}    5/27/2024    ");
+            byte[] watermark = Encoding.ASCII.GetBytes($"    ReMaster Utility{ver} ");
             for (int i = 0; i < watermark.Length; i++) if (watermark[i] == 0x20) watermark[i] = 0x00;
             byte[] head = Encoding.ASCII.GetBytes("GCR-1541");
             byte z = 0;
             List<int> len = new List<int>(0);
-            for (int i = 0; i < tracks; i++)
-            {
-                if (NDS.cbm[i] > 0 && NDS.cbm[i] < 6) len.Add(NDG.Track_Length[i]);
-            }
+            for (int i = 0; i < tracks; i++) if (NDS.cbm[i] > 0 && NDS.cbm[i] < 6) len.Add(NDG.Track_Length[i]);
             short m = Convert.ToInt16(len.Max());
-            //short m = Convert.ToInt16(NDG.Track_Length.Max());
             if (m < 7928) m = 7928;
             write.Write(head);
             write.Write(z);

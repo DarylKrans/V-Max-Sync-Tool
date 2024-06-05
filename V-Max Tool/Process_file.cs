@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace V_Max_Tool
@@ -57,7 +56,12 @@ namespace V_Max_Tool
             Batch_Bar.Value = Batch_Bar.Maximum / 100;
             listBox1.Items.Clear();
             listBox1.Visible = true;
-            Task.Run(delegate
+            if (Cores > 7) CPU_Killer.Checked = true;
+            Worker_Main?.Abort();
+            Worker_Main = new Thread(new ThreadStart(() => Start_Work()));
+            Worker_Main?.Start();
+
+            void Start_Work()
             {
                 for (int i = 0; i < batch_list.Length; i++)
                 {
@@ -105,7 +109,7 @@ namespace V_Max_Tool
                 Invoke(new Action(() =>
                 {
                     btime.Stop();
-                    if (DB_timers.Checked) label2.Text = $"Total Batch-Process time {btime.Elapsed.TotalSeconds:N0} seconds";
+                    if (DB_timers.Checked) label2.Text = $"Total Batch-Process time {btime.Elapsed.TotalSeconds:F2} seconds";
                     using (Message_Center center = new Message_Center(this)) /// center message box
                     {
                         string t = "";
@@ -113,7 +117,7 @@ namespace V_Max_Tool
                         if (!cancel)
                         {
                             t = "Done!";
-                            s = "Batch processing completed..";
+                            s = $"Batch processing completed..\n in {btime.Elapsed.TotalSeconds:F2} seconds";
                         }
                         else
                         {
@@ -130,11 +134,12 @@ namespace V_Max_Tool
                     busy = true;
                     Auto_Adjust = temp;
                     busy = false;
+                    CPU_Killer.Checked = false;
                     Set_Auto_Opts();
                     Reset_to_Defaults(false);
                 }));
                 batch = false;
-            });
+            }
 
             void Batch_NIB(string fn, string output)
             {
@@ -186,7 +191,6 @@ namespace V_Max_Tool
 
         Stopwatch Parse_Nib_Data(bool new_disk = false)
         {
-
             Stopwatch sw = new Stopwatch();
             sw.Start();
             Invoke(new Action(() =>
@@ -195,7 +199,7 @@ namespace V_Max_Tool
                 Import_Progress_Bar.Maximum = 100;
                 Import_Progress_Bar.Maximum *= 100;
                 Import_Progress_Bar.Value = Import_Progress_Bar.Maximum / 100;
-                if (Cores < 2) Import_Progress_Bar.Visible = true;
+                if (Cores < 8) Import_Progress_Bar.Visible = true;
             }));
             bool ldr = false; int cbm = 0; int vmx = 0; int vpl = 0;
             double ht;
@@ -212,21 +216,46 @@ namespace V_Max_Tool
                 ht = 0.5;
             }
             else ht = 0;
-            Thread[] tt = new Thread[tracks];
-            Invoke(new Action(() => label5.Text = "Analyzing Tracks.."));
-            for (int i = 0; i < tracks; i++)
+            /// ------------ Safe Threading Method, Starts as many threads as there are physical threads available ------------------------
+            if (!CPU_Killer.Checked)
             {
-                int x = i;
-                tt[i] = new Thread(new ThreadStart(() => { Get_Fmt(x); Get_Track_Info(x); }));
-                tt[i].Start();
-                if (new_disk) Invoke(new Action(() => { })); /// <- This is needed to negate a weird threading issue that causes the program to freeze
-                if (tracks > 42) i++;
+                using (var countdownEvent = new CountdownEvent(tracks))
+                {
+                    for (int i = 0; i < tracks; i++)
+                    {
+                        int x = i;
+                        Thread_Limit.WaitOne();
+                        ThreadPool.QueueUserWorkItem(state =>
+                        {
+                            Analyze_Track(x);
+                            countdownEvent.Signal(); // Signal completion
+                        });
+                        Update_Progress_Bar(i);
+                    }
+                    countdownEvent.Wait();
+                }
             }
-            for (int i = 0; i < tracks; i++)
+            else
+            /// ----------------- CPU Killer! Starts as many threads as there are tracks to process ----------------------------
             {
-                tt[i]?.Join();
-                Update_Progress_Bar(i);
+                if (Random_Task?.Length > 0) for (int i = 0; i < Random_Task.Length; i++) Random_Task?[i].Abort();
+                Random_Task = new Thread[tracks];
+                for (int i = 0; i < tracks; i++)
+                {
+                    int x = i;
+                    Random_Task[i] = new Thread(new ThreadStart(() => Analyze_Track(x)));
+                    Random_Task[i].Start();
+                    if (tracks > 42) i++;
+                }
+
+                for (int i = 0; i < tracks; i++)
+                {
+                    Random_Task[i]?.Join();
+                    Update_Progress_Bar(i);
+                }
+                Random_Task = new Thread[0];
             }
+
             if (!batch)
             {
                 var color = Color.Black;
@@ -453,6 +482,13 @@ namespace V_Max_Tool
                     }
                 }
             }
+
+            void Analyze_Track(int track)
+            {
+                Get_Fmt(track);
+                Get_Track_Info(track);
+                if (!CPU_Killer.Checked) Thread_Limit.Release();
+            }
         }
         /// ---------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -472,7 +508,6 @@ namespace V_Max_Tool
             bool vpadj = false;
             bool v2cust = false;
             bool v3cust = false;
-            //bool swap = false;
             int vpl_lead = 0;
             Invoke(new Action(() =>
             {
@@ -494,7 +529,7 @@ namespace V_Max_Tool
                             else
                             {
                                 if (V2_swap.SelectedIndex == 0) { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x4e; }
-                                if (V2_swap.SelectedIndex == 1) { NDG.newheader[0] = 0x46; NDG.newheader[1] = 0x46; }
+                                if (V2_swap.SelectedIndex == 1) { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x46; }
                                 if (V2_swap.SelectedIndex == 2) { NDG.newheader[0] = 0x4e; NDG.newheader[1] = 0x64; }
                                 loader_fixed = false;
                                 NDG.L_Rot = false;
@@ -549,20 +584,47 @@ namespace V_Max_Tool
                 }
                 busy = false;
             }));
-
-            Thread[] tt = new Thread[tracks];
-            for (int i = 0; i < tracks; i++)
+            var ldt = 255;
+            /// ------------ Safe Threading Method, Starts as many threads as there are physical threads available ------------------------
+            if (!CPU_Killer.Checked)
             {
-                var x = i;
-                var y = vpl_lead;
-                if (NDS.cbm[i] != 4)
+                using (var countdownEvent = new CountdownEvent(tracks))
                 {
-                    tt[i] = new Thread(new ThreadStart(() => Process_Track(x, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, y, fl, sl, rb_vm, cbm, short_sector)));
-                    tt[i].Start();
+                    for (int i = 0; i < tracks; i++)
+                    {
+                        int x = i;
+                        var y = vpl_lead;
+                        Thread_Limit.WaitOne();
+                        ThreadPool.QueueUserWorkItem(state =>
+                        {
+                            if (NDS.cbm[x] != 4) Process(x, y);
+                            else { ldt = x; Do_Nothing(); }
+                            countdownEvent.Signal(); // Signal completion
+                        });
+                    }
+                    countdownEvent.Wait();
                 }
-                else Process_Track(x, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, y, fl, sl, rb_vm, cbm, short_sector);
+                if (ldt < tracks) Process(ldt, 0, false); /// (false) tells Process not to release the thread because it isn't in a Semaphore or a thread
             }
-            for (int i = 0; i < tracks; i++) if (NDS.cbm[i] != 4) tt?[i].Join();
+            else
+            /// --- CPU Killer! Starts as many threads as there are tracks to process. Doesn't matter much here since this is a relatively fast process ---
+            {
+                Random_Task = new Thread[tracks];
+                for (int i = 0; i < tracks; i++)
+                {
+                    var x = i;
+                    var y = vpl_lead;
+                    if (NDS.cbm[i] != 4)
+                    {
+                        Random_Task[i] = new Thread(new ThreadStart(() => Process(x, y, false))); /// Not using a Semaphore here, so don't release the thread from it
+                        Random_Task[i].Start();
+                    }
+                    else Process(x, 0, false); /// (false) tells Process not to release the thread because it isn't in a Semaphore or a thread
+                }
+                for (int i = 0; i < tracks; i++) if (NDS.cbm[i] != 4) Random_Task?[i].Join();
+                Random_Task = new Thread[0];
+            }
+
 
             if (!batch)
             {
@@ -635,6 +697,16 @@ namespace V_Max_Tool
                 return (a, b, c);
             }
 
+            void Process(int track, int vorpal_lead = 0, bool release = true)
+            {
+                Process_Track(track, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, vorpal_lead, fl, sl, rb_vm, cbm, short_sector);
+                if (release) Thread_Limit.Release();
+            }
+
+            void Do_Nothing() // needed for semaphore if a loader track is being processed.  Can't process them in a thread for some reason
+            {
+                Thread_Limit.Release();
+            }
 
             void Process_CBM(int trk, bool acbm, bool bmc)
             {
