@@ -33,11 +33,11 @@ namespace V_Max_Tool
         private byte[] v26446ntsc = new byte[0];
         private byte[] v2644entsc = new byte[0];
         private readonly int min_t_len = 6000;
-        private int Cores = 1;
-        private Semaphore Thread_Limit = new Semaphore(3, 3);
+        private int Cores; // = 1;
+        private Semaphore Task_Limit = new Semaphore(3, 3);
         Thread Worker_Main;
         Thread Worker_Alt;
-        Thread[] Random_Task;
+        Thread[] Task;
 
         public Form1()
         {

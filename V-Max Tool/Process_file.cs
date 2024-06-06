@@ -216,45 +216,20 @@ namespace V_Max_Tool
                 ht = 0.5;
             }
             else ht = 0;
-            /// ------------ Safe Threading Method, Starts as many threads as there are physical threads available ------------------------
-            if (!CPU_Killer.Checked)
+            /// ------------ Safe Threading Method, Starts as many threads as there are physical CPU cores available ----------------------
+            /// ------------ CPU_Killer (true) Starts as many threads as there are jobs to do. (can overwhelm slower CPU's quickly!) ------
+            Task = new Thread[tracks];
+            for (int i = 0; i < tracks; i++)
             {
-                using (var countdownEvent = new CountdownEvent(tracks))
-                {
-                    for (int i = 0; i < tracks; i++)
-                    {
-                        int x = i;
-                        Thread_Limit.WaitOne();
-                        ThreadPool.QueueUserWorkItem(state =>
-                        {
-                            Analyze_Track(x);
-                            countdownEvent.Signal(); // Signal completion
-                        });
-                        Update_Progress_Bar(i);
-                    }
-                    countdownEvent.Wait();
-                }
+                int x = i;
+                if (!CPU_Killer.Checked) Task_Limit.WaitOne();
+                Task[i] = new Thread(new ThreadStart(() => Analyze_Track(x)));
+                Task[i].Start();
+                Update_Progress_Bar(i);
+                if (tracks > 42) i++;
             }
-            else
-            /// ----------------- CPU Killer! Starts as many threads as there are tracks to process ----------------------------
-            {
-                if (Random_Task?.Length > 0) for (int i = 0; i < Random_Task.Length; i++) Random_Task?[i].Abort();
-                Random_Task = new Thread[tracks];
-                for (int i = 0; i < tracks; i++)
-                {
-                    int x = i;
-                    Random_Task[i] = new Thread(new ThreadStart(() => Analyze_Track(x)));
-                    Random_Task[i].Start();
-                    if (tracks > 42) i++;
-                }
-
-                for (int i = 0; i < tracks; i++)
-                {
-                    Random_Task[i]?.Join();
-                    Update_Progress_Bar(i);
-                }
-                Random_Task = new Thread[0];
-            }
+            foreach (var thread in Task) thread?.Join();
+            Task = new Thread[0];
 
             if (!batch)
             {
@@ -487,12 +462,12 @@ namespace V_Max_Tool
             {
                 Get_Fmt(track);
                 Get_Track_Info(track);
-                if (!CPU_Killer.Checked) Thread_Limit.Release();
+                if (!CPU_Killer.Checked) Task_Limit.Release();
             }
         }
         /// ---------------------------------------------------------------------------------------------------------------------------------------------------
 
-        Stopwatch Process_Nib_Data(bool cbm, bool short_sector, bool rb_vm, bool wait = false)
+        Stopwatch Process_Nib_Data(bool cbm, bool short_sector, bool rb_vm, bool wait = false, bool new_disk = false)
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -582,49 +557,30 @@ namespace V_Max_Tool
                 {
                     if (!DB_force.Checked) cbmadj = Check_tlen(); else cbmadj = true;
                 }
+                if (new_disk) fnappend = string.Empty;
                 busy = false;
             }));
             var ldt = 255;
             /// ------------ Safe Threading Method, Starts as many threads as there are physical threads available ------------------------
-            if (!CPU_Killer.Checked)
-            {
-                using (var countdownEvent = new CountdownEvent(tracks))
-                {
-                    for (int i = 0; i < tracks; i++)
-                    {
-                        int x = i;
-                        var y = vpl_lead;
-                        Thread_Limit.WaitOne();
-                        ThreadPool.QueueUserWorkItem(state =>
-                        {
-                            if (NDS.cbm[x] != 4) Process(x, y);
-                            else { ldt = x; Do_Nothing(); }
-                            countdownEvent.Signal(); // Signal completion
-                        });
-                    }
-                    countdownEvent.Wait();
-                }
-                if (ldt < tracks) Process(ldt, 0, false); /// (false) tells Process not to release the thread because it isn't in a Semaphore or a thread
-            }
-            else
-            /// --- CPU Killer! Starts as many threads as there are tracks to process. Doesn't matter much here since this is a relatively fast process ---
-            {
-                Random_Task = new Thread[tracks];
-                for (int i = 0; i < tracks; i++)
-                {
-                    var x = i;
-                    var y = vpl_lead;
-                    if (NDS.cbm[i] != 4)
-                    {
-                        Random_Task[i] = new Thread(new ThreadStart(() => Process(x, y, false))); /// Not using a Semaphore here, so don't release the thread from it
-                        Random_Task[i].Start();
-                    }
-                    else Process(x, 0, false); /// (false) tells Process not to release the thread because it isn't in a Semaphore or a thread
-                }
-                for (int i = 0; i < tracks; i++) if (NDS.cbm[i] != 4) Random_Task?[i].Join();
-                Random_Task = new Thread[0];
-            }
 
+            bool sem = !CPU_Killer.Checked;
+            Task = new Thread[tracks];
+            for (int i = 0; i < tracks; i++)
+            {
+
+                int x = i;
+                var y = vpl_lead;
+                if (NDS.cbm[i] != 4)
+                {
+                    if (!CPU_Killer.Checked) Task_Limit.WaitOne();
+                    Task[i] = new Thread(new ThreadStart(() => Process(x, y, sem)));
+                    Task[i].Start();
+                }
+                else ldt = i;
+                if (tracks > 42) i++;
+            }
+            foreach (var thread in Task) thread?.Join();
+            if (ldt < tracks) Process(ldt, 0, false); /// (false) tells Process not to release the thread because it isn't in a Semaphore or a thread
 
             if (!batch)
             {
@@ -700,12 +656,12 @@ namespace V_Max_Tool
             void Process(int track, int vorpal_lead = 0, bool release = true)
             {
                 Process_Track(track, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, vorpal_lead, fl, sl, rb_vm, cbm, short_sector);
-                if (release) Thread_Limit.Release();
+                if (release) Task_Limit.Release();
             }
 
             void Do_Nothing() // needed for semaphore if a loader track is being processed.  Can't process them in a thread for some reason
             {
-                Thread_Limit.Release();
+                Task_Limit.Release();
             }
 
             void Process_CBM(int trk, bool acbm, bool bmc)

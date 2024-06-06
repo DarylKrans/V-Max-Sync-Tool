@@ -1039,14 +1039,14 @@ namespace V_Max_Tool
             Draw_Init_Img(def_bg_text);
             Default_Dir_Screen();
             Set_Auto_Opts();
-            manualRender = M_render.Visible = Get_Cores() < 2;
-            if (Cores < 2) Img_Q.SelectedIndex = 0;
-            Thread_Limit = new Semaphore(Cores * 2, Cores * 2);
-            ThreadPool.SetMinThreads(5, 5);
-            ThreadPool.SetMaxThreads(200, 200);
+            Cores = Get_Cores();
+            manualRender = M_render.Visible = Cores < 2;
+            if (Cores < 2)
+            {
+                Img_Q.SelectedIndex = 0;
+                Task_Limit = new Semaphore(3, 3);
+            }else Task_Limit = new Semaphore(Cores, Cores);
 
-
-            //Check_CPU_Speed();
             //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
             //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
             //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));

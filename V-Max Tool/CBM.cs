@@ -37,7 +37,7 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-        readonly bool write_dir = false;
+        //readonly bool write_dir = false;
         private readonly byte[] sz = { 0x52, 0xc0, 0x0f, 0xfc };
 
         byte[] Rebuild_CBM(byte[] data, int sectors, byte[] Disk_ID, int t_density, int trk)
@@ -451,7 +451,7 @@ namespace V_Max_Tool
                     }
                     catch { }
                     byte[] directory = buff.ToArray();
-                    if (write_dir) File.WriteAllBytes($@"hdr_c:\dir", directory);
+                    //if (write_dir) File.WriteAllBytes($@"c:\dir", directory);
                     if (directory.Length >= 256)
                     {
                         for (int i = 0; i < 35; i++) if (i != 17) blocksFree += directory[4 + (i * 4)];
@@ -582,7 +582,7 @@ namespace V_Max_Tool
                 Parse_Nib_Data(true);
                 Invoke(new Action(() =>
                 {
-                    Process_Nib_Data(true, false, false);
+                    Process_Nib_Data(true, false, false, false, true);
                     Get_Disk_Directory();
                     Set_ListBox_Items(false, false);
                     Import_File.Visible = false;
