@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -13,7 +15,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
-        private readonly string ver = " v0.9.94 (beta)";
+        private readonly string ver = " v0.9.95 (beta)";
         private readonly string fix = "(sync_fixed)";
         private readonly string mod = "(modified)";
         private readonly string vorp = "(aligned)";
@@ -26,6 +28,7 @@ namespace V_Max_Tool
         private bool nib_error = false;
         private bool g64_error = false;
         private bool batch = false;
+        private bool populating = false;
         private string nib_err_msg;
         private string g64_err_msg;
         private byte[] v2ldrcbm = new byte[0];
@@ -33,7 +36,9 @@ namespace V_Max_Tool
         private byte[] v26446ntsc = new byte[0];
         private byte[] v2644entsc = new byte[0];
         private readonly int min_t_len = 6000;
-        private int Cores; // = 1;
+        private int Cores;
+        private int Default_Cores;
+        private List<string> LB_File_List = new List<string>(); 
         private Semaphore Task_Limit = new Semaphore(3, 3);
         Thread Worker_Main;
         Thread Worker_Alt;
@@ -64,36 +69,8 @@ namespace V_Max_Tool
                     DialogResult uc = MessageBox.Show(s, t, MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
                     if (uc.ToString() == "OK")
                     {
-                        var folder = Path.GetDirectoryName(File_List[0]);
-                        var SaveFolder = new FolderBrowserDialog()
-                        {
-                            Description = "Select a folder for output files.",
-                            SelectedPath = folder,
-
-                        };
-                        if (SaveFolder.ShowDialog() == DialogResult.OK)
-                        {
-                            string parent;// = "";
-                            string[] batch_list;
-                            (batch_list, parent) = Populate_File_List(File_List);
-
-                            if (batch_list?.Length != 0)
-                            {
-                                string sel_path = SaveFolder.SelectedPath.ToString();
-                                //File.WriteAllText($@"C:\test\list", parent);
-                                if (sel_path != "") Process_Batch(batch_list, sel_path, parent);
-                            }
-                            else
-                            {
-                                using (Message_Center centerr = new Message_Center(this)) // center message box
-                                {
-                                    t = "Nothing to do!";
-                                    s = "No valid files to process";
-                                    MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                }
-                            }
-
-                        }
+                        Worker_Main = new Thread(new ThreadStart(() => Batch_Get_File_List(File_List)));
+                        Worker_Main.Start();
                     }
                 }
             }
@@ -110,6 +87,7 @@ namespace V_Max_Tool
 
         void Process_New_Image(string file)
         {
+            Disable_Core_Controls(true);
             string l = "Not ok";
             try
             {
@@ -235,15 +213,13 @@ namespace V_Max_Tool
 
             void Process(bool get, string l2)
             {
-                listBox1.Visible = false;
+                Batch_List_Box.Visible = false;
                 Dir_screen.Clear();
                 Dir_screen.Text = "LOAD\"$\",8\nSEARCHING FOR $\nLOADING";
                 loader_fixed = false;
-                //Thread Worker_Main = new Thread(new ThreadStart(() => Do_work(get)));
                 Worker_Main?.Abort();
                 Worker_Main = new Thread(new ThreadStart(() => Do_work(get)));
                 Worker_Main.Start();
-                //Do_work(get);
             }
         }
 
@@ -267,6 +243,7 @@ namespace V_Max_Tool
                     M_render.Enabled = true;
                     Import_File.Visible = false;
                     Adv_ctrl.Enabled = true;
+                    Disable_Core_Controls(false);
                 }));
             }
 
@@ -588,6 +565,35 @@ namespace V_Max_Tool
                 if (V2_swap.SelectedIndex == 2) { NDG.newheader[0] = 0x4e; NDG.newheader[1] = 0x64; }
                 busy = false;
                 V2_Adv_Opts();
+            }
+        }
+
+        private void DB_cores_ValueChanged(object sender, EventArgs e)
+        {
+            Cores = Convert.ToInt32(DB_cores.Value);
+            Set_Cores(false);
+        }
+
+        private void DB_core_override_CheckedChanged(object sender, EventArgs e)
+        {
+            DB_cores.Enabled = DB_core_override.Checked;
+            if (DB_core_override.Checked)
+            {
+                Cores = Convert.ToInt32(DB_cores.Value);
+            }
+            else
+            {
+                Cores = Default_Cores;
+            }
+            Set_Cores();
+        }
+
+        private void ListBox1_DoubleClick(object sender, EventArgs e)
+        {
+            if (!populating)
+            {
+                string argument = "/select, \"" + LB_File_List[Batch_List_Box.SelectedIndex] + "\"";
+                if (File.Exists(LB_File_List[Batch_List_Box.SelectedIndex])) Process.Start("explorer.exe", argument);
             }
         }
     }

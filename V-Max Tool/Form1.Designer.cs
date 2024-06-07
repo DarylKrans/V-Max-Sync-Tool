@@ -84,7 +84,8 @@
             this.VPL_rb = new System.Windows.Forms.CheckBox();
             this.VP_Export = new System.Windows.Forms.Button();
             this.D_Bug = new System.Windows.Forms.TabPage();
-            this.CPU_Killer = new System.Windows.Forms.CheckBox();
+            this.DB_core_override = new System.Windows.Forms.CheckBox();
+            this.DB_cores = new System.Windows.Forms.NumericUpDown();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.BD_id = new System.Windows.Forms.TextBox();
             this.label12 = new System.Windows.Forms.Label();
@@ -141,7 +142,7 @@
             this.DV_gcr = new System.Windows.Forms.RadioButton();
             this.Save_Dialog = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.listBox1 = new System.Windows.Forms.ListBox();
+            this.Batch_List_Box = new System.Windows.Forms.ListBox();
             this.Batch_Box = new System.Windows.Forms.GroupBox();
             this.label9 = new System.Windows.Forms.Label();
             this.B_cancel = new System.Windows.Forms.Button();
@@ -178,6 +179,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.VD0)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.Lead_In)).BeginInit();
             this.D_Bug.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.DB_cores)).BeginInit();
             this.groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.BD_tracks)).BeginInit();
             this.Adv_ctrl.SuspendLayout();
@@ -901,7 +903,8 @@
             // 
             // D_Bug
             // 
-            this.D_Bug.Controls.Add(this.CPU_Killer);
+            this.D_Bug.Controls.Add(this.DB_core_override);
+            this.D_Bug.Controls.Add(this.DB_cores);
             this.D_Bug.Controls.Add(this.groupBox2);
             this.D_Bug.Controls.Add(this.DB_force);
             this.D_Bug.Controls.Add(this.DB_g64);
@@ -915,15 +918,39 @@
             this.D_Bug.Text = "Debugging";
             this.D_Bug.UseVisualStyleBackColor = true;
             // 
-            // CPU_Killer
+            // DB_core_override
             // 
-            this.CPU_Killer.AutoSize = true;
-            this.CPU_Killer.Location = new System.Drawing.Point(281, 19);
-            this.CPU_Killer.Name = "CPU_Killer";
-            this.CPU_Killer.Size = new System.Drawing.Size(326, 29);
-            this.CPU_Killer.TabIndex = 41;
-            this.CPU_Killer.Text = "Super Fast mode (CPU Killer)";
-            this.CPU_Killer.UseVisualStyleBackColor = true;
+            this.DB_core_override.AutoSize = true;
+            this.DB_core_override.Location = new System.Drawing.Point(269, 19);
+            this.DB_core_override.Name = "DB_core_override";
+            this.DB_core_override.Size = new System.Drawing.Size(170, 29);
+            this.DB_core_override.TabIndex = 42;
+            this.DB_core_override.Text = "Max Threads";
+            this.DB_core_override.UseVisualStyleBackColor = true;
+            this.DB_core_override.CheckedChanged += new System.EventHandler(this.DB_core_override_CheckedChanged);
+            // 
+            // DB_cores
+            // 
+            this.DB_cores.Location = new System.Drawing.Point(457, 17);
+            this.DB_cores.Maximum = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
+            this.DB_cores.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.DB_cores.Name = "DB_cores";
+            this.DB_cores.Size = new System.Drawing.Size(120, 31);
+            this.DB_cores.TabIndex = 41;
+            this.DB_cores.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.DB_cores.ValueChanged += new System.EventHandler(this.DB_cores_ValueChanged);
             // 
             // groupBox2
             // 
@@ -1560,7 +1587,7 @@
             // 
             this.panel1.BackColor = System.Drawing.Color.Gainsboro;
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panel1.Controls.Add(this.listBox1);
+            this.panel1.Controls.Add(this.Batch_List_Box);
             this.panel1.Controls.Add(this.Batch_Box);
             this.panel1.Controls.Add(this.Dir_screen);
             this.panel1.Controls.Add(this.Drag_pic);
@@ -1581,15 +1608,16 @@
             this.panel1.Size = new System.Drawing.Size(900, 1123);
             this.panel1.TabIndex = 37;
             // 
-            // listBox1
+            // Batch_List_Box
             // 
-            this.listBox1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.listBox1.FormattingEnabled = true;
-            this.listBox1.ItemHeight = 29;
-            this.listBox1.Location = new System.Drawing.Point(9, 152);
-            this.listBox1.Name = "listBox1";
-            this.listBox1.Size = new System.Drawing.Size(886, 961);
-            this.listBox1.TabIndex = 38;
+            this.Batch_List_Box.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Batch_List_Box.FormattingEnabled = true;
+            this.Batch_List_Box.ItemHeight = 29;
+            this.Batch_List_Box.Location = new System.Drawing.Point(9, 152);
+            this.Batch_List_Box.Name = "Batch_List_Box";
+            this.Batch_List_Box.Size = new System.Drawing.Size(886, 961);
+            this.Batch_List_Box.TabIndex = 38;
+            this.Batch_List_Box.DoubleClick += new System.EventHandler(this.ListBox1_DoubleClick);
             // 
             // Batch_Box
             // 
@@ -1844,6 +1872,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.Lead_In)).EndInit();
             this.D_Bug.ResumeLayout(false);
             this.D_Bug.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.DB_cores)).EndInit();
             this.groupBox2.ResumeLayout(false);
             this.groupBox2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.BD_tracks)).EndInit();
@@ -1992,7 +2021,7 @@
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.Button B_cancel;
         private System.Windows.Forms.ProgressBar Batch_Bar;
-        private System.Windows.Forms.ListBox listBox1;
+        private System.Windows.Forms.ListBox Batch_List_Box;
         private System.Windows.Forms.TabPage D_Bug;
         private System.Windows.Forms.CheckBox DB_vpl;
         private System.Windows.Forms.CheckBox DB_timers;
@@ -2009,7 +2038,8 @@
         private System.Windows.Forms.ComboBox V2_swap;
         private System.Windows.Forms.CheckBox V2_swap_headers;
         private System.Windows.Forms.Label label13;
-        private System.Windows.Forms.CheckBox CPU_Killer;
+        private System.Windows.Forms.CheckBox DB_core_override;
+        private System.Windows.Forms.NumericUpDown DB_cores;
     }
 }
 

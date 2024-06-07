@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 /// CBM Block Header structure
 /// 8 plain bytes converted to 10 GCR bytes
@@ -534,6 +535,7 @@ namespace V_Max_Tool
         void Create_Blank_Disk()
         {
             busy = true;
+            Invoke(new Action(()=> Disable_Core_Controls(true)));
             if (BD_name.Text == "") BD_name.Text = "BLANK DISK";
             if (BD_id.Text == "") BD_id.Text = "00 2A";
             byte[] name = Encoding.ASCII.GetBytes($"{BD_name.Text}");
@@ -579,16 +581,20 @@ namespace V_Max_Tool
 
             void Parse_Disk()
             {
-                Parse_Nib_Data(true);
+                Stopwatch pn = Parse_Nib_Data();
                 Invoke(new Action(() =>
                 {
-                    Process_Nib_Data(true, false, false, false, true);
+                    Stopwatch po = Process_Nib_Data(true, false, false, false, true);
                     Get_Disk_Directory();
                     Set_ListBox_Items(false, false);
                     Import_File.Visible = false;
                     Adv_ctrl.Enabled = true;
                     Save_Disk.Visible = true;
+                    Batch_List_Box.Visible = false;
+                    linkLabel1.Visible = false;
+                    Disable_Core_Controls(false);
                     busy = false;
+                    if (DB_timers.Checked) label2.Text = $"New Disk Time - Parse : {pn.Elapsed.TotalMilliseconds} Process: {po.Elapsed.TotalMilliseconds} Total : {pn.Elapsed.TotalMilliseconds + po.Elapsed.TotalMilliseconds}";
                 }));
             }
 

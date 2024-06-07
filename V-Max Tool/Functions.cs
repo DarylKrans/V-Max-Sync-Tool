@@ -112,8 +112,8 @@ namespace V_Max_Tool
             Tabs.Controls.Remove(Vpl_adv);
             if (clear_batch_list)
             {
-                listBox1.Visible = false;
-                listBox1.Items.Clear();
+                Batch_List_Box.Visible = false;
+                Batch_List_Box.Items.Clear();
             }
             Img_style.Enabled = Img_View.Enabled = Img_opts.Enabled = Save_Circle_btn.Visible = M_render.Visible = Adv_ctrl.Enabled = false;
             VBS_info.Visible = Reg_info.Visible = false;
@@ -302,6 +302,7 @@ namespace V_Max_Tool
                     }
                 }
                 catch { }
+                if (Cores <= 3) Invoke(new Action(() => label8.Text = $"Gathering files : {files.Count} of {File_List.Length} are valid NIB files."));
             }
             return (files.ToArray(), Directory.GetParent(File_List[0]).ToString());
 
@@ -549,39 +550,6 @@ namespace V_Max_Tool
             return n;
         }
 
-        //bool Find_vpl_sec(BitArray source, int pos)
-        //{
-        //    int snc = 0;
-        //    bool sncc = false;
-        //    for (int j = pos; j < (pos + 1600); j++)
-        //    {
-        //        if (source[j])
-        //        {
-        //            snc++;
-        //            if (snc == 8) sncc = true;
-        //        }
-        //        else
-        //        {
-        //            if (sncc)
-        //            {
-        //                if (snc == 8)
-        //                {
-        //                    bool flip = false;
-        //                    for (int k = j; k < (j + 7); k++)
-        //                    {
-        //                        if (!source[k] == flip) { return false; }
-        //                        flip = !flip;
-        //                    }
-        //                    return true;
-        //                }
-        //            }
-        //            sncc = false;
-        //            snc = 0;
-        //        }
-        //    }
-        //    return false;
-        //}
-
         bool Check_Version(string find, byte[] sdat, int clen)
         {
             int i;
@@ -621,7 +589,32 @@ namespace V_Max_Tool
                 int coreCount = int.Parse(item["NumberOfCores"].ToString());
                 Cores += coreCount;
             }
-            return Cores -= 1;
+            Default_Cores = Cores;
+            return Cores; //-= 1;
+        }
+
+        void Set_Cores(bool Min_Cores_3 = true)
+        {
+            if (Min_Cores_3 && Cores < 2)
+            {
+                if (Cores < 2)
+                {
+                    Task_Limit = new Semaphore(3, 3);
+                    DB_cores.Value = 3;
+                }
+            }
+            else
+            {
+                DB_cores.Value = Cores;
+                Task_Limit = new Semaphore(Cores, Cores);
+            }
+        }
+
+        void Disable_Core_Controls(bool disable)
+        {
+            DB_core_override.Enabled = !disable;
+            if (DB_cores.Enabled && disable) DB_cores.Enabled = !disable;
+            if (!disable) DB_cores.Enabled = DB_core_override.Checked;
         }
 
         byte[] Shrink_Track(byte[] data, int trk_density)
@@ -919,8 +912,8 @@ namespace V_Max_Tool
             string[] args = Environment.GetCommandLineArgs();
             if (args.Length > 1 && args[1] == "-debug") debug = true;
             if (!debug) Tabs.TabPages.Remove(D_Bug);
-            listBox1.Visible = false; // set to true for debugging that requires a listbox
-            listBox1.HorizontalScrollbar = true;
+            Batch_List_Box.Visible = false; // set to true for debugging that requires a listbox
+            Batch_List_Box.HorizontalScrollbar = true;
             Debug_Button.Visible = debug;
             Other_opts.Visible = false;
             busy = true;
@@ -996,7 +989,6 @@ namespace V_Max_Tool
             /// ----------------- V-Max v2 Config -------------
             Tabs.Controls.Remove(Adv_V2_Opts);
             V2_hlen.Enabled = false;
-            //v2exp.Text = v3exp.Text = $"\u2190 Experimental";
             v2exp.Text = v3exp.Text = string.Empty;
             v2adv.Text = v3adv.Text = $"\u2193        Advanced users ONLY!        \u2193";
             vm2_ver[0] = new string[] { "A5-A5", "A4-A5", "A5-A7", "A5-A6", "A9-AD", "AC-A9", "AD-AB", "A9-AE", "A5-AD", "AC-A5", "AD-A7", "A5-AE", "A5-A9",
@@ -1035,18 +1027,25 @@ namespace V_Max_Tool
             Import_File.BringToFront();
             Import_File.Top = 57;
             Import_File.Left = 19;
+            DB_cores.Enabled = DB_core_override.Checked;
             Set_Boxes();
             Draw_Init_Img(def_bg_text);
             Default_Dir_Screen();
             Set_Auto_Opts();
             Cores = Get_Cores();
+            Set_Cores();
             manualRender = M_render.Visible = Cores < 2;
-            if (Cores < 2)
-            {
-                Img_Q.SelectedIndex = 0;
-                Task_Limit = new Semaphore(3, 3);
-            }else Task_Limit = new Semaphore(Cores, Cores);
-
+            if (Cores < 2) Img_Q.SelectedIndex = 0;
+            //{
+            //    Img_Q.SelectedIndex = 0;
+            //    Task_Limit = new Semaphore(3, 3);
+            //    DB_cores.Value = 3;
+            //}
+            //else
+            //{ 
+            //    Task_Limit = new Semaphore(Cores, Cores); 
+            //    DB_cores.Value = Cores;
+            //}
             //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
             //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
             //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));

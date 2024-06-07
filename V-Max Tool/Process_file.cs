@@ -37,32 +37,77 @@ namespace V_Max_Tool
             128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139 };
         private int[] jt = new int[42];
 
+        void Batch_Get_File_List(string[] files)
+        {
+            string s = string.Empty;
+            string t = string.Empty;
+            var folder = Path.GetDirectoryName(files[0]);
+            var SaveFolder = new FolderBrowserDialog()
+            {
+                Description = "Select a folder for output files.",
+                SelectedPath = folder,
+
+            };
+            var ok = new DialogResult();
+            Invoke(new Action(() => ok = SaveFolder.ShowDialog()));
+            if (ok == DialogResult.OK)
+            {
+                string parent;// = "";
+                string[] batch_list;
+                if (Cores <= 3) Invoke(new Action(()=> Batch_Box.Visible = true));
+                (batch_list, parent) = Populate_File_List(files);
+
+                if (batch_list?.Length != 0)
+                {
+                    string sel_path = SaveFolder.SelectedPath.ToString();
+                    if (sel_path != "") Process_Batch(batch_list, sel_path, parent);
+                }
+                else
+                {
+                    Invoke(new Action(() =>
+                    {
+                        using (Message_Center centerr = new Message_Center(this)) // center message box
+                        {
+                            t = "Nothing to do!";
+                            s = "No valid files to process";
+                            MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }));
+                }
+            }
+        }
+
         void Process_Batch(string[] batch_list, string path, string basedir)
         {
             Stopwatch btime = new Stopwatch();
             btime.Start();
             bool temp = Auto_Adjust;
-            Reset_to_Defaults();
-            busy = true;
-            Auto_Adjust = true;
-            Set_Auto_Opts();
-            busy = false;
-            Drag_pic.Visible = Adv_ctrl.Enabled = false;
-            Batch_Box.Visible = true;
-            batch = true;
-            Batch_Bar.Value = 0;
-            Batch_Bar.Maximum = 100;
-            Batch_Bar.Maximum *= 100;
-            Batch_Bar.Value = Batch_Bar.Maximum / 100;
-            listBox1.Items.Clear();
-            listBox1.Visible = true;
-            if (Cores > 7) CPU_Killer.Checked = true;
-            Worker_Main?.Abort();
-            Worker_Main = new Thread(new ThreadStart(() => Start_Work()));
-            Worker_Main?.Start();
+            Invoke(new Action(() =>
+            {
+                Reset_to_Defaults();
+                busy = true;
+                Auto_Adjust = true;
+                Set_Auto_Opts();
+                busy = false;
+                Drag_pic.Visible = Adv_ctrl.Enabled = false;
+                Batch_Box.Visible = true;
+                batch = true;
+                Batch_Bar.Value = 0;
+                Batch_Bar.Maximum = 100;
+                Batch_Bar.Maximum *= 100;
+                Batch_Bar.Value = Batch_Bar.Maximum / 100;
+                Batch_List_Box.Items.Clear();
+                Batch_List_Box.Visible = true;
+                Disable_Core_Controls(true);
+            }));
+            Worker_Alt?.Abort();
+            Worker_Alt = new Thread(new ThreadStart(() => Start_Work()));
+            Worker_Alt?.Start();
 
             void Start_Work()
             {
+                LB_File_List = new List<string>();
+                populating = true;
                 for (int i = 0; i < batch_list.Length; i++)
                 {
                     loader_fixed = false;
@@ -80,7 +125,7 @@ namespace V_Max_Tool
                                 Batch_Bar.Maximum = (int)((double)Batch_Bar.Value / (double)(i + 1) * batch_list.Length);
                                 if (Cores > 1) Import_File.Visible = false; else Import_File.Visible = true;
                             }));
-                            string curfile = $@"{path}\{Path.GetDirectoryName(batch_list[i]).Replace(basedir, "")}\{Path.GetFileNameWithoutExtension(batch_list[i])}.g64";
+                            string curfile = $@"{path}{Path.GetDirectoryName(batch_list[i]).Replace(basedir, "")}\{Path.GetFileNameWithoutExtension(batch_list[i])}.g64";
                             fext = Path.GetExtension(batch_list[0]);
                             if (fext.ToLower() == supported[0]) Batch_NIB(batch_list[i], curfile);
                             Invoke(new Action(() =>
@@ -88,19 +133,24 @@ namespace V_Max_Tool
                                 var status = "OK!";
                                 if (error)
                                 {
-                                    if (File.Exists(curfile)) status = "Completed with errors";
+                                    if (File.Exists(curfile))
+                                    {
+                                        status = "Completed with errors";
+                                        LB_File_List.Add(curfile);
+                                    }
                                     else status = "Error, file not saved";
                                 }
                                 if (File.Exists(curfile))
                                 {
                                     long sz = new FileInfo(curfile).Length / 1024;
                                     status = $"(OK!) {sz:N0}kb";
+                                    LB_File_List.Add(curfile);
                                 }
                                 else status = "Error, file not saved";
                                 error = false;
-                                listBox1.Items.Add($@"{Path.GetDirectoryName(curfile).Replace(path, "")}\{Path.GetFileNameWithoutExtension(curfile)} ({status})");
-                                listBox1.SelectedIndex = listBox1.Items.Count - 1;
-                                listBox1.SelectedIndex = -1;
+                                Batch_List_Box.Items.Add($@"{Path.GetDirectoryName(curfile).Replace(path, "")}\{Path.GetFileNameWithoutExtension(curfile)} ({status})");
+                                Batch_List_Box.SelectedIndex = Batch_List_Box.Items.Count - 1;
+                                Batch_List_Box.SelectedIndex = -1;
                             }));
                         }
                     }
@@ -133,10 +183,11 @@ namespace V_Max_Tool
                     cancel = false;
                     busy = true;
                     Auto_Adjust = temp;
+                    populating = false;
                     busy = false;
-                    CPU_Killer.Checked = false;
                     Set_Auto_Opts();
                     Reset_to_Defaults(false);
+                    Disable_Core_Controls(false);
                 }));
                 batch = false;
             }
@@ -189,7 +240,7 @@ namespace V_Max_Tool
             }
         }
 
-        Stopwatch Parse_Nib_Data(bool new_disk = false)
+        Stopwatch Parse_Nib_Data()
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -222,7 +273,7 @@ namespace V_Max_Tool
             for (int i = 0; i < tracks; i++)
             {
                 int x = i;
-                if (!CPU_Killer.Checked) Task_Limit.WaitOne();
+                Task_Limit.WaitOne();
                 Task[i] = new Thread(new ThreadStart(() => Analyze_Track(x)));
                 Task[i].Start();
                 Update_Progress_Bar(i);
@@ -462,7 +513,7 @@ namespace V_Max_Tool
             {
                 Get_Fmt(track);
                 Get_Track_Info(track);
-                if (!CPU_Killer.Checked) Task_Limit.Release();
+                Task_Limit.Release();
             }
         }
         /// ---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -563,7 +614,6 @@ namespace V_Max_Tool
             var ldt = 255;
             /// ------------ Safe Threading Method, Starts as many threads as there are physical threads available ------------------------
 
-            bool sem = !CPU_Killer.Checked;
             Task = new Thread[tracks];
             for (int i = 0; i < tracks; i++)
             {
@@ -572,8 +622,8 @@ namespace V_Max_Tool
                 var y = vpl_lead;
                 if (NDS.cbm[i] != 4)
                 {
-                    if (!CPU_Killer.Checked) Task_Limit.WaitOne();
-                    Task[i] = new Thread(new ThreadStart(() => Process(x, y, sem)));
+                    Task_Limit.WaitOne();
+                    Task[i] = new Thread(new ThreadStart(() => Process(x, y, true)));
                     Task[i].Start();
                 }
                 else ldt = i;
@@ -659,10 +709,10 @@ namespace V_Max_Tool
                 if (release) Task_Limit.Release();
             }
 
-            void Do_Nothing() // needed for semaphore if a loader track is being processed.  Can't process them in a thread for some reason
-            {
-                Task_Limit.Release();
-            }
+            //void Do_Nothing() // needed for semaphore if a loader track is being processed.  Can't process them in a thread for some reason
+            //{
+            //    Task_Limit.Release();
+            //}
 
             void Process_CBM(int trk, bool acbm, bool bmc)
             {
