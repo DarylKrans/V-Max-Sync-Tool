@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -13,12 +13,12 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-        private bool Auto_Adjust = false; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
+        private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
-        private readonly string ver = " v0.9.95 (beta)";
-        private readonly string fix = "(sync_fixed)";
-        private readonly string mod = "(modified)";
-        private readonly string vorp = "(aligned)";
+        private readonly string ver = " v0.9.96 (beta)";
+        private readonly string fix = "_ReMaster_Utility";
+        private readonly string mod = "_ReMaster_Utility"; // _(modified)";
+        private readonly string vorp = "_ReMaster_Utility"; //(aligned)";
         private readonly byte loader_padding = 0x55;
         private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
@@ -28,7 +28,6 @@ namespace V_Max_Tool
         private bool nib_error = false;
         private bool g64_error = false;
         private bool batch = false;
-        private bool populating = false;
         private string nib_err_msg;
         private string g64_err_msg;
         private byte[] v2ldrcbm = new byte[0];
@@ -38,7 +37,7 @@ namespace V_Max_Tool
         private readonly int min_t_len = 6000;
         private int Cores;
         private int Default_Cores;
-        private List<string> LB_File_List = new List<string>(); 
+        private List<string> LB_File_List = new List<string>();
         private Semaphore Task_Limit = new Semaphore(3, 3);
         Thread Worker_Main;
         Thread Worker_Alt;
@@ -590,11 +589,25 @@ namespace V_Max_Tool
 
         private void ListBox1_DoubleClick(object sender, EventArgs e)
         {
-            if (!populating)
+            var a = Batch_List_Box.SelectedIndex;
+            if (a >= 0 && a < Batch_List_Box.Items.Count)
             {
-                string argument = "/select, \"" + LB_File_List[Batch_List_Box.SelectedIndex] + "\"";
-                if (File.Exists(LB_File_List[Batch_List_Box.SelectedIndex])) Process.Start("explorer.exe", argument);
+                string argument = "/select, \"" + LB_File_List[a].Replace(@"\\", @"\") + "\"";
+                if (File.Exists(LB_File_List[a])) Process.Start("explorer.exe", argument);
             }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            try
+            {
+                cancel = true;
+                this.Text = "Closing..";
+                Application.Exit();
+                Environment.Exit(0);
+            }
+            catch { }
+            this.Close();
         }
     }
 }

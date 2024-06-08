@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using System.Diagnostics;
 
 /// CBM Block Header structure
 /// 8 plain bytes converted to 10 GCR bytes
@@ -535,7 +535,7 @@ namespace V_Max_Tool
         void Create_Blank_Disk()
         {
             busy = true;
-            Invoke(new Action(()=> Disable_Core_Controls(true)));
+            Invoke(new Action(() => Disable_Core_Controls(true)));
             if (BD_name.Text == "") BD_name.Text = "BLANK DISK";
             if (BD_id.Text == "") BD_id.Text = "00 2A";
             byte[] name = Encoding.ASCII.GetBytes($"{BD_name.Text}");

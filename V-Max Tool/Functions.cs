@@ -589,25 +589,17 @@ namespace V_Max_Tool
                 int coreCount = int.Parse(item["NumberOfCores"].ToString());
                 Cores += coreCount;
             }
+            if (Cores == 1) manualRender = M_render.Visible = true;
             Default_Cores = Cores;
-            return Cores; //-= 1;
+            return Cores;
         }
 
         void Set_Cores(bool Min_Cores_3 = true)
         {
-            if (Min_Cores_3 && Cores < 2)
-            {
-                if (Cores < 2)
-                {
-                    Task_Limit = new Semaphore(3, 3);
-                    DB_cores.Value = 3;
-                }
-            }
-            else
-            {
-                DB_cores.Value = Cores;
-                Task_Limit = new Semaphore(Cores, Cores);
-            }
+            if (Min_Cores_3 && Cores < 3) Cores = 3;
+            else DB_cores.Value = Cores;
+            Task_Limit = new Semaphore(Cores, Cores);
+            //Text = $"cores {Cores}";
         }
 
         void Disable_Core_Controls(bool disable)
@@ -1034,7 +1026,7 @@ namespace V_Max_Tool
             Set_Auto_Opts();
             Cores = Get_Cores();
             Set_Cores();
-            manualRender = M_render.Visible = Cores < 2;
+            //manualRender = M_render.Visible = Cores <= 3;
             if (Cores < 2) Img_Q.SelectedIndex = 0;
             //{
             //    Img_Q.SelectedIndex = 0;

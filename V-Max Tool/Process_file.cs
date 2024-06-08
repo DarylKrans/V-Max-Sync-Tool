@@ -54,7 +54,7 @@ namespace V_Max_Tool
             {
                 string parent;// = "";
                 string[] batch_list;
-                if (Cores <= 3) Invoke(new Action(()=> Batch_Box.Visible = true));
+                if (Cores <= 3) Invoke(new Action(() => Batch_Box.Visible = true));
                 (batch_list, parent) = Populate_File_List(files);
 
                 if (batch_list?.Length != 0)
@@ -107,7 +107,6 @@ namespace V_Max_Tool
             void Start_Work()
             {
                 LB_File_List = new List<string>();
-                populating = true;
                 for (int i = 0; i < batch_list.Length; i++)
                 {
                     loader_fixed = false;
@@ -125,7 +124,7 @@ namespace V_Max_Tool
                                 Batch_Bar.Maximum = (int)((double)Batch_Bar.Value / (double)(i + 1) * batch_list.Length);
                                 if (Cores > 1) Import_File.Visible = false; else Import_File.Visible = true;
                             }));
-                            string curfile = $@"{path}{Path.GetDirectoryName(batch_list[i]).Replace(basedir, "")}\{Path.GetFileNameWithoutExtension(batch_list[i])}.g64";
+                            string curfile = $@"{path}\{Path.GetDirectoryName(batch_list[i]).Replace(basedir, "")}\{Path.GetFileNameWithoutExtension(batch_list[i])}{fnappend}.g64";
                             fext = Path.GetExtension(batch_list[0]);
                             if (fext.ToLower() == supported[0]) Batch_NIB(batch_list[i], curfile);
                             Invoke(new Action(() =>
@@ -136,7 +135,6 @@ namespace V_Max_Tool
                                     if (File.Exists(curfile))
                                     {
                                         status = "Completed with errors";
-                                        LB_File_List.Add(curfile);
                                     }
                                     else status = "Error, file not saved";
                                 }
@@ -144,13 +142,13 @@ namespace V_Max_Tool
                                 {
                                     long sz = new FileInfo(curfile).Length / 1024;
                                     status = $"(OK!) {sz:N0}kb";
-                                    LB_File_List.Add(curfile);
                                 }
                                 else status = "Error, file not saved";
                                 error = false;
-                                Batch_List_Box.Items.Add($@"{Path.GetDirectoryName(curfile).Replace(path, "")}\{Path.GetFileNameWithoutExtension(curfile)} ({status})");
+                                Batch_List_Box.Items.Add($@"{Path.GetDirectoryName(curfile).Replace(path, "")}\{Path.GetFileNameWithoutExtension(curfile).Replace($"{fnappend}" , "")} ({status})");
                                 Batch_List_Box.SelectedIndex = Batch_List_Box.Items.Count - 1;
                                 Batch_List_Box.SelectedIndex = -1;
+                                LB_File_List.Add(curfile);
                             }));
                         }
                     }
@@ -183,7 +181,6 @@ namespace V_Max_Tool
                     cancel = false;
                     busy = true;
                     Auto_Adjust = temp;
-                    populating = false;
                     busy = false;
                     Set_Auto_Opts();
                     Reset_to_Defaults(false);
@@ -260,7 +257,6 @@ namespace V_Max_Tool
             string le = "Length";
             string fm = "Format";
             string bl = "** Potentially bad loader! **";
-            var a = tracks; /// <- used to show analyse progress on progress bar when processing multi-threaded
             if (tracks > 42)
             {
                 halftracks = true;
@@ -398,15 +394,6 @@ namespace V_Max_Tool
             void Get_Fmt(int trk)
             {
                 NDS.cbm[trk] = Get_Data_Format(NDS.Track_Data[trk], trk);
-                a--;
-                if (!manualRender)
-                {
-                    Invoke(new Action(() =>
-                    {
-                        Import_Progress_Bar.Maximum = (int)((double)Import_Progress_Bar.Value / (double)((tracks - a) + 1) * tracks);
-                        Update();
-                    }));
-                }
             }
 
             void Update_Progress_Bar(int i)
@@ -574,8 +561,8 @@ namespace V_Max_Tool
                     if (v2cc) V2_Custom.Checked = true;
                     if (batch || V2_Auto_Adj.Checked) v2adj = true;
                     if (V2_Custom.Checked) v2cust = true;
-                    if (v2adj || rb_vm) fnappend = mod;
-                    else fnappend = fix;
+                    if (v2adj || rb_vm) { fnappend = mod; cbmadj = true; }
+                    else { fnappend = fix; cbmadj = Adj_cbm.Checked; }
                 }
                 if (NDS.cbm.Any(x => x == 3))
                 {
@@ -590,8 +577,8 @@ namespace V_Max_Tool
                     if (v3cc) V3_Custom.Checked = true;
                     if (batch || V3_Auto_Adj.Checked) v3adj = true;
                     if (V3_Custom.Checked) v3cust = true;
-                    if (v3adj) fnappend = mod;
-                    else fnappend = fix;
+                    if (v3adj) { fnappend = mod; cbmadj = true; }
+                    else { fnappend = fix; cbmadj = Adj_cbm.Checked; }
                 }
                 if (NDS.cbm.Any(x => x == 4))
                 {

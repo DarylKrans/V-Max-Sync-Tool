@@ -68,7 +68,7 @@ namespace V_Max_Tool
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
             //byte[] watermark = Encoding.ASCII.GetBytes($"    ReMaster Utility{ver}    5/27/2024    ");
-            byte[] watermark = Encoding.ASCII.GetBytes($"    ReMaster Utility{ver} ");
+            byte[] watermark = Encoding.ASCII.GetBytes($"    ReMaster Utility{ver} https://github.com/DarylKrans/ReMaster-Utility                  ");
             for (int i = 0; i < watermark.Length; i++) if (watermark[i] == 0x20) watermark[i] = 0x00;
             byte[] head = Encoding.ASCII.GetBytes("GCR-1541");
             byte z = 0;
