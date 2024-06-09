@@ -739,12 +739,12 @@
             // 
             this.VD2.Location = new System.Drawing.Point(651, 125);
             this.VD2.Maximum = new decimal(new int[] {
-            6750,
+            6700,
             0,
             0,
             0});
             this.VD2.Minimum = new decimal(new int[] {
-            6555,
+            6400,
             0,
             0,
             0});
@@ -762,12 +762,12 @@
             // 
             this.VD1.Location = new System.Drawing.Point(525, 125);
             this.VD1.Maximum = new decimal(new int[] {
-            7210,
+            7200,
             0,
             0,
             0});
             this.VD1.Minimum = new decimal(new int[] {
-            7012,
+            6800,
             0,
             0,
             0});
@@ -785,12 +785,12 @@
             // 
             this.VD0.Location = new System.Drawing.Point(399, 125);
             this.VD0.Maximum = new decimal(new int[] {
-            7800,
+            7900,
             0,
             0,
             0});
             this.VD0.Minimum = new decimal(new int[] {
-            7700,
+            7600,
             0,
             0,
             0});

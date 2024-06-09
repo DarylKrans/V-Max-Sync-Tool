@@ -22,6 +22,7 @@ namespace V_Max_Tool
         private readonly byte loader_padding = 0x55;
         private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        //private readonly int[] vpl_density = { 7800, 6950, 6580, 6250 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private bool error = false;
         private bool cancel = false;
         private bool busy = false;
@@ -37,6 +38,7 @@ namespace V_Max_Tool
         private readonly int min_t_len = 6000;
         private int Cores;
         private int Default_Cores;
+        readonly System.Windows.Forms.ToolTip tips = new System.Windows.Forms.ToolTip();
         private List<string> LB_File_List = new List<string>();
         private Semaphore Task_Limit = new Semaphore(3, 3);
         Thread Worker_Main;

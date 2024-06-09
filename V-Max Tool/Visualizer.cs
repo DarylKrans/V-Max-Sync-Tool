@@ -185,7 +185,6 @@ namespace V_Max_Tool
                 a++;
             }
             Draw_Disk(circle, m, width, $"{fi_nam}{fi_ext}", ToBinary(Encoding.ASCII.GetString(NDS.Track_Data[trk], 0, 2000)));
-            //Stopwatch sw = Stopwatch.StartNew();
             Thread[] Draw = new Thread[tracks];
 
             while (r > 80 && track < tracks)
@@ -207,21 +206,13 @@ namespace V_Max_Tool
                         }
 
                     }
-                    if (Circle_View.Checked)
-                    {
-                        this.Invoke(new Action(() => Update_Image()));
-                    }
+                    if (Circle_View.Checked && Cores <= 3) this.Invoke(new Action(() => Update_Image()));
                     this.Invoke(new Action(() => Update_Progress_Bar(pt, at)));
                 }
                 r -= (t_width * skp);
                 track += 1;
             }
-            Invoke(new Action(() =>
-            {
-                //sw.Stop();
-                //Text = sw.Elapsed.TotalMilliseconds.ToString();
-                Set_Circular_Draw_Options(true, width);
-            }));
+            Invoke(new Action(() => Set_Circular_Draw_Options(true, width)));
 
             void Draw_Arc(FastBitmap d, int cx, int cy, int radius, int startAngle, Color color)
             {
@@ -433,12 +424,12 @@ namespace V_Max_Tool
         private void Update_Image()
         {
             /// Uncomment to show Image updates (per track processed)
-            //try
-            //{
-            //    Disk_Image.Image = Resize_Image(circle.Bitmap, panPic.Width, panPic.Height, false, false);
-            //    Disk_Image.Refresh();
-            //}
-            //catch { }
+            try
+            {
+                Disk_Image.Image = Resize_Image(circle.Bitmap, panPic.Width, panPic.Height, false, false);
+                Disk_Image.Refresh();
+            }
+            catch { }
         }
 
         private void Draw_Disk(FastBitmap d, int m, int size, string file_name, string bg_text)

@@ -10,6 +10,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace V_Max_Tool
 {
@@ -599,7 +600,6 @@ namespace V_Max_Tool
             if (Min_Cores_3 && Cores < 3) Cores = 3;
             else DB_cores.Value = Cores;
             Task_Limit = new Semaphore(Cores, Cores);
-            //Text = $"cores {Cores}";
         }
 
         void Disable_Core_Controls(bool disable)
@@ -1026,18 +1026,9 @@ namespace V_Max_Tool
             Set_Auto_Opts();
             Cores = Get_Cores();
             Set_Cores();
-            //manualRender = M_render.Visible = Cores <= 3;
+            Set_Tool_Tips();
+            manualRender = M_render.Visible = Cores <= 3;
             if (Cores < 2) Img_Q.SelectedIndex = 0;
-            //{
-            //    Img_Q.SelectedIndex = 0;
-            //    Task_Limit = new Semaphore(3, 3);
-            //    DB_cores.Value = 3;
-            //}
-            //else
-            //{ 
-            //    Task_Limit = new Semaphore(Cores, Cores); 
-            //    DB_cores.Value = Cores;
-            //}
             //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
             //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
             //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
@@ -1099,6 +1090,48 @@ namespace V_Max_Tool
                 inbox.TabIndex = 55;
                 inbox.TabStop = false;
                 inbox.Text = "Trk / Size / Format / Sectors / Dens";
+            }
+
+            void Set_Tool_Tips()
+            {
+                tips.SetToolTip(Adj_cbm, "Adjust standard tracks to fit a 300rpm rotation cycle\n" +
+                    "Allows for writing images without slowing down the disk drive\n\n" +
+                    "Option may not be available on certain Protection types that rely on the extra data");
+                tips.SetToolTip(f_load, "Attempt to (fix) a V-Max loader track\nif a V-Max image gets stuck on track 20, try this option");
+                tips.SetToolTip(Save_Disk, "Export ReMastered file as G64 or NIB");
+                tips.SetToolTip(Circle_View, "Show image of track data representation as it would be on a disk");
+                tips.SetToolTip(Flat_View, "Show image of track data representation in a linear view");
+                tips.SetToolTip(Out_view, "Show the processed (output) image data representation");
+                tips.SetToolTip(Src_view, "Show the source file's (input) image data representation");
+                tips.SetToolTip(Show_sec, "Highlight areas where a new sector starts (V-Max/Vorpal)");
+                tips.SetToolTip(Cap_margins, "Show's where the data exceeds the track's capacity limit at 300rpm");
+                tips.SetToolTip(Flat_Interp, "Blurs the image a little (can help better define where the sectors are)");
+                tips.SetToolTip(Rev_View, "Shows the tracks in different colors to differentiate between formats");
+                tips.SetToolTip(Save_Circle_btn, "Save currently displayed image as BMP or JPG");
+                tips.SetToolTip(label4, "Change Disk-View image resolution\nLow = 1000 x 1000, Insanity = 7000 x 7000");
+                tips.SetToolTip(Img_Q, "Change Disk-View image resolution\nLow = 1000 x 1000, Insanity = 7000 x 7000");
+                tips.SetToolTip(Re_Align, "Attempt to center the V-Max loader data in the track to prevent the track gap from being placed within the data");
+                tips.SetToolTip(V2_Auto_Adj, "Adjust all tracks to fit on a disk without slowing down the drive motor");
+                tips.SetToolTip(V2_Custom, "Manually set the sector header length (applies to all tracks)\n" +
+                    "this isn't very useful, but it could be fun! or dangerous. Who knows?");
+                tips.SetToolTip(V3_Auto_Adj, "Adjust all tracks to fit on a disk without slowing down the drive motor");
+                tips.SetToolTip(V3_Custom, "Manually set the sector header length (applies to all tracks)\n" +
+                    "this isn't very useful, but it could be fun! or dangerous. Who knows?");
+                tips.SetToolTip(V2_swap_headers, "Changes the sector headers (must use the same headers on all sides)\n" +
+                    "64-46 contains weak-bits that might not work on older 1541 drives.\n" +
+                    "Change headers to 64-4E if your drive has any issues with loading\n" +
+                    "*4E-64 is only found on European versions of V-Max, but they also work");
+                tips.SetToolTip(V2_Add_Sync, "Adds 10 bits of sync before each sector on syncless tracks\n" +
+                    "This doesn't have any affect on loading and the protection doesn't check for it");
+                tips.SetToolTip(VPL_auto_adj, "Adjust all tracks for best success on write");
+                tips.SetToolTip(VPL_rb, "Adjust all (Vorpal) tracks for best success on write, leaves standard tracks un-altered");
+                tips.SetToolTip(VPL_lead, "Adjust sector data placement (in bytes) from the start of the track");
+                tips.SetToolTip(VPL_only_sectors, "Vorpal tracks will ONLY contain the sector data, no lead-in or lead-out\n" +
+                    "this is for educational purposes only and is unlikely to produce a working image");
+                tips.SetToolTip(VPL_presync, "Adds 16 bits of sync to the start of the track (in the lead-in)\n" +
+                    "this is for experimentation and may help or hinder successful disk-writes");
+                tips.SetToolTip(label7, "Change the Lead-in/out sequence of Vorpal tracks\n" +
+                    "0x55 and 0xAA are essentially the same (01010101 or 10101010");
             }
         }
 
@@ -1164,4 +1197,5 @@ namespace V_Max_Tool
             }
         }
     }
+
 }

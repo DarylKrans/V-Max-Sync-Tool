@@ -145,7 +145,7 @@ namespace V_Max_Tool
                                 }
                                 else status = "Error, file not saved";
                                 error = false;
-                                Batch_List_Box.Items.Add($@"{Path.GetDirectoryName(curfile).Replace(path, "")}\{Path.GetFileNameWithoutExtension(curfile).Replace($"{fnappend}" , "")} ({status})");
+                                Batch_List_Box.Items.Add($@"{Path.GetDirectoryName(curfile).Replace(path, "")}\{Path.GetFileNameWithoutExtension(curfile).Replace($"{fnappend}", "")} ({status})");
                                 Batch_List_Box.SelectedIndex = Batch_List_Box.Items.Count - 1;
                                 Batch_List_Box.SelectedIndex = -1;
                                 LB_File_List.Add(curfile);
@@ -595,6 +595,7 @@ namespace V_Max_Tool
                 {
                     if (!DB_force.Checked) cbmadj = Check_tlen(); else cbmadj = true;
                 }
+
                 if (new_disk) fnappend = string.Empty;
                 busy = false;
             }));
@@ -696,11 +697,6 @@ namespace V_Max_Tool
                 if (release) Task_Limit.Release();
             }
 
-            //void Do_Nothing() // needed for semaphore if a loader track is being processed.  Can't process them in a thread for some reason
-            //{
-            //    Task_Limit.Release();
-            //}
-
             void Process_CBM(int trk, bool acbm, bool bmc)
             {
                 var track = trk;
@@ -732,7 +728,7 @@ namespace V_Max_Tool
                             }
                             else
                             {
-                                if (!(NDS.cbm.Any(x => x == 4) && !(NDS.cbm.Any(x => x == 3) || NDS.cbm.Any(x => x == 2))))
+                                if (DB_force.Checked || !(NDS.cbm.Any(x => x == 4) && !(NDS.cbm.Any(x => x == 3) || NDS.cbm.Any(x => x == 2))))
                                 {
                                     d = Get_Density(NDS.Track_Length[trk] >> 3);
                                     temp = Rebuild_CBM(NDS.Track_Data[trk], NDS.sectors[trk], NDS.Disk_ID[trk], d, trk);
