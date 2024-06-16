@@ -66,7 +66,7 @@ namespace V_Max_Tool
                 Bitmap t = new Bitmap(flat_large.Width, flat_large.Height);
                 int at = 0;
                 int pt = 0;
-                for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < 6) at++;
+                for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < secF.Length - 1) at++;
                 if (at > 0) Invoke(new Action(() =>
                 {
                     Flat_Render.Value = 0;
@@ -79,7 +79,7 @@ namespace V_Max_Tool
                 {
                     if (Out_view.Checked)
                     {
-                        if (NDG.Track_Length[i] > min_t_len && NDS.cbm[i] < 6)
+                        if (NDG.Track_Length[i] > min_t_len && NDS.cbm[i] < secF.Length - 1)
                         {
                             d = Get_Density(NDG.Track_Data[i].Length);
                             t = Draw_Track(flat_large, (42 * 14), NDG.Track_Data[i], (int)ht, 0, 0, NDS.cbm[i], NDS.v2info[i], d, Out_view.Checked, NDS.cbm_sector[i]);
@@ -144,7 +144,7 @@ namespace V_Max_Tool
             if (wait) Thread.Sleep(1000);
             int at = 0;
             int pt = 0;
-            for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < 6) at++;
+            for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < secF.Length - 1) at++;
             int m = 0;
             double sub = 1.25;
             Invoke(new Action(() =>
@@ -190,7 +190,7 @@ namespace V_Max_Tool
             while (r > 80 && track < tracks)
             {
                 bool v5 = false;
-                if (NDG.Track_Length[track] > min_t_len && NDS.cbm[track] < 6)
+                if (NDG.Track_Length[track] > min_t_len && NDS.cbm[track] < secF.Length - 1)
                 {
                     pt++;
                     v2 = false;
@@ -345,8 +345,12 @@ namespace V_Max_Tool
             byte[] temp = new byte[0];
             if (Out_view.Checked)
             {
-                temp = new byte[NDG.Track_Length[track]];
-                Buffer.BlockCopy(NDG.Track_Data[track], 0, temp, 0, temp.Length);
+                try
+                {
+                    temp = new byte[NDG.Track_Length[track]];
+                    Buffer.BlockCopy(NDG.Track_Data[track], 0, temp, 0, temp.Length);
+                }
+                catch { }
             }
             if (Src_view.Checked)
             {

@@ -25,6 +25,7 @@ namespace V_Max_Tool
         public static int[] Total_Sync = new int[0];
         public static byte[][] Disk_ID = new byte[0][];
         public static int[] Gap_Sector = new int[0];
+        public static int[] Track_ID = new int[0];
     }
 
     public static class NDA  // Global variables for adjusted-sync arrays
@@ -45,6 +46,7 @@ namespace V_Max_Tool
         public static bool L_Rot = false;
         public static int[] s_len = new int[0];
         public static byte[] newheader = new byte[0];
+        public static bool[] Fat_Track = new bool[0];
     }
 
     public static class Original  // Global variable for retaining original loader track data

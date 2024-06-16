@@ -9,7 +9,7 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-        void Export_File()
+        void Export_File(int last_track = -1, int fat_track = -1)
         {
             Save_Dialog.FileName = $"{fname}{fnappend}";
             if (Out_Type) Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib";
@@ -18,12 +18,12 @@ namespace V_Max_Tool
             if (Save_Dialog.ShowDialog() == DialogResult.OK)
             {
                 string fs = Save_Dialog.FileName;
-                if (Save_Dialog.FilterIndex == 1) Make_G64(fs);
+                if (Save_Dialog.FilterIndex == 1) Make_G64(fs, last_track, fat_track);
                 if (Save_Dialog.FilterIndex == 2) Make_NIB(fs);
                 if (Save_Dialog.FilterIndex == 3)
                 {
                     Make_NIB($@"{Path.GetDirectoryName(fs)}\{Path.GetFileNameWithoutExtension(fs)}.nib");
-                    Make_G64($@"{Path.GetDirectoryName(fs)}\{Path.GetFileNameWithoutExtension(fs)}.g64");
+                    Make_G64($@"{Path.GetDirectoryName(fs)}\{Path.GetFileNameWithoutExtension(fs)}.g64", last_track, fat_track);
                 }
                 if (nib_error || g64_error)
                 {
@@ -62,8 +62,9 @@ namespace V_Max_Tool
             write.Close();
         }
 
-        void Make_G64(string fname)
+        void Make_G64(string fname, int l_trk, int f_trk)
         {
+            if (l_trk < 0) l_trk = tracks;
             if (!Directory.Exists(Path.GetDirectoryName(fname))) Directory.CreateDirectory(Path.GetDirectoryName(fname));
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
@@ -73,7 +74,7 @@ namespace V_Max_Tool
             byte[] head = Encoding.ASCII.GetBytes("GCR-1541");
             byte z = 0;
             List<int> len = new List<int>(0);
-            for (int i = 0; i < tracks; i++) if (NDS.cbm[i] > 0 && NDS.cbm[i] < 6) len.Add(NDG.Track_Length[i]);
+            for (int i = 0; i < tracks; i++) if (NDS.cbm[i] > 0 && NDS.cbm[i] < secF.Length - 1) len.Add(NDG.Track_Length[i]);
             short m = Convert.ToInt16(len.Max());
             if (m < 7928) m = 7928;
             write.Write(head);
@@ -83,24 +84,23 @@ namespace V_Max_Tool
             int offset = 684 + watermark.Length;
             int th = 0;
             int[] td = new int[84];
-            int tr = tracks;
-            if (tracks > 42)
-            {
-                if (NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)) tr = 75;
-                if (NDS.cbm.Any(x => x == 5)) tr = 69;
-                Big(tr);
-            }
-            else
-            {
-                if (NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)) tr = 38;
-                if (NDS.cbm.Any(x => x == 5)) tr = 35;
-                Small(tr);
-            }
+            if (tracks > 42) Big(l_trk);
+            //{
+            //    //if (NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)) tr = 75;
+            //    //if (NDS.cbm.Any(x => x == 5)) tr = 69;
+            //    Big(l_trk);
+            //}
+            else Small(l_trk);
+            //{
+            //    //if (NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)) tr = 38;
+            //    //if (NDS.cbm.Any(x => x == 5)) tr = 35;
+            //    Small(l_trk);
+            //}
             for (int i = 0; i < 84; i++) write.Write(td[i]);
             write.Write(watermark);
-            for (int i = 0; i < tr; i++) // tracks; i++)
+            for (int i = 0; i < l_trk; i++) // tracks; i++)
             {
-                if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] > 0 && NDS.cbm[i] < 6)
+                if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] > 0 && NDS.cbm[i] < secF.Length - 1)
                 {
                     write.Write((short)NDG.Track_Length[i]);
                     if (DB_g64.Checked)
@@ -130,14 +130,21 @@ namespace V_Max_Tool
 
             void Big(int trk) // 84 track nib file
             {
+                int prev_ofs = 0;
                 for (int i = 0; i < 84; i++)
                 {
-                    if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < 6)
+                    if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < secF.Length - 1)
                     {
                         if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
+                        prev_ofs = offset + th;
                         th += 2;
                         if (DB_g64.Checked) offset += m; else offset += NDG.Track_Data[i].Length;
                         if (i <= trk) td[i] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[i] = 0;
+                    }
+                    else if (NDG.Fat_Track[i - 1] && NDG.Fat_Track[i + 1])
+                    {
+                        write.Write((int)(prev_ofs));
+                        td[i] = td[i - 1];
                     }
                     else write.Write((int)0);
                 }
@@ -146,20 +153,92 @@ namespace V_Max_Tool
             void Small(int trk) // 42 track nib file
             {
                 int r = 0;
+                int prev_ofs = 0;
                 for (int i = 0; i < 42; i++)
                 {
-                    if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < 6)
+                    bool fat = false;
+                    if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < secF.Length - 1)
                     {
                         if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
+                        prev_ofs = offset + th;
                         th += 2;
                         if (DB_g64.Checked) offset += m; else offset += NDG.Track_Data[i].Length;
-                        if (i <= trk) td[r] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[i] = 0;
+                        if (i <= trk) td[r] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[r] = 0;
                         r++; td[r] = 0; r++;
+                        if (i + 1 < trk && (NDG.Fat_Track[i] && NDG.Fat_Track[i + 1]))
+                        {
+                            write.Write((int)(prev_ofs));
+                            td[r - 1] = td[r - 2];
+                            fat = true;
+                        }
                     }
-                    else write.Write((int)0);
-                    write.Write((int)0);
+                    else
+                    {
+                        write.Write((int)0);
+                    }
+                    if (!fat) write.Write((int)0);
                 }
             }
+
+
+            //void Big(int trk) // 84 track nib file
+            //{
+            //    for (int i = 0; i < 84; i++)
+            //    {
+            //        if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < secF.Length - 1)
+            //        {
+            //            if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
+            //            /// Fat Track additional marker if Fat Track Exists
+            //            //if (NDS.cbm[i] == 1 && NDS.cbm[i + 2] == 1)
+            //            //{
+            //            //    if (((trk / 2) + 1) - NDS.Track_ID[trk] == 1)
+            //            //    {
+            //            //        if (i + 2 < NDS.Track_ID.Length && NDS.Track_ID[i + 2] == NDS.Track_ID[i]) write.Write((int)offset + th);
+            //            //    }
+            //            //}
+            //            th += 2;
+            //            if (DB_g64.Checked) offset += m; else offset += NDG.Track_Data[i].Length;
+            //            if (i <= trk) td[i] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[i] = 0;
+            //            //if (NDS.cbm[i] == 1 && NDS.cbm[i + 2] == 1)
+            //            //{
+            //            //    if (i + 2 < NDS.Track_ID.Length && NDS.Track_ID[i + 2] == NDS.Track_ID[i]) td[i + 1] = td[i];
+            //            //}
+            //        }
+            //        else write.Write((int)0);
+            //    }
+            //}
+            //
+            //void Small(int trk) // 42 track nib file
+            //{
+            //    int r = 0;
+            //    for (int i = 0; i < 42; i++)
+            //    {
+            //        bool fat = false;
+            //        if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < secF.Length - 1)
+            //        {
+            //            if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
+            //            /// Fat Track additional marker if Fat Track Exists
+            //            if (NDS.cbm[i] == 1)
+            //            {
+            //                if (i + 1 < NDS.Track_ID.Length && i + 1 - NDS.Track_ID[i + 1] == 0)
+            //                {
+            //                    if (i + 1 < NDS.Track_ID.Length && NDS.Track_ID[i + 1] == NDS.Track_ID[i]) { write.Write((int)offset + th); fat = true; }
+            //                }
+            //            }
+            //            th += 2;
+            //            if (DB_g64.Checked) offset += m; else offset += NDG.Track_Data[i].Length;
+            //            if (i <= trk) td[r] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[r] = 0;
+            //            if (NDS.cbm[i] == 1)
+            //            {
+            //                if (i + 1 < NDS.Track_ID.Length && NDS.Track_ID[i + 1] == NDS.Track_ID[i]) td[r + 1] = td[r];
+            //            }
+            //            if (!fat) td[r + 1] = 0;
+            //            r += 2;
+            //        }
+            //        else write.Write((int)0);
+            //        if (!fat) write.Write((int)0);
+            //    }
+            //}
         }
     }
 }

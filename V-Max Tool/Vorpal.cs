@@ -164,9 +164,13 @@ namespace V_Max_Tool
 
             void Write_Lead(int li, int lo)
             {
-                for (int i = temp.Length - lo; i < temp.Length; i++) temp[i] = lead_out;
-                for (int i = 0; i < li; i++) Buffer.BlockCopy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
-                temp[temp.Length - 1] = stop;
+                try
+                {
+                    for (int i = temp.Length - lo; i < temp.Length; i++) temp[i] = lead_out;
+                    for (int i = 0; i < li; i++) Buffer.BlockCopy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
+                    temp[temp.Length - 1] = stop;
+                }
+                catch { }
             }
 
             int Get_VPL_Sectors()

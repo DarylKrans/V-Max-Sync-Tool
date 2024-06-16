@@ -10,7 +10,6 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace V_Max_Tool
 {
@@ -47,6 +46,8 @@ namespace V_Max_Tool
                 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
 
             };
+
+        private readonly int[] sectors_by_Density = { 21, 19, 18, 17 };
 
         private readonly byte[] density_map = {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/*  1 - 10 */
@@ -116,6 +117,8 @@ namespace V_Max_Tool
                 Batch_List_Box.Visible = false;
                 Batch_List_Box.Items.Clear();
             }
+            end_track = -1;
+            fat_trk = -1;
             Img_style.Enabled = Img_View.Enabled = Img_opts.Enabled = Save_Circle_btn.Visible = M_render.Visible = Adv_ctrl.Enabled = false;
             VBS_info.Visible = Reg_info.Visible = false;
             Other_opts.Visible = false;
@@ -164,6 +167,7 @@ namespace V_Max_Tool
             NDS.Total_Sync = new int[len];
             NDS.Disk_ID = new byte[len][];
             NDS.Gap_Sector = new int[len];
+            NDS.Track_ID = new int[len];
             // NDA is the destination or output array
             NDA.Track_Data = new byte[len][];
             NDA.Sector_Zero = new int[len];
@@ -178,6 +182,7 @@ namespace V_Max_Tool
             NDG.L_Rot = false;
             NDG.s_len = new int[len];
             NDG.newheader = new byte[2];
+            NDG.Fat_Track = new bool[len];
             // Original is the arrays that keep the original track data for the Auto Adjust feature
             Original.A = new byte[0];
             Original.G = new byte[0];
@@ -607,6 +612,48 @@ namespace V_Max_Tool
             DB_core_override.Enabled = !disable;
             if (DB_cores.Enabled && disable) DB_cores.Enabled = !disable;
             if (!disable) DB_cores.Enabled = DB_core_override.Checked;
+        }
+
+        byte[] Pirate_Slayer(byte[] data)
+        {
+            byte[] dataend = new byte[] { 0x55, 0xae, 0x9b, 0x55, 0xad, 0x55, 0xcb, 0xae, 0x6b, 0xab, 0xad, 0xaf };
+            byte[] end_gap = new byte[] { 0xc8, 0x00, 0x88, 0xaa, 0xaa, 0xba };
+            byte[] lead = IArray(1001, 0xd7);
+            byte[] ldout = IArray(127, 0xd7);
+            byte[] de = new byte[dataend.Length];
+            int start = 0;
+            int end = 0;
+            int pos = 0;
+            MemoryStream buffer = new MemoryStream();
+            BinaryWriter write = new BinaryWriter(buffer);
+            for (int i = start; i < data.Length; i++)
+            {
+                if (data[i] == 0x55)
+                {
+                    Buffer.BlockCopy(data, i, de, 0, de.Length);
+                    if (Match(dataend, de)) { end = i + de.Length; pos = i; }
+                }
+            }
+            while (pos >= 0)
+            {
+                if (data[pos] == ps2[0])
+                {
+                    if (data[pos + 1] == ps2[1] && data[pos + 2] == ps2[2] && data[pos + 3] == ps2[3] && data[pos + 4] == ps2[4]) { start = pos + 2; break; }
+                }
+                pos--;
+            }
+            byte[] key = new byte[end - start];
+            Buffer.BlockCopy(data, start, key, 0, end - start);
+            for (int i = 0; i < 2; i++)
+            {
+                write.Write(key);
+                write.Write(lead);
+            }
+            write.Write(key);
+            write.Write(ldout);
+            write.Write(end_gap);
+            while (buffer.Position < density[3]) write.Write((byte)0xfa);
+            return buffer.ToArray();
         }
 
         byte[] Shrink_Track(byte[] data, int trk_density)

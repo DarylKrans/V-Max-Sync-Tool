@@ -13,7 +13,6 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-
         bool v2cc = false;
         bool v2aa = false;
         bool v3cc = false;
@@ -32,7 +31,8 @@ namespace V_Max_Tool
             "52-40-05-24", "52-40-05-64", "52-40-05-68", "52-40-05-6C", "52-40-05-34", "52-40-05-74", "52-40-05-78", "52-40-05-54", "52-40-05-A8",
             "52-40-05-AC", "52-40-05-C8", "52-40-05-CC", "52-40-05-B8" };
         /// vmax = the block header values of V-Max v2 sectors (non-CBM sectors)
-        private readonly string[] secF = { "NDOS", "CBM", "V-Max v2", "V-Max v3", "Loader", "Vorpal", "Unformatted" };
+        //private readonly string[] secF = { "NDOS", "CBM", "V-Max v2", "V-Max v3", "Loader", "Vorpal", "Unformatted" };
+        private readonly string[] secF = { "NDOS", "CBM", "V-Max v2", "V-Max v3", "Loader", "Vorpal", "RapidLok", "RL-Key", "EA", "Unformatted" };
         private readonly int[] invalid_char = { 0, 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 95,
             128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139 };
         private int[] jt = new int[42];
@@ -221,7 +221,7 @@ namespace V_Max_Tool
                                 {
                                     if (DB_timers.Checked) label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms";
                                 }));
-                                Make_G64(output);
+                                Make_G64(output, end_track, fat_trk);
                             }
                         }
                         catch (Exception e)
@@ -249,7 +249,7 @@ namespace V_Max_Tool
                 Import_Progress_Bar.Value = Import_Progress_Bar.Maximum / 100;
                 if (Cores < 8) Import_Progress_Bar.Visible = true;
             }));
-            bool ldr = false; int cbm = 0; int vmx = 0; int vpl = 0;
+            bool ldr = false; int cbm = 0; int vmx = 0; int vpl = 0; int rlk = 0;
             double ht;
             bool halftracks = false;
             string[][] f = new string[tracks][];
@@ -257,6 +257,7 @@ namespace V_Max_Tool
             string le = "Length";
             string fm = "Format";
             string bl = "** Potentially bad loader! **";
+            //bool fat = false;
             if (tracks > 42)
             {
                 halftracks = true;
@@ -277,7 +278,11 @@ namespace V_Max_Tool
             }
             foreach (var thread in Task) thread?.Join();
             Task = new Thread[0];
-
+            /// -- Checks for false positive of RapidLok Key track on non-RapidLok images
+            if (NDS.cbm.Any(x => x == 7) && !NDS.cbm.Any(x => x == 6))
+            {
+                for (int i = 0; i < tracks; i++) if (NDS.cbm[i] == 7) NDS.cbm[i] = secF.Length - 1;
+            }
             if (!batch)
             {
                 var color = Color.Black;
@@ -287,9 +292,10 @@ namespace V_Max_Tool
                     Check_Adv_Opts();
                     if (ldr) Loader_Track.Text = "Loader Track : Yes"; else Loader_Track.Text = "Loader Track : No";
                     CBM_Tracks.Text = $"CBM tracks : {cbm}";
-                    if (vmx > 0) Protected_Tracks.Text = $"V-Max tracks : {vmx}";
-                    if (vpl > 0) Protected_Tracks.Text = $"Vorpal tracks : {vpl}";
-                    Protected_Tracks.Visible = (vmx > 0 || vpl > 0);
+                    if (vmx > 0) Protected_Tracks.Text = $"V-Max Tracks : {vmx}";
+                    if (vpl > 0) Protected_Tracks.Text = $"Vorpal Tracks : {vpl}";
+                    if (rlk > 0) Protected_Tracks.Text = $"RapidLok Tracks : {rlk}";
+                    Protected_Tracks.Visible = (vmx > 0 || vpl > 0 || rlk > 0);
                     if (tracks > 42)
                     {
                         halftracks = true;
@@ -303,16 +309,24 @@ namespace V_Max_Tool
                     int t;
                     for (int i = 0; i < tracks; i++)
                     {
+                        int htk = 1;
+                        if (tracks > 42) htk = 2;
+                        string Fat = "";
+
                         if (tracks > 42) t = i / 2 + 1; else t = i + 1;
+                        if (i > 2 && i + htk < NDS.cbm.Length && (NDS.cbm[i] == 1 && (NDS.cbm[i + htk] == 1 || NDS.cbm?[i - htk] == 1)))
+                        {
+                            if ((t != NDS.Track_ID[i] && t == NDS.Track_ID[i] + 1) || (i + htk < NDS.Track_ID.Length && t == NDS.Track_ID[i + htk])) Fat = " [Fat]";
+                        }
                         if (halftracks) ht += .5; else ht += 1;
-                        if (NDS.cbm[i] > 0 && NDS.cbm[i] < 5)
+                        if (NDS.cbm[i] > 0 && NDS.cbm[i] < secF.Length - 1)
                         {
                             var d = Get_Density(NDS.Track_Length[i] >> 3);
                             if ((ht >= 0 && ht < 18 && d != 0) || (ht >= 18 && ht < 25 && d != 1) || (ht >= 25 && ht < 31 && d != 2) || (ht >= 31 && ht < 43 && d != 3)) cust_dens = true;
                             if (NDS.cbm[i] == 2) v2 = true;
                             if (NDS.cbm[i] == 3) v3 = true;
                         }
-                        if (!batch && NDS.Track_Length[i] > 6000 && NDS.cbm[i] != 6 && NDS.cbm[i] != 0)
+                        if (!batch && NDS.Track_Length[i] > 6000 && NDS.cbm[i] != secF.Length - 1 && NDS.cbm[i] > 0)
                         {
                             color = Color.Black;
                             var d = Get_Density(NDS.Track_Length[i] >> 3);
@@ -323,7 +337,9 @@ namespace V_Max_Tool
                             if (NDS.cbm[i] == 3) color = Color.Green;
                             if (NDS.cbm[i] == 4) color = Color.Blue;
                             if (NDS.cbm[i] == 5) color = Color.DarkCyan;
-                            sf.Items.Add(new LineColor { Color = color, Text = $"{secF[NDS.cbm[i]]}" });
+                            if (NDS.cbm[i] == 6) color = Color.DarkOrange;
+                            if (NDS.cbm[i] == 7 || NDS.cbm[i] == 8) color = Color.DarkGreen;
+                            sf.Items.Add(new LineColor { Color = color, Text = $"{secF[NDS.cbm[i]]}{Fat}" });
                             sl.Items.Add((NDS.Track_Length[i] >> 3).ToString("N0"));
                             ss.Items.Add(NDS.sectors[i]);
                             strack.Items.Add(ht);
@@ -331,7 +347,11 @@ namespace V_Max_Tool
                         }
                         if (NDS.cbm[i] == 1)
                         {
-                            Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]}" });
+                            htk = 1;
+                            if (tracks > 42) htk = 2;
+                            Fat = "";
+                            if ((t != NDS.Track_ID[i] && t == NDS.Track_ID[i] + 1) || (i + htk < NDS.Track_ID.Length && t == NDS.Track_ID[i + htk])) Fat = " [ Fat-Track ]";
+                            Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]}, Embeded Track ID # {NDS.Track_ID[i]} {Fat}" });
                             for (int j = 0; j < f[i].Length; j++)
                             {
                                 if (j >= f[i].Length - 3) color = Color.Black; else color = Color.FromArgb(40, 40, 40);
@@ -378,6 +398,24 @@ namespace V_Max_Tool
                             Track_Info.Items.Add(new LineColor { Color = Color.Black, Text = $"Track Length : ({(NDS.D_End[i] - NDS.D_Start[i] >> 3)}) Sectors ({NDS.sectors[i]})" });
                             Track_Info.Items.Add(" ");
                         }
+                        if (NDS.cbm[i] == 6)
+                        {
+                            Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]} {tr} {le} ({NDG.Track_Data[i].Length})" });
+                            for (int j = 0; j < f[i].Length; j++)
+                            {
+                                Track_Info.Items.Add(new LineColor { Color = Color.DarkMagenta, Text = f[i][j] });
+                            }
+                            Track_Info.Items.Add(new LineColor { Color = Color.Black, Text = $"Track Length : ({(NDS.D_End[i] - NDS.D_Start[i] >> 3)}) Sectors ({NDS.sectors[i]})" });
+                            Track_Info.Items.Add(" ");
+                        }
+                        if (NDS.cbm[i] == 7)
+                        {
+                            Track_Info.Items.Add(new LineColor { Color = Color.DarkBlue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]} {tr} {le} ({NDG.Track_Data[i].Length})" });
+                        }
+                        if (NDS.cbm[i] == 8)
+                        {
+                            Track_Info.Items.Add(new LineColor { Color = Color.DarkBlue, Text = $"{tr} {t} {fm} : PirateSlayer (EA) {tr} {le} ({NDG.Track_Data[i].Length})" });
+                        }
                         Track_Info.EndUpdate();
                     }
                     if (!cust_dens) Cust_Density.Text = "Track Densities : Standard"; else Cust_Density.Text = "Track Densities : Custom";
@@ -385,7 +423,11 @@ namespace V_Max_Tool
                     if (v3) VM_Ver.Text = "Protection : V-Max v3";
                     if (!v2 && !v3 && NDS.cbm.Any(x => x == 4)) VM_Ver.Text = "Protection : V-Max v2 CBM";
                     if (!v2 && !v3 && !NDS.cbm.Any(x => x == 4)) VM_Ver.Text = "No Protection or CBM exploit";
+                    if (!v2 && !v3 && NDS.cbm.Any(x => x == 6)) VM_Ver.Text = "Protection : RapidLok";
                     if (NDS.cbm.Any(s => s == 5)) VM_Ver.Text = "Protection : Vorpal";
+                    if (NDS.cbm.Any(x => x == 8)) VM_Ver.Text = "Protection: (EA) PirateSlayer";
+                    //if (fat) VM_Ver.Text = "Protection: Fat-Tracks";
+                    if (NDG.Fat_Track.Any()) VM_Ver.Text = "Protection: Fat-Tracks"; // (x => x == true)
                 }));
             }
             sw.Stop();
@@ -424,7 +466,8 @@ namespace V_Max_Tool
                         NDS.cbm_sector[trk],
                         NDS.Total_Sync[trk],
                         NDS.Disk_ID[trk],
-                        junk) = CBM_Track_Info(NDS.Track_Data[trk], cksm);
+                        junk,
+                        NDS.Track_ID[trk]) = CBM_Track_Info(NDS.Track_Data[trk], cksm, trk);
                     NDA.sectors[trk] = NDS.sectors[trk];
                 }
                 if (NDS.cbm[trk] == 2)
@@ -494,6 +537,34 @@ namespace V_Max_Tool
                         }
                     }
                 }
+                if (NDS.cbm[trk] == 6)
+                {
+                    int tk = trk;
+                    if (tracks > 42) tk = (trk / 2) + 1; else tk += 1;
+                    rlk++;
+                    int q = 0;
+                    byte[] temp = new byte[q];
+                    (temp,
+                        NDS.D_Start[trk],
+                        NDS.D_End[trk], q,
+                        NDS.sectors[trk],
+                        f[trk]) = RapidLok_Track_Info(NDS.Track_Data[trk]);
+                    NDS.Track_Length[trk] = q;
+                    Set_Dest_Arrays(temp, trk);
+                }
+                if (NDS.cbm[trk] == 7)
+                {
+                    rlk++;
+                    byte[] newkey = RapidLok_Key_Fix(NDS.Track_Data[trk]);
+                    NDS.Track_Length[trk] = newkey.Length << 3;
+                    Set_Dest_Arrays(newkey, trk);
+                }
+                if (NDS.cbm[trk] == 8)
+                {
+                    byte[] EA = Pirate_Slayer(NDS.Track_Data[trk]);
+                    NDS.Track_Length[trk] = EA.Length << 3;
+                    Set_Dest_Arrays(EA, trk);
+                }
             }
 
             void Analyze_Track(int track)
@@ -525,9 +596,12 @@ namespace V_Max_Tool
             Invoke(new Action(() =>
             {
                 busy = true;
+                end_track = tracks;
+                fat_trk = -1;
                 (v2a, v3a, vpa) = Check_Tabs();
                 if (NDS.cbm.Any(x => x == 2))
                 {
+                    if (tracks > 42) end_track = 75; else end_track = 38;
                     for (int i = 0; i < tracks; i++)
                     {
                         if (NDS.cbm[i] == 2)
@@ -566,6 +640,7 @@ namespace V_Max_Tool
                 }
                 if (NDS.cbm.Any(x => x == 3))
                 {
+                    if (tracks > 42) end_track = 74; else end_track = 38;
                     if (V2_Auto_Adj.Checked || V2_Custom.Checked)
                     {
                         if (V2_Auto_Adj.Checked) v2aa = true; else v2aa = false;
@@ -587,6 +662,7 @@ namespace V_Max_Tool
                 }
                 if (NDS.cbm.Any(ss => ss == 5))
                 {
+                    if (tracks > 42) end_track = 69; else end_track = 35;
                     if (VPL_auto_adj.Checked || batch || VPL_rb.Checked) vpadj = true;
                     if (VPL_rb.Checked || Adj_cbm.Checked || vpadj) fnappend = mod; else fnappend = vorp;
                     vpl_lead = Lead_ptn.SelectedIndex;
@@ -632,8 +708,9 @@ namespace V_Max_Tool
                 Color color = new Color();
                 for (int i = 0; i < tracks; i++)
                 {
+                    //Invoke(new Action(() => Text = $"{i}"));
                     if (halftracks) ht += .5; else ht += 1;
-                    if (!batch && NDA.Track_Length[i] > 0 && NDS.cbm[i] != 6)
+                    if (!batch && NDA.Track_Length[i] > 0 && NDS.cbm[i] < secF.Length - 1)
                     {
                         out_size.Items.Add((NDA.Track_Length[i] / 8).ToString("N0"));
                         out_dif.Items.Add((NDA.Track_Length[i] - NDS.Track_Length[i] >> 3).ToString("+#;-#;0"));
@@ -666,19 +743,21 @@ namespace V_Max_Tool
                 if (Adv_ctrl.Controls[2] != Adv_ctrl.SelectedTab) displayed = false;
                 if (Adv_ctrl.Controls[0] != Adv_ctrl.SelectedTab) drawn = false;
                 if (!busy) Data_Viewer();
+                //Invoke(new Action(() => Text = $"fat {fat_trk} last {end_track}"));
             }
             sw.Stop();
             return sw;
 
             void Process_Track(int trk, bool acbm, bool av2, bool cv2, bool av3, bool cv3, bool avp, int vplead, bool fix, bool sol, bool rvb, bool cmb, bool s_sec) //, bool swp)
             {
-                if (NDS.Track_Length[trk] > 0 && NDS.cbm[trk] > 0 && NDS.cbm[trk] < 6)
+                if (NDS.Track_Length[trk] > 0 && NDS.cbm[trk] > 0 && NDS.cbm[trk] < secF.Length)
                 {
                     if (NDS.cbm[trk] == 1) Process_CBM(trk, acbm, cmb);
                     if (NDS.cbm[trk] == 2) Process_VMAX_V2(trk, av2, cv2, rvb);
                     if (NDS.cbm[trk] == 3) Process_VMAX_V3(trk, av3, cv3, rvb, s_sec);
                     if (NDS.cbm[trk] == 4) Process_Loader(trk, fix, sol);
                     if (NDS.cbm[trk] == 5) Process_Vorpal(trk, avp, vpl_lead);
+                    if (NDS.cbm[trk] == 6) Process_RapidLok(trk);
                 }
                 else { NDA.Track_Data[trk] = NDS.Track_Data[trk]; }
             }
@@ -700,9 +779,17 @@ namespace V_Max_Tool
             void Process_CBM(int trk, bool acbm, bool bmc)
             {
                 var track = trk;
-                if (tracks > 42) track = (trk / 2) + 1; else track += 1;
+                int htk = 1;
+                if (tracks > 42) htk = 2;
+                if (tracks > 42) { track = (trk / 2) + 1; htk = 2; } else track += 1;
+                if ((track != NDS.Track_ID[trk] && track == NDS.Track_ID[trk] + 1) || (trk + htk < NDS.Track_ID.Length && track == NDS.Track_ID[trk + htk]))
+                {
+                    NDG.Fat_Track[trk] = true;
+                    if (fat_trk < 0) fat_trk = track;
+                    if (track != NDS.Track_ID[trk] && track >= 34) end_track = trk + htk;
+                }
                 int exp_snc = 40;   /// expected sync length.  (sync will be adjusted to this value if it is >= minimum value (or) =< ignore value
-                int min_snc = 16;   /// minimum sync length to signal this is a sync marker that needs adjusting
+                int min_snc = 12;   /// minimum sync length to signal this is a sync marker that needs adjusting
                 int ign_snc = 80;   /// ignore sync if it is >= to value
                 var d = 0;
                 byte[] temp = new byte[0];
@@ -710,6 +797,7 @@ namespace V_Max_Tool
                 {
                     try
                     {
+                        if (acbm && track < 18 && NDS.sectors[trk] != 21) exp_snc = 14;
                         temp = Adjust_Sync_CBM(NDS.Track_Data[trk], exp_snc, min_snc, ign_snc, NDS.D_Start[trk], NDS.D_End[trk], NDS.Sector_Zero[trk], NDS.Track_Length[trk], trk);
                         if (temp != null)
                         {
@@ -730,8 +818,11 @@ namespace V_Max_Tool
                             {
                                 if (DB_force.Checked || !(NDS.cbm.Any(x => x == 4) && !(NDS.cbm.Any(x => x == 3) || NDS.cbm.Any(x => x == 2))))
                                 {
-                                    d = Get_Density(NDS.Track_Length[trk] >> 3);
-                                    temp = Rebuild_CBM(NDS.Track_Data[trk], NDS.sectors[trk], NDS.Disk_ID[trk], d, trk);
+                                    if (!(track < 18 && NDS.sectors[trk] != 21))
+                                    {
+                                        d = Get_Density(NDS.Track_Length[trk] >> 3);
+                                        temp = Rebuild_CBM(NDS.Track_Data[trk], NDS.sectors[trk], NDS.Disk_ID[trk], d, NDS.Track_ID[trk]);
+                                    }
                                 }
                             }
                         }
@@ -848,6 +939,30 @@ namespace V_Max_Tool
                 Set_Dest_Arrays(temp, trk);
             }
 
+            void Process_RapidLok(int trk)
+            {
+                byte[] temp = new byte[0];
+                int sync = 0;
+                for (int i = 0; i < NDG.Track_Data[trk].Length; i++)
+                {
+                    if (NDG.Track_Data[trk][i] == 0xff) sync++;
+                    else
+                    {
+                        try
+                        {
+                            if (sync > 12 && (NDG.Track_Data[trk][i] == 0x55 && NDG.Track_Data[trk][i + 1] == 0x7b))
+                            {
+                                temp = Rotate_Left(NDG.Track_Data[trk], i - (sync - 1) - 8);
+                                Set_Dest_Arrays(temp, trk);
+                                break;
+                            }
+                        }
+                        catch { }
+                        sync = 0;
+                    }
+                }
+            }
+
             bool Check_tlen()
             {
                 List<int> tl = new List<int>();
@@ -862,8 +977,12 @@ namespace V_Max_Tool
             bool blnk = false;
             int t = 0;
             int csec = 0;
+            int trk = track;
+            if (tracks > 42) trk = (track / 2) + 1; else trk += 1;
             byte[] comp = new byte[4];
+            if (Check_RapidLok(data)) return 6;
             if ((tracks <= 42 && track == 19) || tracks > 42 && track == 38) if (Check_Loader(data)) return 4;
+            BitArray source = new BitArray(Flip_Endian(data));
             for (int i = 0; i < (data.Length) - comp.Length; i++)
             {
                 Buffer.BlockCopy(data, i, comp, 0, comp.Length);
@@ -878,13 +997,12 @@ namespace V_Max_Tool
             if (t == 1 || t == 0)
             {
                 if (blnk) return t;
-                BitArray source = new BitArray(Flip_Endian(data));
                 byte[] temp = new byte[0];
                 bool c;
                 int y = 0;
                 int p = 0;
                 int ps = 0;
-                for (int i = 0; i < 16; i++)
+                for (int i = 0; i < 20; i++)
                 {
                     (c, ps) = Find_Sector(source, i + 1);
                     if (c) { y++; p = ps + 320; if (p > data.Length) p = 0; }
@@ -912,6 +1030,20 @@ namespace V_Max_Tool
             {
                 if (Match(d, vv2n) || Match(d, vv2p)) return 2;
                 if (Match(d, v3a)) return 3;
+                if (Match(d, RLok))
+                {
+                    bool c;
+                    int y = 0;
+                    p = 0;
+                    int ps = 0;
+                    for (int i = 0; i < 20; i++)
+                    {
+                        (c, ps) = Find_Sector(source, i + 1);
+                        if (c) { y++; p = ps + 320; if (p > data.Length) p = 0; }
+                        if (y > 4) return 1;
+                    }
+                    return 6;
+                }
                 if (d[0] == sz[0])
                 {
                     d[1] &= sz[1]; d[2] &= sz[2]; d[3] &= sz[3];
@@ -929,8 +1061,20 @@ namespace V_Max_Tool
                 {
                     if (blank.Any(x => x == d[i])) b++;
                     if (d[i] == 0xff) snc++;
-                    if (b > 1000) return (6, false);
-                    if (snc > 10) return (0, true);
+                    if (ps1.Any(x => x == d[i]) || ps2.Any(x => x == d[i]))
+                    try
+                    {
+                        if (ps1[0] == d[i] || ps2[0] == d[i])
+                        {
+                            byte[] s1 = new byte[ps1.Length];
+                            byte[] s2 = new byte[ps2.Length];
+                            Buffer.BlockCopy(d, i, s1, 0, s1.Length);
+                            Buffer.BlockCopy(d, i, s2, 0, s2.Length);
+                            if (Match(ps1, s1) || Match(ps2, s2)) return (8, false);
+                        }
+                    } catch  { }
+                    if (b > 1000) return (secF.Length, false);
+                    if (snc > 1000 && trk == 36) return (7, false);
                 }
                 return (0, true);
             }
@@ -965,6 +1109,24 @@ namespace V_Max_Tool
                     }
                 }
                 if (l > 30) return true; else return false;
+            }
+
+            bool Check_RapidLok(byte[] d)
+            {
+                int sync = 0;
+                for (int i = 0; i < d.Length; i++)
+                {
+                    if (d[i] == 0xff) sync++;
+                    else
+                    {
+                        if (sync > 10 && (d[i] == 0x75 && d[i + 1] == 0x92))
+                        {
+                            return true;
+                        }
+                        sync = 0;
+                    }
+                }
+                return false;
             }
         }
 
@@ -1002,7 +1164,7 @@ namespace V_Max_Tool
             for (int i = 0; i < tracks; i++)
             {
                 Invoke(new Action(() => DV_pbar.Maximum = (int)((double)DV_pbar.Value / (double)(i + 1) * tracks)));
-                if (NDS.cbm[i] > 0 && NDS.cbm[i] < 6)
+                if (NDS.cbm[i] > 0 && NDS.cbm[i] < secF.Length - 1)
                 {
                     if (DV_gcr.Checked)
                     {

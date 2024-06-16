@@ -46,6 +46,20 @@ namespace V_Max_Tool
             }
         }
 
+        int Get_Track_Len(byte[] data, int compare_length, int skip = 0)
+        {
+            int t_len = 0;
+            byte[] s = new byte[compare_length];
+            byte[] comp = new byte[compare_length];
+            Buffer.BlockCopy(data, 0, s, 0, compare_length);
+            for (t_len = skip; t_len < (data.Length - comp.Length); t_len++)
+            {
+                Buffer.BlockCopy(data, t_len, comp, 0, comp.Length);
+                if (Match(s, comp)) return t_len;
+            }
+            return 8192;
+        }
+
         /// ------------------------- Rotate Loader Track -------------------------------------------
 
         byte[] Rotate_Loader(byte[] temp)

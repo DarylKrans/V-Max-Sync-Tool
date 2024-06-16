@@ -40,10 +40,13 @@ namespace V_Max_Tool
     {
         //readonly bool write_dir = false;
         private readonly byte[] sz = { 0x52, 0xc0, 0x0f, 0xfc };
+        private readonly byte[] ps1 = { 0xeb, 0xd7, 0xaa, 0x55 }; /// <- Piraye Slayer v1 secondary check
+        private readonly byte[] ps2 = { 0xd7, 0xd7, 0xeb, 0xcc, 0xad }; /// <- Pirate Slayer v1/2 check
+
 
         byte[] Rebuild_CBM(byte[] data, int sectors, byte[] Disk_ID, int t_density, int trk)
         {
-            if (tracks > 42) trk = (trk / 2) + 1; else trk += 1;
+            //if (tracks > 42) trk = (trk / 2) + 1; else trk += 1;
             BitArray tk = new BitArray(Flip_Endian(data));
             int sector_len = 10 + 325 + 10;
             int gap_len = 25;
@@ -81,13 +84,14 @@ namespace V_Max_Tool
             return buffer.ToArray();
         }
 
-        (int, int, int, int, string[], int, int[], int, byte[], int[]) CBM_Track_Info(byte[] data, bool checksums)
+        (int, int, int, int, string[], int, int[], int, byte[], int[], int) CBM_Track_Info(byte[] data, bool checksums, int trk = -1)
         {
             string[] csm = new string[] { "OK", "Bad!" };
             string decoded_header;
             int sectors = 0;
             int[] s_st = new int[valid_cbm.Length];
             int pos = 0;
+            int track_id = 0;
             int sync_count = 0;
             int data_start = 0;
             int sector_zero = 0;
@@ -102,8 +106,7 @@ namespace V_Max_Tool
             byte[] dec_hdr;
             byte[] sec_hdr = new byte[10];
             byte[] Disk_ID = new byte[4];
-            data = Flip_Endian(data);
-            BitArray source = new BitArray(data);
+            BitArray source = new BitArray(Flip_Endian(data));
             List<string> list = new List<string>();
             List<string> headers = new List<string>();
             int[] s_pos = new int[22];
@@ -129,7 +132,7 @@ namespace V_Max_Tool
             }
             var len = (data_end - data_start);
             list.Add($"{(len) / 8} {data_start} {data_end}");
-            return (data_start, data_end, sector_zero, len, headers.ToArray(), sectors, s_st, total_sync, Disk_ID, s_pos);
+            return (data_start, data_end, sector_zero, len, headers.ToArray(), sectors, s_st, total_sync, Disk_ID, s_pos, track_id);
 
             void add_total()
             {
@@ -139,6 +142,7 @@ namespace V_Max_Tool
             void Compare(int p)
             {
                 d = Flip_Endian(Bit2Byte(source, pos, comp));
+                //if (d[0] == 0x52) // && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
                 if (d[0] == 0x52 && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
                 {
 
@@ -149,6 +153,8 @@ namespace V_Max_Tool
                         if (!list.Any(s => s == h))
                         {
                             dec_hdr = Decode_CBM_GCR(Flip_Endian(Bit2Byte(source, pos, 80)));
+                            if (track_id == 0) track_id = Convert.ToInt32(dec_hdr[3]);
+                            if (track_id < 1 || track_id > 42) track_id = 0;
                             decoded_header = Hex_Val(dec_hdr);
                             int chksum = 0;
                             string hdr_c = csm[0];
@@ -422,7 +428,8 @@ namespace V_Max_Tool
             {
                 byte[] next_sector = new byte[] { (byte)track, 0x00 };
                 byte[] last_sector = new byte[2];
-                while (Convert.ToInt32(next_sector[0]) == track)
+                int sec_tried = 0;
+                while (Convert.ToInt32(next_sector[0]) == track && sec_tried < NDS.sectors[halftrack])
                 {
                     Buffer.BlockCopy(next_sector, 0, last_sector, 0, 2);
                     (temp, c) = Decode_CBM_Sector(NDA.Track_Data[halftrack], Convert.ToInt32(next_sector[1]), true);
@@ -438,6 +445,7 @@ namespace V_Max_Tool
                         if (Match(last_sector, next_sector)) break;
                     }
                     else { ret = "Error processing directory!"; break; }
+                    sec_tried++;
                 }
                 if (buff.Length != 0)
                 {

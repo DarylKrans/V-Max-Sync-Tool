@@ -198,15 +198,15 @@ namespace V_Max_Tool
                 var tk = 0;
                 if (tracks > 42) tk = (trk / 2) + 1; else tk = trk + 1;
                 error = false;
-                Invoke(new Action(() =>
-                {
-                    using (Message_Center centeringService = new Message_Center(this)) /// center message box
-                    {
-                        string m = $"Possible corrupt data on track {tk} sector {error_sec}";
-                        string t = "Error processing image!";
-                        MessageBox.Show(m, t, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }));
+                //Invoke(new Action(() =>
+                //{
+                //    using (Message_Center centeringService = new Message_Center(this)) /// center message box
+                //    {
+                //        string m = $"Possible corrupt data on track {tk} sector {error_sec}";
+                //        string t = "Error processing image!";
+                //        MessageBox.Show(m, t, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //    }
+                //}));
             }
             return (buffer.ToArray(), 0, (int)buffer.Length, sectors);
 

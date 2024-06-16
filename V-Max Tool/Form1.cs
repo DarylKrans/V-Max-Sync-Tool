@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -15,10 +14,10 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
-        private readonly string ver = " v0.9.96 (beta)";
-        private readonly string fix = "_ReMaster_Utility";
-        private readonly string mod = "_ReMaster_Utility"; // _(modified)";
-        private readonly string vorp = "_ReMaster_Utility"; //(aligned)";
+        private readonly string ver = " v0.9.96.6 (beta)";
+        private readonly string fix = "_ReMaster";
+        private readonly string mod = "_ReMaster"; // _(modified)";
+        private readonly string vorp = "_ReMaster"; //(aligned)";
         private readonly byte loader_padding = 0x55;
         private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
@@ -36,6 +35,8 @@ namespace V_Max_Tool
         private byte[] v26446ntsc = new byte[0];
         private byte[] v2644entsc = new byte[0];
         private readonly int min_t_len = 6000;
+        private int end_track = -1;
+        private int fat_trk = -1;
         private int Cores;
         private int Default_Cores;
         readonly System.Windows.Forms.ToolTip tips = new System.Windows.Forms.ToolTip();
@@ -48,7 +49,8 @@ namespace V_Max_Tool
         public Form1()
         {
             InitializeComponent();
-            this.Text = $"Re-Master V-Max/Vorpal Utility {ver}";
+            //this.Text = $"Un-Master Utility {ver}";
+            this.Text = $"Re-Master (Experimental) {ver}";
             Init();
             Set_ListBox_Items(true, true);
         }
@@ -257,7 +259,7 @@ namespace V_Max_Tool
 
         private void Make(object sender, EventArgs e)
         {
-            Export_File();
+            Export_File(end_track, fat_trk);
         }
 
         private void F_load_CheckedChanged(object sender, EventArgs e)
