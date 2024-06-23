@@ -40,9 +40,6 @@ namespace V_Max_Tool
     {
         //readonly bool write_dir = false;
         private readonly byte[] sz = { 0x52, 0xc0, 0x0f, 0xfc };
-        private readonly byte[] ps1 = { 0xeb, 0xd7, 0xaa, 0x55 }; /// <- Piraye Slayer v1 secondary check
-        private readonly byte[] ps2 = { 0xd7, 0xd7, 0xeb, 0xcc, 0xad }; /// <- Pirate Slayer v1/2 check
-
 
         byte[] Rebuild_CBM(byte[] data, int sectors, byte[] Disk_ID, int t_density, int trk)
         {
@@ -86,6 +83,9 @@ namespace V_Max_Tool
 
         (int, int, int, int, string[], int, int[], int, byte[], int[], int) CBM_Track_Info(byte[] data, bool checksums, int trk = -1)
         {
+            int track = trk;
+            if (tracks > 42) track = (trk / 2);
+            //if (trk == -1) trk = 0;
             string[] csm = new string[] { "OK", "Bad!" };
             string decoded_header;
             int sectors = 0;
@@ -97,7 +97,6 @@ namespace V_Max_Tool
             int sector_zero = 0;
             int data_end = 0;
             int total_sync = 0;
-            int s_hed = 80;
             int comp = 32;
             bool sec_zero = false;
             bool sync = false;
@@ -107,11 +106,14 @@ namespace V_Max_Tool
             byte[] sec_hdr = new byte[10];
             byte[] Disk_ID = new byte[4];
             BitArray source = new BitArray(Flip_Endian(data));
-            List<string> list = new List<string>();
+            //List<string> list = new List<string>();
+            List<int> list = new List<int>();
+            List<string> dchr = new List<string>();
             List<string> headers = new List<string>();
             int[] s_pos = new int[22];
             byte[] d = new byte[4];
             var h = "";
+            var sect = 0;
             Compare(pos);
             while (pos < source.Length - 32)
             {
@@ -130,8 +132,24 @@ namespace V_Max_Tool
                 }
                 pos++;
             }
+            if (!end_found)
+            {
+                data_end = pos;
+                if (!start_found) data_start = s_pos[0];
+                sectors = list.Count;
+                if (!batch)
+                {
+                    try
+                    {
+                        headers.Add($"Track length ({(data_end - data_start) >> 3}) Sectors ({list.Count}) Avg sync length ({(total_sync + sync_count) / (list.Count * 2)} bits)");
+                    }
+                    catch { }
+                }
+                headers.Add($"{data_start} {data_end} {start_found} {end_found}");
+            }
             var len = (data_end - data_start);
-            list.Add($"{(len) / 8} {data_start} {data_end}");
+            //list.Add($"{(len) / 8} {data_start} {data_end}");
+            //try { File.WriteAllLines($@"C:\test\t{trk}", dchr.ToArray()); } catch { }
             return (data_start, data_end, sector_zero, len, headers.ToArray(), sectors, s_st, total_sync, Disk_ID, s_pos, track_id);
 
             void add_total()
@@ -142,17 +160,18 @@ namespace V_Max_Tool
             void Compare(int p)
             {
                 d = Flip_Endian(Bit2Byte(source, pos, comp));
-                //if (d[0] == 0x52) // && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
-                if (d[0] == 0x52 && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
-                {
 
+                if (d[0] == 0x52)
+                {
                     for (int i = 1; i < sz.Length; i++) d[i] &= sz[i];
                     h = Hex_Val(d);
-                    if (valid_cbm.Any(s => s == h))
+                    dec_hdr = Decode_CBM_GCR(Flip_Endian(Bit2Byte(source, pos, 80)));
+                    sect = Convert.ToInt32(dec_hdr[2]);
+                    if (dec_hdr[2] < 21 && (dec_hdr[3] > 0 && dec_hdr[3] < 43))
                     {
-                        if (!list.Any(s => s == h))
+                        if (!list.Any(s => s == sect))
                         {
-                            dec_hdr = Decode_CBM_GCR(Flip_Endian(Bit2Byte(source, pos, 80)));
+                            dchr.Add($"pos {pos / 8} sec {sect} {Hex_Val(dec_hdr)}");
                             if (track_id == 0) track_id = Convert.ToInt32(dec_hdr[3]);
                             if (track_id < 1 || track_id > 42) track_id = 0;
                             decoded_header = Hex_Val(dec_hdr);
@@ -162,10 +181,9 @@ namespace V_Max_Tool
                             for (int i = 0; i < 4; i++) chksum ^= dec_hdr[i + 2];
                             if (chksum != dec_hdr[1]) hdr_c = csm[1];
                             string sz = "";
-                            int a = Array.FindIndex(valid_cbm, se => se == h);
-                            if (a == 0) sz = "*";
+                            if (dec_hdr[2] == 0x00) sz = "*";
                             if (!start_found) { data_start = pos; start_found = true; }
-                            if (!sec_zero && h == valid_cbm[0])
+                            if (!sec_zero && dec_hdr[2] == 0x00)
                             {
                                 Buffer.BlockCopy(dec_hdr, 4, Disk_ID, 0, 4);
                                 sector_zero = pos;
@@ -176,19 +194,17 @@ namespace V_Max_Tool
                             {
                                 byte[] s_dat;
                                 bool c;
-                                (s_dat, c) = Decode_CBM_Sector(data, a, true, source);
+                                (s_dat, c) = Decode_CBM_Sector(data, sect, true, source);
                                 if (!c) sec_c = csm[1];
                             }
-                            if (!batch) headers.Add($"Sector ({a}){sz} Checksum ({sec_c}) pos ({p / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})");
+                            if (!batch) headers.Add($"Sector ({sect}){sz} Checksum ({sec_c}) pos ({p / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})");
                         }
                         else
                         {
-                            if (list.Any(s => s == valid_cbm[0]))
+                            if (list.Any(s => s == sect))
                             {
                                 string sz = "";
-                                int a = Array.FindIndex(valid_cbm, se => se == h);
-                                if (a == 0) sz = "*";
-                                dec_hdr = Decode_CBM_GCR(Flip_Endian(Bit2Byte(source, data_start, s_hed)));
+                                if (dec_hdr[2] == 0x00) sz = "*";
                                 decoded_header = Hex_Val(dec_hdr);
                                 int chksum = 0;
                                 string hdr_c = csm[0];
@@ -199,12 +215,12 @@ namespace V_Max_Tool
                                 {
                                     byte[] s_dat;
                                     bool c;
-                                    (s_dat, c) = Decode_CBM_Sector(data, a, true, source);
+                                    (s_dat, c) = Decode_CBM_Sector(data, sect, true, source);
                                     if (!c) sec_c = csm[1];
                                 }
                                 if (!batch)
                                 {
-                                    headers[0] = $"Sector ({a}){sz} Checksum ({sec_c}) pos ({data_start / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})";
+                                    headers[0] = $"Sector ({sect}){sz} Checksum ({sec_c}) pos ({data_start / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})";
                                     headers.Add($"pos {p / 8} ** repeat ** {h}");
                                 }
                                 if (data_start == 0) data_end = pos;
@@ -214,14 +230,14 @@ namespace V_Max_Tool
                                 sectors = list.Count;
                             }
                         }
-                        list.Add(h);
-                        string q = $"sector_data {Array.FindIndex(valid_cbm, s => s == h)} Position {pos}";
+                        //list.Add(h);
+                        list.Add(sect);
                     }
                 }
             }
         }
 
-        byte[] Adjust_Sync_CBM(byte[] data, int expected_sync, int minimum_sync, int exception, int Data_Start_Pos, int Data_End_Pos, int Sec_0, int Track_Len, int Track_Num)
+        byte[] Adjust_Sync_CBM(byte[] data, int expected_sync, int minimum_sync, int exception, int Data_Start_Pos, int Data_End_Pos, int Sec_0, int Track_Len, int Track_Num, bool adjust = true)
         {
             if (Track_Num == Track_Num - 0) { };
             if (exception > expected_sync && expected_sync > minimum_sync)
@@ -249,7 +265,7 @@ namespace V_Max_Tool
                         {
                             sync_count++;
                             d[dest_pos] = true;
-                            if (sync_count == minimum_sync) sync = true;
+                            if (sync_count == minimum_sync && adjust) sync = true;
                         }
                         if (!s[i] && sync)
                         {
@@ -352,7 +368,7 @@ namespace V_Max_Tool
                 int cl = 5;
                 if (!decode) cl = 10;
                 byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
-                if (d[0] == 0x52 && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
+                if (d[0] == 0x52)
                 {
                     byte[] g = Decode_CBM_GCR(d);
                     if (g[3] > 0 && g[3] < 43)
@@ -398,7 +414,7 @@ namespace V_Max_Tool
             bool Compare()
             {
                 byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
-                if (d[0] == 0x52 && !(d[1] == 0x55 && d[2] == 0x55 && d[3] == 0x55))
+                if (d[0] == 0x52)
                 {
                     byte[] g = Decode_CBM_GCR(d);
                     if (g[3] > 0 && g[3] < 43)

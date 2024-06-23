@@ -614,48 +614,6 @@ namespace V_Max_Tool
             if (!disable) DB_cores.Enabled = DB_core_override.Checked;
         }
 
-        byte[] Pirate_Slayer(byte[] data)
-        {
-            byte[] dataend = new byte[] { 0x55, 0xae, 0x9b, 0x55, 0xad, 0x55, 0xcb, 0xae, 0x6b, 0xab, 0xad, 0xaf };
-            byte[] end_gap = new byte[] { 0xc8, 0x00, 0x88, 0xaa, 0xaa, 0xba };
-            byte[] lead = IArray(1001, 0xd7);
-            byte[] ldout = IArray(127, 0xd7);
-            byte[] de = new byte[dataend.Length];
-            int start = 0;
-            int end = 0;
-            int pos = 0;
-            MemoryStream buffer = new MemoryStream();
-            BinaryWriter write = new BinaryWriter(buffer);
-            for (int i = start; i < data.Length; i++)
-            {
-                if (data[i] == 0x55)
-                {
-                    Buffer.BlockCopy(data, i, de, 0, de.Length);
-                    if (Match(dataend, de)) { end = i + de.Length; pos = i; }
-                }
-            }
-            while (pos >= 0)
-            {
-                if (data[pos] == ps2[0])
-                {
-                    if (data[pos + 1] == ps2[1] && data[pos + 2] == ps2[2] && data[pos + 3] == ps2[3] && data[pos + 4] == ps2[4]) { start = pos + 2; break; }
-                }
-                pos--;
-            }
-            byte[] key = new byte[end - start];
-            Buffer.BlockCopy(data, start, key, 0, end - start);
-            for (int i = 0; i < 2; i++)
-            {
-                write.Write(key);
-                write.Write(lead);
-            }
-            write.Write(key);
-            write.Write(ldout);
-            write.Write(end_gap);
-            while (buffer.Position < density[3]) write.Write((byte)0xfa);
-            return buffer.ToArray();
-        }
-
         byte[] Shrink_Track(byte[] data, int trk_density)
         {
             byte[] temp;
@@ -1043,6 +1001,8 @@ namespace V_Max_Tool
             v26446ntsc = Decompress(XOR(Resources.v26446n, 0x46)); // V-Max Custom sectors (NTSC Loader) Older version, headers have weak bits and may be incompatible with some 1541's
             v2644entsc = Decompress(XOR(Resources.v2644En, 0x4e)); // V-Max Custom sectors (NTSC Loader) Newer version, headers are compatible with all 1541 versions.
             /// these loaders are guaranteed to work and the loader code has not been modified from original. (these are not "cracked" loaders)
+            rak1 = Decompress(XOR(Resources.rak1, 0xab));
+            cldr_id = Decompress(XOR(Resources.cyan, 0xc1));
             Img_Q.DataSource = Img_Quality;
             Img_Q.SelectedIndex = 2;
             Width = PreferredSize.Width;
@@ -1076,6 +1036,8 @@ namespace V_Max_Tool
             Set_Tool_Tips();
             manualRender = M_render.Visible = Cores <= 3;
             if (Cores < 2) Img_Q.SelectedIndex = 0;
+            //File.WriteAllBytes($@"c:\test\compressed\cyan.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cyan")), 0xc1));
+            //File.WriteAllBytes($@"c:\test\compressed\rak1.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rak1")), 0xab));
             //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
             //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
             //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));

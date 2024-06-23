@@ -14,7 +14,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
-        private readonly string ver = " v0.9.96.6 (beta)";
+        private readonly string ver = " v0.9.97.0 (beta) Test Build";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
@@ -30,6 +30,9 @@ namespace V_Max_Tool
         private bool batch = false;
         private string nib_err_msg;
         private string g64_err_msg;
+        //private string testfile = string.Empty;
+        private byte[] rak1 = new byte[0];
+        private byte[] cldr_id = new byte[0];
         private byte[] v2ldrcbm = new byte[0];
         private byte[] v24e64pal = new byte[0];
         private byte[] v26446ntsc = new byte[0];
@@ -90,6 +93,7 @@ namespace V_Max_Tool
 
         void Process_New_Image(string file)
         {
+            //testfile = Path.GetFileNameWithoutExtension(file); /// <-- for debugging
             Disable_Core_Controls(true);
             string l = "Not ok";
             try
@@ -267,10 +271,26 @@ namespace V_Max_Tool
             int i = 100;
             if (tracks > 0 && NDS.Track_Data.Length > 0)
             {
-                i = Array.FindIndex(NDS.cbm, s => s == 4);
-                if (i < 100 && i > -1)
+                if (!NDS.cbm.Any(x => x == 9))
                 {
-                    Fix_Loader_Option(!busy, i);
+                    i = Array.FindIndex(NDS.cbm, s => s == 4);
+                    if (i < 100 && i > -1)
+                    {
+                        Fix_Loader_Option(!busy, i);
+                    }
+                }
+                else
+                {
+                    //int t = 0;
+                    //while (NDS.cbm[t] != 9) t++;
+                    //bool l = f_load.Checked;
+                    //RainbowArts(NDS.Track_Data[t], l);
+                    out_track.Items.Clear();
+                    out_size.Items.Clear();
+                    out_dif.Items.Clear();
+                    Out_density.Items.Clear();
+                    out_rpm.Items.Clear();
+                    Process_Nib_Data(true, false, true);
                 }
             }
         }

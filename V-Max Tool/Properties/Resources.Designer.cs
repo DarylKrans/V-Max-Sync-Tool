@@ -63,6 +63,26 @@ namespace ReMaster_Utility.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] cyan {
+            get {
+                object obj = ResourceManager.GetObject("cyan", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] rak1 {
+            get {
+                object obj = ResourceManager.GetObject("rak1", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] v24e64p {
             get {
                 object obj = ResourceManager.GetObject("v24e64p", resourceCulture);

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Management.Instrumentation;
 using System.Windows.Forms;
 
 namespace V_Max_Tool
@@ -260,6 +261,7 @@ namespace V_Max_Tool
 
         (byte[], int, int, int, int, int, int[], string[]) Get_Vorpal_Track_Length(byte[] data, int trk = -1)
         {
+
             int d = trk;
             if (tracks > 42) d = (trk / 2) + 1;
             int sec_size = 0;
@@ -411,6 +413,27 @@ namespace V_Max_Tool
                 leadF = true;
                 return (leadF, leadin);
             }
+        }
+
+        bool Check_Vorpal_Sectors(BitArray source, int pos)
+        {
+            pos += 1200;
+            int snc = 0;
+            while (pos < source.Length)
+            {
+                if (source[pos]) snc++;
+                else
+                {
+                    if (snc == 8)
+                    {
+                        if (!source[pos] && source[pos + 1] && !source[pos + 2] && source[pos + 3] && !source[pos + 4] && source[pos + 5] && !source[pos + 6]) return true;
+                    }
+                    snc = 0;
+                }
+                pos++;
+            }
+
+            return false;
         }
     }
 }
