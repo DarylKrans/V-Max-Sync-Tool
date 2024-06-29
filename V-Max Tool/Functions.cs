@@ -191,6 +191,135 @@ namespace V_Max_Tool
             Original.OT = new byte[len][];
         }
 
+        void Query_Track_Formats()
+        {
+            int ldr = 0, vpl = 0, rlk = 0, mps = 0, vmx = 0, cb = 0;
+            for (int i = 0; i < tracks; i++) { }
+            foreach (var format in NDS.cbm)
+            {
+                switch (format)
+                {
+                    case 1: cb++; break;
+                    case 2: vmx++; break;
+                    case 3: vmx++; break;
+                    case 4: ldr++; break;
+                    case 5: vpl++; break;
+                    case 6: rlk++; break;
+                    case 7: rlk++; break;
+                    case 10: mps++; break;
+                }
+            }
+
+            if (ldr > 0) Loader_Track.Text = "Loader Track : Yes"; else Loader_Track.Text = "Loader Track : No";
+            CBM_Tracks.Text = $"CBM tracks : {cb}";
+            if (NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)) Protected_Tracks.Text = $"V-Max Tracks : {vmx}";
+            if (NDS.cbm.Any(x => x == 5)) Protected_Tracks.Text = $"Vorpal Tracks : {vpl}";
+            if (NDS.cbm.Any(x => x == 6)) Protected_Tracks.Text = $"RapidLok Tracks : {rlk}";
+            if (NDS.cbm.Any(x => x == 10)) Protected_Tracks.Text = $"MicroPros Tracks : {mps}";
+            Protected_Tracks.Visible = (vmx > 0 || vpl > 0 || rlk > 0 || mps > 0);
+        }
+
+        (bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, int) Set_Adjust_Options(bool rb_vm)
+        {
+            bool v2a = false, v3a = false, vpa = false, v2adj = false, v2cust = false, v3adj = false, v3cust = false, cbmadj = false;
+            bool sl = false, fl = false, vpadj = false;
+            int vpl_lead = 0;
+            (v2a, v3a, vpa) = Check_Tabs();
+            if (NDS.cbm.Any(x => x == 2))
+            {
+                if (tracks > 42) end_track = 75; else end_track = 38;
+                for (int i = 0; i < tracks; i++)
+                {
+                    if (NDS.cbm[i] == 2)
+                    {
+                        if (!V2_swap_headers.Checked && !batch)
+                        {
+                            V2_swap.DataSource = new string[] { "64-4E (newer)", "64-46 (weak bits)", "4E-64 (alt)" };
+                            if (Hex_Val(NDS.v2info[i], 0, 2) == "64-4E") { Invoke(new Action(() => V2_swap.SelectedIndex = 0)); break; }
+                            if (Hex_Val(NDS.v2info[i], 0, 2) == "64-46") { Invoke(new Action(() => V2_swap.SelectedIndex = 1)); break; }
+                            if (Hex_Val(NDS.v2info[i], 0, 2) == "4E-64") { Invoke(new Action(() => V2_swap.SelectedIndex = 2)); break; }
+                        }
+                        else
+                        {
+                            if (V2_swap.SelectedIndex == 0) { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x4e; }
+                            if (V2_swap.SelectedIndex == 1) { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x46; }
+                            if (V2_swap.SelectedIndex == 2) { NDG.newheader[0] = 0x4e; NDG.newheader[1] = 0x64; }
+                            loader_fixed = false;
+                            NDG.L_Rot = false;
+                            break;
+                        }
+                    }
+                }
+                if (V3_Auto_Adj.Checked || V3_Custom.Checked)
+                {
+                    if (V3_Auto_Adj.Checked) v3aa = true; else v3aa = false;
+                    if (V3_Custom.Checked) v3cc = true; else v3cc = false;
+                    V3_Auto_Adj.Checked = V3_Custom.Checked = false;
+                }
+                V3_Auto_Adj.Checked = V3_Custom.Checked = false;
+                if (v2aa) V2_Auto_Adj.Checked = true;
+                if (v2cc) V2_Custom.Checked = true;
+                if (batch || V2_Auto_Adj.Checked) v2adj = true;
+                if (V2_Custom.Checked) v2cust = true;
+                if (v2adj || rb_vm) { fnappend = mod; cbmadj = true; }
+                else { fnappend = fix; cbmadj = Adj_cbm.Checked; }
+            }
+            if (NDS.cbm.Any(x => x == 3))
+            {
+                if (tracks > 42) end_track = 75; else end_track = 38;
+                if (V2_Auto_Adj.Checked || V2_Custom.Checked)
+                {
+                    if (V2_Auto_Adj.Checked) v2aa = true; else v2aa = false;
+                    if (V2_Custom.Checked) v2cc = true; else v2cc = false;
+                    V2_Auto_Adj.Checked = V2_Custom.Checked = false;
+                }
+                V2_Auto_Adj.Checked = V2_Custom.Checked = V2_Add_Sync.Checked = false;
+                if (v3aa) V3_Auto_Adj.Checked = true;
+                if (v3cc) V3_Custom.Checked = true;
+                if (batch || V3_Auto_Adj.Checked) v3adj = true;
+                if (V3_Custom.Checked) v3cust = true;
+                if (v3adj) { fnappend = mod; cbmadj = true; }
+                else { fnappend = fix; cbmadj = Adj_cbm.Checked; }
+            }
+            if (NDS.cbm.Any(x => x == 4))
+            {
+                if ((f_load.Checked || batch || V2_swap_headers.Checked) && !loader_fixed) fl = true; else fl = false;
+                if (NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3)) sl = true;
+            }
+            if (NDS.cbm.Any(ss => ss == 5))
+            {
+                if (tracks > 42) end_track = 69; else end_track = 35;
+                if (VPL_auto_adj.Checked || batch || VPL_rb.Checked) vpadj = true;
+                if (VPL_rb.Checked || Adj_cbm.Checked || vpadj) fnappend = mod; else fnappend = vorp;
+                vpl_lead = Lead_ptn.SelectedIndex;
+            }
+            if (NDS.cbm.Any(ss => ss == 10))
+            {
+                if (tracks > 42) end_track = 69; else end_track = 35;
+            }
+            if (Adj_cbm.Checked || v2a || v3a || vpa || batch)
+            {
+                if (!DB_force.Checked) cbmadj = Check_tlen(); else cbmadj = true;
+            }
+            return (v2a, v3a, vpa, v2adj, v2cust, v3adj, v3cust, cbmadj, sl, fl, vpadj, rb_vm, vpl_lead);
+
+            (bool, bool, bool) Check_Tabs()
+            {
+                bool a = (V2_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V2_Opts));
+                bool b = (V3_Auto_Adj.Checked && Tabs.TabPages.Contains(Adv_V3_Opts));
+                bool c = (VPL_auto_adj.Checked && Tabs.TabPages.Contains(Vpl_adv));
+                return (a, b, c);
+            }
+
+            bool Check_tlen()
+            {
+                List<int> tl = new List<int>();
+                for (int i = 0; i < tracks; i++) if (NDS.cbm[i] == 1) tl.Add(NDS.Track_Length[i]);
+                if (tl.Count > 0) if (tl.Max() >> 3 < 8000) return true;
+                return false;
+            }
+        }
+
         public static byte[] Compress(byte[] data)
         {
             MemoryStream output = new MemoryStream();
@@ -370,6 +499,22 @@ namespace V_Max_Tool
             try
             {
                 if (Out_density.Items[e.Index] is LineColor item)
+                {
+                    e.Graphics.DrawString(
+                        item.Text,
+                        e.Font,
+                        new SolidBrush(item.Color),
+                    e.Bounds);
+                }
+            }
+            catch { }
+        }
+
+        void Out_Track_Color(object sender, DrawItemEventArgs e)
+        {
+            try
+            {
+                if (out_track.Items[e.Index] is LineColor item)
                 {
                     e.Graphics.DrawString(
                         item.Text,
@@ -732,6 +877,27 @@ namespace V_Max_Tool
             catch { }
         }
 
+        byte[] Create_Empty_Sector(byte fill = 0x01)
+        {
+            int chksum = 0;
+            var buff = new MemoryStream();
+            var wrt = new BinaryWriter(buff);
+            wrt.Write((byte)0x07);
+            wrt.Write((byte)0x4b);
+            chksum ^= 0x4b;
+            while (buff.Length < 260)
+            {
+                if (buff.Length < 257)
+                {
+                    wrt.Write((byte)fill);
+                    chksum ^= 1;
+                }
+                if (buff.Length == 257) wrt.Write((byte)chksum);
+                if (buff.Length > 257) wrt.Write(((byte)0x00));
+            }
+            return buff.ToArray();
+        }
+
         byte[] Decode_CBM_GCR(byte[] gcr)
         {
             byte hnib;
@@ -933,14 +1099,17 @@ namespace V_Max_Tool
             flat_large = new Bitmap(8192, panPic.Height - 16);
             Adv_ctrl.SelectedIndexChanged += new System.EventHandler(Adv_Ctrl_SelectedIndexChanged);
             Out_density.DrawItem += new DrawItemEventHandler(Out_Density_Color);
+            out_track.DrawItem += new DrawItemEventHandler(Out_Track_Color);
             Track_Info.DrawItem += new DrawItemEventHandler(Source_Info_Color);
             sf.DrawItem += new DrawItemEventHandler(Track_Format_Color);
             out_rpm.DrawItem += new DrawItemEventHandler(RPM_Color);
             Out_density.DrawMode = DrawMode.OwnerDrawFixed;
+            out_track.DrawMode = DrawMode.OwnerDrawFixed;
             Track_Info.DrawMode = DrawMode.OwnerDrawFixed;
             out_rpm.DrawMode = DrawMode.OwnerDrawFixed;
             sf.DrawMode = DrawMode.OwnerDrawFixed;
             Out_density.ItemHeight = out_rpm.ItemHeight = sf.ItemHeight = 13;
+            out_track.ItemHeight = out_rpm.ItemHeight = sf.ItemHeight = 13;
             Track_Info.ItemHeight = 15;
             Track_Info.HorizontalScrollbar = true;
             Adj_cbm.Visible = false;
@@ -1003,6 +1172,29 @@ namespace V_Max_Tool
             /// these loaders are guaranteed to work and the loader code has not been modified from original. (these are not "cracked" loaders)
             rak1 = Decompress(XOR(Resources.rak1, 0xab));
             cldr_id = Decompress(XOR(Resources.cyan, 0xc1));
+            /// RapidLok v6/7 patches
+            rl6_t18s3[0, 0] = new byte[] { 0x60, 0x9b, 0x2a, 0x7d };
+            rl6_t18s3[1, 0] = new byte[] { 0xea, 0xf4, 0xb7, 0xb3, 0xba };
+            rl6_t18s3[2, 0] = new byte[] { 0x75, 0x73, 0xdc, 0x3d, 0x27, 0xd6 };
+            rl6_t18s3[3, 0] = new byte[] { 0x18, 0x28, 0x9b, 0x95, 0x64, 0x00, 0xa5, 0xc7, 0xc2, 0x27 };
+            rl6_t18s3[4, 0] = new byte[] { 0xf9, 0xeb, 0x63 };
+            rl6_t18s3[0, 1] = new byte[] { 0x68, 0x95, 0x56, 0xcb };
+            rl6_t18s3[1, 1] = new byte[] { 0x82, 0xae, 0xeb, 0x93, 0x46 };
+            rl6_t18s3[2, 1] = new byte[] { 0xa5, 0xf3, 0xb3, 0x8a, 0xc3, 0xd6 };
+            rl6_t18s3[3, 1] = new byte[] { 0x1b, 0x12, 0x68, 0xb5, 0xb4, 0x01, 0xa5, 0x83, 0x83, 0xdc };
+            rl6_t18s3[4, 1] = new byte[] { 0xf9, 0x3c, 0x63 };
+            rl6_t18s6[0, 0] = new byte[] { 0x91, 0xb3, 0x7f, 0x92, 0xbe, 0xe9, 0x0c, 0x92, 0xfd, 0xcc, 0x24, 0x38, 0x02, 0x5a, 0xf1, 0x3e, 0x27, 0x51,
+                                           0x52, 0x43, 0x9c, 0xd3, 0x93, 0x23, 0xca, 0x5d, 0x24, 0x7d, 0x31};
+            rl6_t18s6[0, 1] = new byte[] { 0x32, 0x36, 0xe8, 0x0e, 0x33, 0x71, 0x70, 0x3a, 0xe0, 0xdf, 0x3d, 0x57, 0xd7, 0xb3, 0xcc, 0x2d, 0x0a, 0x4d,
+                                           0x87, 0x06, 0x97, 0x74, 0xb2, 0x7a, 0x75, 0x83, 0x56, 0x9f, 0x33};
+            rl2_t18s9[0, 0] = new byte[] { 0x75, 0xf3, 0x7f, 0x9b, 0xb9 };
+            rl2_t18s9[1, 0] = new byte[] { 0xa9, 0xd5, 0x95, 0xfa, 0x9a };
+            rl2_t18s9[0, 1] = new byte[] { 0x75, 0xf3, 0xef, 0x5b, 0xa9 };
+            rl2_t18s9[1, 1] = new byte[] { 0xa9, 0xd5, 0xdc, 0xdb, 0xea };
+            rl1_t18s9[0, 0] = new byte[] { 0xd5, 0x5e, 0xeb, 0xb7, 0xdb };
+            rl1_t18s9[1, 0] = new byte[] { 0x3c, 0xcf, 0x3e, 0xd6, 0x96 };
+            rl1_t18s9[0, 1] = new byte[] { 0xd5, 0x5e, 0x7b, 0xb6, 0xdb };
+            rl1_t18s9[1, 1] = new byte[] { 0x3c, 0xcd, 0x5a, 0xdd, 0x56 };
             Img_Q.DataSource = Img_Quality;
             Img_Q.SelectedIndex = 2;
             Width = PreferredSize.Width;
@@ -1037,7 +1229,7 @@ namespace V_Max_Tool
             manualRender = M_render.Visible = Cores <= 3;
             if (Cores < 2) Img_Q.SelectedIndex = 0;
             //File.WriteAllBytes($@"c:\test\compressed\cyan.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cyan")), 0xc1));
-            //File.WriteAllBytes($@"c:\test\compressed\rak1.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rak1")), 0xab));
+            //File.WriteAllBytes($@"c:\test\compressed\rak1.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rak2")), 0xab));
             //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
             //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
             //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
@@ -1170,13 +1362,13 @@ namespace V_Max_Tool
                 out_track.Items.Clear();
                 Out_density.Items.Clear();
 
-                out_track.Height = Out_density.Height = out_size.Height = out_dif.Height = ss.Height = sf.Height = out_rpm.Height = out_size.PreferredHeight;
-                sl.Height = strack.Height = sl.Height = sd.Height = sl.PreferredHeight; // (items * 12);
+                out_track.Height = Out_density.Height = out_size.Height = out_dif.Height = out_rpm.Height = out_size.PreferredHeight;
+                sl.Height = strack.Height = sl.Height = sd.Height = ss.Height = sf.Height = sl.PreferredHeight; // (items * 12);
             }
             Make_Visible();
             outbox.Visible = inbox.Visible = !r;
-            out_track.Height = Out_density.Height = out_size.Height = out_dif.Height = ss.Height = sf.Height = out_rpm.Height = out_size.PreferredHeight;
-            sl.Height = strack.Height = sl.Height = sd.Height = sl.PreferredHeight; // (items * 12);
+            out_track.Height = Out_density.Height = out_size.Height = out_dif.Height = out_rpm.Height = out_size.PreferredHeight;
+            sl.Height = strack.Height = sl.Height = sd.Height = ss.Height = sf.Height = sl.PreferredHeight; // (items * 12);
             outbox.Height = outbox.PreferredSize.Height;
             inbox.Height = inbox.PreferredSize.Height;
             if (clear_batch_list) Drag_pic.Visible = (r && nofile);
@@ -1206,5 +1398,4 @@ namespace V_Max_Tool
             }
         }
     }
-
 }

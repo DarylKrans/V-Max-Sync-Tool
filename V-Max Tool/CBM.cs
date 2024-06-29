@@ -160,13 +160,35 @@ namespace V_Max_Tool
             void Compare(int p)
             {
                 d = Flip_Endian(Bit2Byte(source, pos, comp));
+                bool skip = false;
+                if (pos == 0 && d[0] == 0x52)
+                {
+                    int test = pos;
+                    int sc = 0;
 
-                if (d[0] == 0x52)
+                    while (test < 3000)
+                    {
+                        if (source[test]) sc++;
+                        if (!source[test])
+                        {
+                            if (sc > 12)
+                            {
+                                byte[] dd = Flip_Endian(Bit2Byte(source, test, comp));
+                                if (dd[0] != 0x52) break;
+                                if (dd[0] == 0x52) { skip = true; break; }
+                            }
+                            sc = 0;
+                        }
+                        test++;
+                    }
+                }
+                if (d[0] == 0x52 && !skip && pos + 80 < source.Length)
                 {
                     for (int i = 1; i < sz.Length; i++) d[i] &= sz[i];
                     h = Hex_Val(d);
                     dec_hdr = Decode_CBM_GCR(Flip_Endian(Bit2Byte(source, pos, 80)));
                     sect = Convert.ToInt32(dec_hdr[2]);
+
                     if (dec_hdr[2] < 21 && (dec_hdr[3] > 0 && dec_hdr[3] < 43))
                     {
                         if (!list.Any(s => s == sect))
@@ -381,6 +403,83 @@ namespace V_Max_Tool
             }
         }
 
+        byte[] Replace_CBM_Sector(byte[] data, int sector, byte[] new_sector, byte[] padding = null)
+        {
+            if (new_sector.Length == 256) new_sector = Build_Sector(new_sector);
+            BitArray source = new BitArray(Flip_Endian(data));
+            BitArray sec = new BitArray(Flip_Endian(new_sector));
+            BitArray pad = new BitArray(0);
+            if (padding != null) pad = new BitArray(Flip_Endian(padding));
+            int pos = 0;
+            int sector_data = (325 * 8);
+            bool sector_marker = false;
+            bool sector_found = false;
+            bool sync = false;
+            int sync_count = 0;
+            Compare();
+            while (pos < source.Length - 32)
+            {
+                if (source[pos])
+                {
+                    sync_count++;
+                    if (sync_count == 15) sync = true;
+                }
+                if (!source[pos])
+                {
+                    if (sync) sector_marker = Compare();
+                    if (pos + sector_data < source.Length)
+                    {
+                        if (sync && sector_found && !sector_marker)
+                        {
+                            for (int i = 0; i < sec.Count; i++) source[pos + i] = sec[i];
+                            if (pad.Length > 0)
+                            {
+                                pos += sec.Length;
+                                for (int i = 0; i < pad.Count; i++) source[pos + i] = pad[i];
+                            }
+                            return Flip_Endian(Bit2Byte(source));
+                        }
+                    }
+                    sync = false;
+                    sync_count = 0;
+                }
+                pos++;
+            }
+            return data;
+
+            bool Compare()
+            {
+                int cl = 5;
+                byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
+                if (d[0] == 0x52)
+                {
+                    byte[] g = Decode_CBM_GCR(d);
+                    if (g[3] > 0 && g[3] < 43)
+                    {
+                        if ((g[2] == sector)) { sector_found = true; return true; }
+                        pos += sector_data;
+                    }
+                }
+                return false;
+            }
+
+            byte[] Build_Sector(byte[] sect)
+            {
+                int cksum = 0;
+                cksum = 0;
+                for (int i = 0; i < sect.Length; i++) cksum ^= sect[i];
+                MemoryStream buffer = new MemoryStream();
+                BinaryWriter write = new BinaryWriter(buffer);
+                write.Write((byte)0x07);
+                write.Write(sect);
+                write.Write((byte)cksum);
+                write.Write((byte)0x00);
+                write.Write((byte)0x00);
+                return Encode_CBM_GCR(buffer.ToArray());
+            }
+        }
+
+
         (bool, int) Find_Sector(BitArray source, int sector, int pos = -1)
         {
             bool sector_found;
@@ -576,7 +675,7 @@ namespace V_Max_Tool
             byte[] sync = new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff };
             byte[] dir_s0 = Encode_CBM_GCR(T18S0());
             byte[] dir_s1 = Encode_CBM_GCR(T18S1());
-            byte[] blank = Encode_CBM_GCR(Empty_Sector());
+            byte[] blank = Encode_CBM_GCR(Create_Empty_Sector());
             for (int i = 0; i < Convert.ToInt32(BD_tracks.Value); i++)
             {
                 MemoryStream buffer = new MemoryStream();
@@ -678,27 +777,6 @@ namespace V_Max_Tool
                     used_sectors[i] = Flip_Endian(used_sectors[i]);
                     wrt.Write(bf[i]);
                     wrt.Write(used_sectors[i]);
-                }
-                return buff.ToArray();
-            }
-
-            byte[] Empty_Sector()
-            {
-                int chksum = 0;
-                var buff = new MemoryStream();
-                var wrt = new BinaryWriter(buff);
-                wrt.Write((byte)0x07);
-                wrt.Write((byte)0x4b);
-                chksum ^= 0x4b;
-                while (buff.Length < 260)
-                {
-                    if (buff.Length < 257)
-                    {
-                        wrt.Write((byte)0x01);
-                        chksum ^= 1;
-                    }
-                    if (buff.Length == 257) wrt.Write((byte)chksum);
-                    if (buff.Length > 257) wrt.Write(((byte)0x00));
                 }
                 return buff.ToArray();
             }

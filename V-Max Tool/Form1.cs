@@ -14,7 +14,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
-        private readonly string ver = " v0.9.97.0 (beta) Test Build";
+        private readonly string ver = " v0.9.97.5 (beta)";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
@@ -52,8 +52,10 @@ namespace V_Max_Tool
         public Form1()
         {
             InitializeComponent();
-            //this.Text = $"Un-Master Utility {ver}";
             this.Text = $"Re-Master (Experimental) {ver}";
+            //byte[] test = new byte[] { 0x52, 0x55, 0xa5, 0x29, 0x4b, 0x77, 0x5d, 0x65, 0x55, 0x55 };
+            //test = Decode_CBM_GCR(test);
+            //Text = Hex_Val(test);
             Init();
             Set_ListBox_Items(true, true);
         }
@@ -232,25 +234,49 @@ namespace V_Max_Tool
 
         void Do_work(bool out_type)
         {
-            Stopwatch parse = Parse_Nib_Data();
+            Stopwatch parse = new Stopwatch();
+            Stopwatch proc = new Stopwatch();
+            try
+            {
+                parse = Parse_Nib_Data();
+            }
+            catch { }
             if (!error)
             {
                 Invoke(new Action(() =>
                 {
-                    Stopwatch proc = Process_Nib_Data(true, false, true);
-                    if (DB_timers.Checked) Invoke(new Action(() => label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} ms, Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms"));
-                    Set_ListBox_Items(false, false);
-                    Get_Disk_Directory();
-                    linkLabel1.Visible = false;
-                    if (Disk_Dir.Checked) Disk_Dir.Focus();
-                    Out_Type = out_type;
-                    Save_Disk.Visible = true;
-                    Source.Visible = Output.Visible = true;
-                    label1.Text = $"{fname}{fext}";
-                    M_render.Enabled = true;
-                    Import_File.Visible = false;
-                    Adv_ctrl.Enabled = true;
-                    Disable_Core_Controls(false);
+                    try
+                    {
+                        proc = Process_Nib_Data(true, false, true);
+                        if (DB_timers.Checked) Invoke(new Action(() => label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} ms, Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms"));
+                        Set_ListBox_Items(false, false);
+                        Get_Disk_Directory();
+                        linkLabel1.Visible = false;
+                        if (Disk_Dir.Checked) Disk_Dir.Focus();
+                        Out_Type = out_type;
+                        Save_Disk.Visible = true;
+                        Source.Visible = Output.Visible = true;
+                        label1.Text = $"{fname}{fext}";
+                        M_render.Enabled = true;
+                        Import_File.Visible = false;
+                        Adv_ctrl.Enabled = true;
+                        Disable_Core_Controls(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!batch)
+                        {
+                            using (Message_Center center = new Message_Center(this)) // center message box
+                            {
+                                string t = "Something went wrong!";
+
+                                string s = ex.Message;
+                                s = "Image is corrupt and cannot be opened";
+                                MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }
+                            Reset_to_Defaults();
+                        }
+                    }
                 }));
             }
 
@@ -271,26 +297,10 @@ namespace V_Max_Tool
             int i = 100;
             if (tracks > 0 && NDS.Track_Data.Length > 0)
             {
-                if (!NDS.cbm.Any(x => x == 9))
+                i = Array.FindIndex(NDS.cbm, s => s == 4);
+                if (i < 100 && i > -1)
                 {
-                    i = Array.FindIndex(NDS.cbm, s => s == 4);
-                    if (i < 100 && i > -1)
-                    {
-                        Fix_Loader_Option(!busy, i);
-                    }
-                }
-                else
-                {
-                    //int t = 0;
-                    //while (NDS.cbm[t] != 9) t++;
-                    //bool l = f_load.Checked;
-                    //RainbowArts(NDS.Track_Data[t], l);
-                    out_track.Items.Clear();
-                    out_size.Items.Clear();
-                    out_dif.Items.Clear();
-                    Out_density.Items.Clear();
-                    out_rpm.Items.Clear();
-                    Process_Nib_Data(true, false, true);
+                    Fix_Loader_Option(!busy, i);
                 }
             }
         }
