@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using System.Windows.Forms;
 
 namespace V_Max_Tool
@@ -99,30 +97,50 @@ namespace V_Max_Tool
             else return data;
         }
 
-        (bool, byte[]) Radwar(byte[] data, bool fix = false)
+        (bool, byte[], int) Radwar(byte[] data, bool fix = false, int sector = -1)
         {
             int rw = 0;
             bool rad = false;
             BitArray source = new BitArray(Flip_Endian(data));
-            for (int i = 0; i < data.Length - 1; i++)
+            byte[] temp = new byte[0];
+            bool f = false;
+            int pos = 0;
+            if (!fix && sector == -1)
             {
-                if (blank.Any(x => x == data[i]))
+                for (sector = 2; sector < 19; sector++)
                 {
-                    rw++;
-                    if (rw > 4) { rad = true; break; }
+                    (f, pos) = Find_Sector(source, sector);
+                    if (f)
+                    {
+                        rw = 0;
+                        (temp, f) = Decode_CBM_Sector(data, sector, false, source);
+                        for (int j = 0; j < temp.Length - 1; j++)
+                        {
+                            if (blank.Any(x => x == temp[j]))
+                            {
+                                rw++;
+                                if (rw > 4) { rad = true; break; }
+                            }
+                        }
+                    }
+                    if (rad) break;
                 }
             }
-            if (rad && fix)
+            else if (sector >= 0) Fix(sector);
+            return (rad, data, sector);
+
+            void Fix(int sec)
             {
-                for (int i = 0; i < data.Length - 1; i++)
+                (temp, f) = Decode_CBM_Sector(data, sec, false, source);
+                for (int k = 0; k < temp.Length - 1; k++)
                 {
-                    if (blank.Any(x => x == data[i]))
+                    if (blank.Any(x => x == temp[k]) && temp[k] != 0x00)
                     {
-                        data[i] = 0x00;
+                        temp[k] = 0x00;
                     }
                 }
+                data = Replace_CBM_Sector(data, sec, temp);
             }
-            return (rad, data);
         }
 
         byte[] JvB(byte[] data)
@@ -162,7 +180,8 @@ namespace V_Max_Tool
             if (NDS.cbm[c_cyn] == 1) cyan = Find_Cyan_Sector(NDS.Track_Data[c_cyn]);
             if (cyan && !patch)
             {
-                VM_Ver.Text = "Protection: Cyan Loader";
+                //VM_Ver.Text = "Protection: Cyan Loader";
+                NDS.Prot_Method = "Protection: Cyan Loader";
                 if (NDS.cbm[c_v1] != 1) (NDS.Track_Data[c_gcr], cpt) = Cyan_t32_GCR_Fix(NDS.Track_Data[c_gcr]);
                 if (NDS.cbm[w_trk] == 1 && NDS.Track_ID[w_trk] == 40)
                 {

@@ -26,7 +26,7 @@ namespace V_Max_Tool
         public static byte[][] Disk_ID = new byte[0][];
         public static int[] Gap_Sector = new int[0];
         public static int[] Track_ID = new int[0];
-        //public static int[][] sync_length = new int[0][];
+        public static string Prot_Method = string.Empty;
         //public static byte[][] sec_header = new byte[0][];
     }
 

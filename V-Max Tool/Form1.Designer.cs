@@ -162,6 +162,7 @@
             this.sl = new System.Windows.Forms.ListBox();
             this.ss = new System.Windows.Forms.ListBox();
             this.sf = new System.Windows.Forms.ListBox();
+            this.RL_Fix = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.V2_hlen)).BeginInit();
             this.Tabs.SuspendLayout();
             this.Main.SuspendLayout();
@@ -416,6 +417,7 @@
             // VBS_info
             // 
             this.VBS_info.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.VBS_info.Controls.Add(this.RL_Fix);
             this.VBS_info.Controls.Add(this.Cust_Density);
             this.VBS_info.Controls.Add(this.VM_Ver);
             this.VBS_info.Controls.Add(this.f_load);
@@ -1834,6 +1836,17 @@
             this.sf.Size = new System.Drawing.Size(115, 1002);
             this.sf.TabIndex = 26;
             // 
+            // RL_Fix
+            // 
+            this.RL_Fix.AutoSize = true;
+            this.RL_Fix.Location = new System.Drawing.Point(8, 62);
+            this.RL_Fix.Name = "RL_Fix";
+            this.RL_Fix.Size = new System.Drawing.Size(238, 29);
+            this.RL_Fix.TabIndex = 13;
+            this.RL_Fix.Text = "Patch out Protection";
+            this.RL_Fix.UseVisualStyleBackColor = true;
+            this.RL_Fix.CheckedChanged += new System.EventHandler(this.RL_Fix_CheckedChanged);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
@@ -2040,6 +2053,7 @@
         private System.Windows.Forms.Label label13;
         private System.Windows.Forms.CheckBox DB_core_override;
         private System.Windows.Forms.NumericUpDown DB_cores;
+        private System.Windows.Forms.CheckBox RL_Fix;
     }
 }
 

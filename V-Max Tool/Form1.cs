@@ -14,7 +14,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
-        private readonly string ver = " v0.9.97.5 (beta)";
+        private readonly string ver = " v0.9.97.6 (beta)";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
@@ -642,6 +642,20 @@ namespace V_Max_Tool
             }
             catch { }
             this.Close();
+        }
+
+        private void RL_Fix_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!busy && RL_Fix.Checked)
+            {
+                RL_Remove_Protection();
+                out_track.Items.Clear();
+                out_size.Items.Clear();
+                out_dif.Items.Clear();
+                Out_density.Items.Clear();
+                out_rpm.Items.Clear();
+                Process_Nib_Data(true, false, false, true); /// false flag instructs the routine NOT to process CBM tracks again
+            }
         }
     }
 }

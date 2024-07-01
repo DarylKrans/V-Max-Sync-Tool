@@ -168,6 +168,7 @@ namespace V_Max_Tool
             NDS.Disk_ID = new byte[len][];
             NDS.Gap_Sector = new int[len];
             NDS.Track_ID = new int[len];
+            NDS.Prot_Method = string.Empty;
             // NDA is the destination or output array
             NDA.Track_Data = new byte[len][];
             NDA.Sector_Zero = new int[len];
@@ -293,6 +294,11 @@ namespace V_Max_Tool
                 if (VPL_rb.Checked || Adj_cbm.Checked || vpadj) fnappend = mod; else fnappend = vorp;
                 vpl_lead = Lead_ptn.SelectedIndex;
             }
+            if (NDS.cbm.Any(x => x == 6))
+            {
+                RL_Fix.Visible = true;
+            }
+            else RL_Fix.Visible = false;
             if (NDS.cbm.Any(ss => ss == 10))
             {
                 if (tracks > 42) end_track = 69; else end_track = 35;
@@ -1195,6 +1201,7 @@ namespace V_Max_Tool
             rl1_t18s9[1, 0] = new byte[] { 0x3c, 0xcf, 0x3e, 0xd6, 0x96 };
             rl1_t18s9[0, 1] = new byte[] { 0xd5, 0x5e, 0x7b, 0xb6, 0xdb };
             rl1_t18s9[1, 1] = new byte[] { 0x3c, 0xcd, 0x5a, 0xdd, 0x56 };
+            RL_Fix.Visible = false;
             Img_Q.DataSource = Img_Quality;
             Img_Q.SelectedIndex = 2;
             Width = PreferredSize.Width;
