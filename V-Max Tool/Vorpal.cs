@@ -394,7 +394,6 @@ namespace V_Max_Tool
                     data_start = leadin;
                     start_found = true;
                     int q = min_skip_len << 3;
-                    //byte[] rcomp;
                     BitArray rcompp = new BitArray(isRealend.Count);
                     while (q < source.Length - (rcompp.Length))
                     {
@@ -431,7 +430,6 @@ namespace V_Max_Tool
                 }
                 pos++;
             }
-
             return false;
         }
     }

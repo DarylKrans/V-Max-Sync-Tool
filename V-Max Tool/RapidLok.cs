@@ -26,11 +26,11 @@ namespace V_Max_Tool
             {
                 int track = 17;
                 if (tracks > 43) track = 34;
-                (NDS.Track_Data[track], rem) = Patch_RapidLok(NDS.Track_Data[track], NDS.sectors[track]);
+                (NDS.Track_Data[track], rem) = Patch_RapidLok(NDS.Track_Data[track]);
             }
         }
 
-        (byte[], string) Patch_RapidLok(byte[] data, int sectors)
+        (byte[], string) Patch_RapidLok(byte[] data)
         {
             bool patched = false;
             bool exist = false;
@@ -96,6 +96,7 @@ namespace V_Max_Tool
             for (int i = 0; i < rl6.Length; i++) if (rl6[i]) r6++;
             for (int i = 0; i < rl2.Length; i++) if (rl2[i]) r2++;
             for (int i = 0; i < rl1.Length; i++) if (rl1[i]) r1++;
+            //Invoke(new Action(() => Text = $"rl6 ({r6}) rl2 ({r2}) rl1 ({r1}) "));
             return (data, p);
 
             void Patch_v2()
@@ -151,7 +152,7 @@ namespace V_Max_Tool
             if (data[s] == 0x6b) s += 200;
             for (int i = s; i < data.Length; i++)
             {
-                if ((data[i] == 0x6b && !blank.Any(x => x == data[i + 1])) && i + 256 < data.Length)
+                if ((data[i] == 0x6b)) // && !blank.Any(x => x == data[i + 1])) && i + 256 < data.Length)
                 {
                     Buffer.BlockCopy(data, i, key, 0, 256);
                     break;
@@ -226,22 +227,21 @@ namespace V_Max_Tool
                     d_start -= diff;
                 }
             } catch { }
-            Build_New();
+            Rebuild_RapidLok_Track();
             a_headers.Add($"track length {adata.Length} start {d_start / 8} end {d_end / 8} pos {pos} {start_found} {end_found} dif {diff}");
 
-            void Build_New()
+            void Rebuild_RapidLok_Track()
             {
+                int den = 0;
+                if (track >= 18) den = 1;
+                int rem = density[den];
                 int sb_sync = 20;   /// <- sets the sync length before the 0x7b sector
                 int id_sync = 40;   /// <- sets the sync length before the Track ID
                 int sz_sync = 60;   /// <- sets the sync length before the first sector
                 int os_sync = 5;    /// <- sets the sync length for all other track sync
-                int head_gap = 10;  /// <- sets the gap length after each sector header before the block sync
-                int tail_gap = 8;   /// <- sets the tail gap after the block data before the next sector header
                 byte snc = 0xff;
                 byte gap = 0x00;
                 byte pad = 0x55;
-                int den = 0;
-                if (track >= 18) den = 1;
                 MemoryStream buffer = new MemoryStream();
                 BinaryWriter write = new BinaryWriter(buffer);
                 int cursec = first_sector;
@@ -256,15 +256,19 @@ namespace V_Max_Tool
                     for (int j = 0; j < id_sync; j++) write.Write((byte)snc);
                     write.Write(tid);   /// <- writes the track ID
                 }
+                rem -= (((int)buffer.Length + sz_sync) + (sectors * (583 + 7 + (os_sync * 2)) - os_sync));
+                rem /= (sectors * 2);
+                int head_gap = rem + 1;   /// <- sets the gap length after each sector header before the block sync
+                int tail_gap = rem;   /// <- sets the tail gap after the block data before the next sector header
                 for (int i = 0; i < sectors; i++)
                 {
                     if (i == 0) for (int j = 0; j < sz_sync; j++) write.Write((byte)snc);
-                    else for (int j = 0; j < os_sync; j++) write.Write((byte)snc);
+                    else for(int j = 0; j < os_sync; j++) write.Write((byte)snc);
                     write.Write(sec_head[cursec]);
-                    for (int j = 0; j < head_gap; j++) write.Write((byte)gap);
+                    for (int j = 0; j < tail_gap; j++) write.Write((byte)gap);
                     for (int j = 0; j < os_sync; j++) write.Write((byte)snc);
                     try { write.Write(sec_data[cursec]); } catch { } /// <- writes the block data and is error-handled in case the block data is missing
-                    for (int j = 0; j < tail_gap; j++) write.Write((byte)gap);
+                    for (int j = 0; j < head_gap; j++) write.Write((byte)gap);
                     cursec++;
                     if (cursec == sectors) cursec = 0;
                 }

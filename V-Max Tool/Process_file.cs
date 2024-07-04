@@ -697,6 +697,7 @@ namespace V_Max_Tool
                         if (r > 300) r = Math.Floor(r);
                         if (VPL_auto_adj.Checked && (tracks >= 43 && i < 33 || tracks <= 42 && i < 18) && NDS.cbm[i] == 5) r = 296.6;
                         if (VPL_auto_adj.Checked && (tracks >= 43 && i > 33 || tracks <= 42 && i > 17) && NDS.cbm[i] == 5) r = 299.0;
+                        if (NDS.cbm[i] == 7) r = 300.0;
                         if (r == 300 && r < 301) color = Color.FromArgb(0, 30, 255);
                         if ((r >= 301 && r < 302) || (r < 300 && r >= 299)) color = Color.DarkGreen;
                         if (r > 302 || (r < 299 && r >= 297)) color = Color.Purple;
@@ -807,7 +808,11 @@ namespace V_Max_Tool
                     int min_snc = 12;   /// minimum sync length to signal this is a sync marker that needs adjusting
                     int ign_snc = 80;   /// ignore sync if it is >= to value
                     var d = 0;
-                    if (track == 18 && NDS.cbm.Any(x => x == 6) && RL_Fix.Checked) RL_Remove_Protection();
+                    if (track == 18 && NDS.cbm.Any(x => x == 6))
+                    { 
+                        if (RL_Fix.Checked) RL_Remove_Protection();
+                        acbm = true;
+                    }
                     if (bmc || acbm)
                     {
                         try
@@ -823,7 +828,6 @@ namespace V_Max_Tool
                             }
                             if (acbm)
                             {
-                                //if ((track == 18 && NDS.cbm.Any(x => x == 5)) || (track == 40 && cyn_ldr))
                                 if ((track == 18 && (NDS.cbm.Any(x => x == 5) || NDS.cbm.Any(x => x == 6))) || (track == 40 && cyn_ldr))
                                 {
                                     if (temp.Length < density[1]) temp = Lengthen_Track(temp);
@@ -857,6 +861,7 @@ namespace V_Max_Tool
                                 }
                             }
                             Set_Dest_Arrays(temp, trk);
+                            //Set_Dest_Arrays(Remove_Weak_Bits(temp), trk);
                         }
                         catch
                         {

@@ -69,6 +69,7 @@ namespace V_Max_Tool
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
             byte[] watermark = Encoding.ASCII.GetBytes($"    ReMaster Utility{ver} https://github.com/DarylKrans/ReMaster-Utility                  ");
+            //byte[] watermark = new byte[0];
             for (int i = 0; i < watermark.Length; i++) if (watermark[i] == 0x20) watermark[i] = 0x00;
             byte[] head = Encoding.ASCII.GetBytes("GCR-1541");
             byte z = 0;
@@ -124,7 +125,7 @@ namespace V_Max_Tool
                 {
                     if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < secF.Length - 1)
                     {
-                        if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
+                        if (i <= trk) write.Write((int)offset + th); // else write.Write((int)0);
                         prev_ofs = offset + th;
                         th += 2;
                         if (DB_g64.Checked) offset += m; else offset += NDG.Track_Data[i].Length;

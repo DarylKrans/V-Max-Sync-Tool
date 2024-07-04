@@ -608,6 +608,12 @@ namespace V_Max_Tool
             else return string.Empty;
         }
 
+        byte[] Remove_Weak_Bits(byte[] data)
+        {
+            for (int i = 0; i < data.Length; i++) if (blank.Any(x => x == data[i])) data[i] = 0x00;
+            return data;
+        }
+
         byte[] Bit2Byte(BitArray bits, int start = 0, int length = -1)
         {
             BitArray temp = new BitArray(0);

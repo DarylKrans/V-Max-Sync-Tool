@@ -31,6 +31,8 @@ namespace V_Max_Tool
         private readonly Brush ldr_brush = new SolidBrush(Color.FromArgb(133, 133, 200));
         private readonly Brush vmx_brush = new SolidBrush(Color.FromArgb(30, 200, 30));
         private readonly Brush vpl_brush = new SolidBrush(Color.FromArgb(30, 200, 200));
+        private readonly Brush rpl_brush = new SolidBrush(Color.FromArgb(200, 200, 30));
+        private readonly Brush key_brush = new SolidBrush(Color.FromArgb(30, 200, 30));
         private readonly Color Write_face = Color.FromArgb(41, 40, 36);
         private readonly Color Inner_face = Color.FromArgb(50, 49, 44);
 
@@ -230,13 +232,12 @@ namespace V_Max_Tool
             }
         }
 
-        private Bitmap Draw_Track(Bitmap bmp, int max_Height, byte[] data, int trk, int s, int e, int tf, byte[] v2i, int d, bool w, int[] v)
+        private Bitmap Draw_Track(Bitmap bmp, int max_Height, byte[] tdata, int trk, int s, int e, int tf, byte[] v2i, int d, bool w, int[] v)
         {
-            byte[] tdata = new byte[data.Length];
-            Buffer.BlockCopy(data, 0, tdata, 0, data.Length);
             Pen pen;
             bool v2 = false;
             bool v5 = false;
+            bool rl = false;
             int t_height = (max_Height / 42) - 4;
             for (int j = 0; j < tdata.Length; j++)
             {
@@ -252,7 +253,9 @@ namespace V_Max_Tool
                     else pen = new Pen(Color.FromArgb(30, tdata[j], 30));
                     if (tf == 2 && tdata[j] == v2i[0]) v2 = true;
                     if (v2 && tdata[j] == v2i[1]) v2 = false;
-                    if (Show_sec.Checked && ((tf == 3 && tdata[j] == 0x49) || v2)) pen = new Pen(Color.FromArgb(30, 30, 255));
+                    if (tf == 6 && tdata[j] == 0x00) rl = true;
+                    if (rl && tdata[j] != 0x00) rl = false;
+                    if (Show_sec.Checked && ((tf == 3 && tdata[j] == 0x49) || v2 || rl)) pen = new Pen(Color.FromArgb(30, 30, 255));
                     if (tf == 5 && Show_sec.Checked)
                     {
                         if ((Cap_margins.Checked && (j > s || j < e)) || !Cap_margins.Checked)
@@ -273,7 +276,9 @@ namespace V_Max_Tool
                     else pen = new Pen(Color.FromArgb(30, tdata[j], 30));
                     if (tf == 2 && tdata[j] == v2i[0]) v2 = true;
                     if (v2 && tdata[j] == v2i[1]) v2 = false;
-                    if (Show_sec.Checked && ((tf == 3 && tdata[j] == 0x49) || v2)) pen = new Pen(Color.FromArgb(30, 30, 255));
+                    if (tf == 6 && tdata[j] == 0x00) rl = true;
+                    if (rl && tdata[j] != 0x00) rl = false;
+                    if (Show_sec.Checked && ((tf == 3 && tdata[j] == 0x49) || v2 || rl)) pen = new Pen(Color.FromArgb(30, 30, 255));
                     if (tf == 5 && Show_sec.Checked)
                     {
                         if ((Cap_margins.Checked && (j > s || j < e)) || !Cap_margins.Checked)
@@ -309,6 +314,7 @@ namespace V_Max_Tool
                     col = Color.FromArgb(30, sub - d, 30);
                     if (track_fmt == 4) col = Color.FromArgb((int)(d / 1.5f), (int)(d / 1.5f), d);
                     if (track_fmt == 5) col = Color.FromArgb(0, (int)(d / 1.5f), (int)(d / 1.5f));
+                    if (track_fmt == 6) col = Color.FromArgb((int)(d / 1.5f), (int)(d / 1.5f), 0);
                 }
             }
             else col = Color.FromArgb(30, d, 30);
@@ -336,7 +342,11 @@ namespace V_Max_Tool
                 if (v5) col = Color.FromArgb((int)(d / 1.5f), (int)(d / 1.5f), (int)(d / 1.5f));
                 //else col = Color.FromArgb(0, (int)(d / 1.5f), (int)(d / 1.5f));
             }
-
+            if (track_fmt == 6 && Show_sec.Checked)
+            {
+                if (d == 0xff) col = Color.FromArgb(30, 30, (int)(d));
+                if (d == 0x7b) col = Color.FromArgb(128, 130, 188);
+            }
             return (col, v2, v5);
         }
 
@@ -487,6 +497,14 @@ namespace V_Max_Tool
                 {
                     Add_Text(circle.Bitmap, "Vorpal", Color.FromArgb(0, 40, 40, 40), vpl_brush, new Font("Ariel", 11 * m), (int)(1 * m), (int)(18 * m), (int)(60 * m), (int)(17 * m));
                 }
+                if (NDS.cbm.Any(s => s == 6))
+                {
+                    Add_Text(circle.Bitmap, "RapidLok", Color.FromArgb(0, 40, 40, 40), rpl_brush, new Font("Ariel", 11 * m), (int)(1 * m), (int)(18 * m), (int)(80 * m), (int)(17 * m));
+                    Add_Text(circle.Bitmap, "Key", Color.FromArgb(0, 40, 40, 40), key_brush, new Font("Ariel", 11 * m), (int)(1 * m), (int)(35 * m), (int)(80 * m), (int)(17 * m));
+                }
+                //if (NDS.cbm.Any(s => s == 7) )
+                //{
+                //}
             }
         }
 
