@@ -208,6 +208,11 @@ namespace V_Max_Tool
                             if (!sec_zero && dec_hdr[2] == 0x00)
                             {
                                 Buffer.BlockCopy(dec_hdr, 4, Disk_ID, 0, 4);
+                                if (track == 17)
+                                {
+                                    NDS.t18_ID = new byte[4];
+                                    Buffer.BlockCopy(dec_hdr, 4, NDS.t18_ID, 0, 4);
+                                }
                                 sector_zero = pos;
                                 sec_zero = true;
                             }

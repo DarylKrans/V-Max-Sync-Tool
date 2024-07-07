@@ -24,6 +24,7 @@ namespace V_Max_Tool
         public static byte[] Loader = new byte[0];
         public static int[] Total_Sync = new int[0];
         public static byte[][] Disk_ID = new byte[0][];
+        public static byte[] t18_ID = new byte[0];
         public static int[] Gap_Sector = new int[0];
         public static int[] Track_ID = new int[0];
         public static string Prot_Method = string.Empty;
@@ -326,4 +327,23 @@ namespace V_Max_Tool
             e.Graphics.DrawString(this.Text, this.Font, new SolidBrush(this.ForeColor), textRect);
         }
     }
+    public static class FastArray
+    {
+        [DllImport("msvcrt.dll",
+                  EntryPoint = "memset",
+                  CallingConvention = CallingConvention.Cdecl,
+                  SetLastError = false)]
+        private static extern IntPtr MemSet(IntPtr dest, int c, int count);
+
+        public static byte[] Init(int size, byte value)
+        {
+            if (size < 0) size = 0;
+            byte[] temp = new byte[size];
+            GCHandle gch = GCHandle.Alloc(temp, GCHandleType.Pinned);
+            MemSet(gch.AddrOfPinnedObject(), value, temp.Length);
+            gch.Free();
+            return temp;
+        }
+    }
+
 }

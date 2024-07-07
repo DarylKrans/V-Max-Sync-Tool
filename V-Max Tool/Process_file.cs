@@ -402,7 +402,8 @@ namespace V_Max_Tool
                         }
                         if (NDS.cbm[i] == 6)
                         {
-                            Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]} {tr} {le} ({NDG.Track_Data[i].Length})" });
+                            //Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]} {tr} {le} ({NDG.Track_Data[i].Length})" });
+                            Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]} {tr} {le} ({NDS.Track_Length[i]})" });
                             for (int j = 0; j < f[i].Length; j++)
                             {
                                 Track_Info.Items.Add(new LineColor { Color = Color.DarkMagenta, Text = f[i][j] });
@@ -433,13 +434,13 @@ namespace V_Max_Tool
                     if (v3) NDS.Prot_Method = "Protection : V-Max v3";
                     if (!v2 && !v3 && NDS.cbm.Any(x => x == 4)) NDS.Prot_Method = "Protection: V-Max v2 CBM";
                     if (!v2 && !v3 && !NDS.cbm.Any(x => x == 4)) NDS.Prot_Method = "No Protection or CBM exploit";
+                    if (fat) NDS.Prot_Method = "Protection: Fat-Tracks";
                     if (!v2 && !v3 && NDS.cbm.Any(x => x == 6)) NDS.Prot_Method = "Protection: RapidLok";
                     if (NDS.cbm.Any(s => s == 5)) NDS.Prot_Method = "Protection: Vorpal";
                     if (NDS.cbm.Any(x => x == 8)) NDS.Prot_Method = "Protection: (EA) PirateSlayer";
                     if (NDS.cbm.Any(x => x == 9)) NDS.Prot_Method = "Protection: Rainbow Arts";
                     if (NDS.cbm.Any(x => x == 10)) NDS.Prot_Method = "Protection: Microprose";
                     if (NDS.cbm.Any(x => x == 11)) NDS.Prot_Method = "Protection: GMA";
-                    if (fat) NDS.Prot_Method = "Protection: Fat-Tracks";
                     Update();
                 }));
             }
@@ -564,9 +565,9 @@ namespace V_Max_Tool
                         NDS.D_Start[trk],
                         NDS.D_End[trk], q,
                         NDS.sectors[trk],
-                        f[trk]) = RapidLok_Track_Info(NDS.Track_Data[trk], trk);
+                        f[trk]) = RapidLok_Track_Info(NDS.Track_Data[trk], trk, false, new byte[] { 0x00 });
                     NDS.Track_Length[trk] = q;
-                    Set_Dest_Arrays(temp, trk);
+                    //Set_Dest_Arrays(temp, trk);
                 }
                 if (NDS.cbm[trk] == 7)
                 {
@@ -625,7 +626,7 @@ namespace V_Max_Tool
                 if (NDS.cbm.Any(s => s == 4)) f_load.Visible = true; else f_load.Visible = false;
                 Check_Adv_Opts();
                 Query_Track_Formats();
-                (v2a, v3a, vpa, v2adj, v2cust, v3adj, v3cust, cbmadj, sl, fl, vpadj, rb_vm, vpl_lead) = Set_Adjust_Options(rb_vm);
+                (v2a, v3a, vpa, v2adj, v2cust, v3adj, v3cust, cbmadj, sl, fl, vpadj, rb_vm, vpl_lead) = Set_Adjust_Options(rb_vm, cyan);
                 if (new_disk) fnappend = string.Empty;
                 busy = false;
             }));
@@ -649,7 +650,6 @@ namespace V_Max_Tool
             }
             foreach (var thread in Task) thread?.Join();
             if (ldt < tracks) Process(ldt, 0, false); /// (false) tells Process not to release the thread because it isn'format in a Semaphore or a thread
-            //if (RL_Fix.Visible && RL_Fix.Checked && NDS.cbm.Any(x => x == 6)) RL_Remove_Protection();
             if ((VM_Ver.Text == "No Protection or CBM exploit" || VM_Ver.Text.Contains("Radwar")) && rad)
             {
                 byte[] temp = new byte[0];
@@ -792,7 +792,7 @@ namespace V_Max_Tool
                 {
                     NDG.Fat_Track[trk] = true;
                     if (fat_trk < 0) fat_trk = track;
-                    if (track != NDS.Track_ID[trk] && track >= 34) end_track = trk + htk;
+                    if (track != NDS.Track_ID[trk] && track >= 34 && !NDS.cbm.Any(x => x == 11)) end_track = trk + htk;
                 }
                 byte[] temp = new byte[0];
                 /// --- Handles a Protection found on Jordan vs Bird (EA) --------
@@ -809,7 +809,7 @@ namespace V_Max_Tool
                     int ign_snc = 80;   /// ignore sync if it is >= to value
                     var d = 0;
                     if (track == 18 && NDS.cbm.Any(x => x == 6))
-                    { 
+                    {
                         if (RL_Fix.Checked) RL_Remove_Protection();
                         acbm = true;
                     }
@@ -977,26 +977,11 @@ namespace V_Max_Tool
 
             void Process_RapidLok(int trk)
             {
-                byte[] temp = new byte[0];
-                int sync = 0;
-                for (int i = 0; i < NDG.Track_Data[trk].Length; i++)
-                {
-                    if (NDG.Track_Data[trk][i] == 0xff) sync++;
-                    else
-                    {
-                        try
-                        {
-                            if (sync > 12 && (NDG.Track_Data[trk][i] == 0x55 && NDG.Track_Data[trk][i + 1] == 0x7b))
-                            {
-                                temp = Rotate_Left(NDG.Track_Data[trk], i - (sync - 1) - 8);
-                                Set_Dest_Arrays(temp, trk);
-                                break;
-                            }
-                        }
-                        catch { }
-                        sync = 0;
-                    }
-                }
+                byte[] temp;
+                int q; int s; int e; int b;
+                string[] f;
+                (temp, s, e, q, b, f) = RapidLok_Track_Info(NDS.Track_Data[trk], trk, true, NDS.t18_ID);
+                Set_Dest_Arrays(temp, trk);
             }
 
             void Process_Rainbow(int trk)
@@ -1130,20 +1115,33 @@ namespace V_Max_Tool
                     if (d[i] == 0xff) snc++;
                     try
                     {
-                        if (d[i] == 0xff && (d[i + 1] == gma[1] || d[i + 1] == gma2[1]))
+                        if (d[i] == 0xff && d[i + 1] == ssp[1])
                         {
-                            byte[] gm = new byte[gma.Length];
-                            byte[] gm2 = new byte[gma2.Length];
+                            byte[] ss = new byte[ssp.Length];
+                            Buffer.BlockCopy(d, i, ss, 0, ss.Length);
+                            if (Match(ssp, ss))
+                            {
+                                int pad = 0;
+                                for (int j = 0; j < d.Length; j++)
+                                {
+                                    if (d[j] == 0x55 || d[j] == 0xaa) pad++;
+                                    if (pad > 3000) return (11, false);
+                                }
+                            }
+                        }
+                        if ((d[i] == gmt[0]))
+                        {
+                            byte[] gm = new byte[gmt.Length];
                             try
                             {
-                                Buffer.BlockCopy(d, i, gm, 0, gma.Length);
-                                Buffer.BlockCopy(d, i, gm2, 0, gma2.Length);
-                                if (Match(gm, gma) || Match(gm2, gma2))
+                                Buffer.BlockCopy(d, i, gm, 0, gmt.Length);
+                                for (int j = 1; j < gmt.Length; j++) gm[j] &= gmt[j];
+                                if (Match(gm, gmt)) // || Match(gm, gma3))
                                 {
                                     int pad = 0;
                                     for (int j = 0; j < d.Length; j++)
                                     {
-                                        if (d[j] == 0x55) pad++;
+                                        if (d[j] == 0x55 || d[j] == 0xaa) pad++;
                                         if (pad > 3000) return (11, false);
                                     }
                                 }
@@ -1186,7 +1184,7 @@ namespace V_Max_Tool
                                 while (ps < data.Length)
                                 {
                                     if (data[ps] == 0x55) sc++;
-                                    if (sc > 4000) return (9, false);
+                                    if (sc > 4000 && trk < 41) return (9, false);
                                     ps++;
                                 }
                             }

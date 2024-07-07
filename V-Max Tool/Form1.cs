@@ -42,7 +42,7 @@ namespace V_Max_Tool
         private int fat_trk = -1;
         private int Cores;
         private int Default_Cores;
-        readonly System.Windows.Forms.ToolTip tips = new System.Windows.Forms.ToolTip();
+        private readonly ToolTip tips = new System.Windows.Forms.ToolTip();
         private List<string> LB_File_List = new List<string>();
         private Semaphore Task_Limit = new Semaphore(3, 3);
         Thread Worker_Main;
@@ -53,8 +53,9 @@ namespace V_Max_Tool
         {
             InitializeComponent();
             this.Text = $"Re-Master (Experimental) {ver}";
-            //byte[] test = new byte[] { 0x52, 0x55, 0xa5, 0x29, 0x4b, 0x77, 0x5d, 0x65, 0x55, 0x55 };
-            //test = Decode_CBM_GCR(test);
+            //byte[] gm = new byte[] { 0x69, 0x50, 0x50, 0xa0, 0xa0 };
+            //byte[] test = new byte[] { 0x69, 0x59, 0x57, 0xa9, 0xa7 };
+            //test[1] &= gm[1]; test[2] &= gm[2]; test[3] &= gm[3]; test[4] &= gm[4];
             //Text = Hex_Val(test);
             Init();
             Set_ListBox_Items(true, true);
@@ -648,13 +649,14 @@ namespace V_Max_Tool
         {
             if (!busy && RL_Fix.Checked)
             {
-                RL_Remove_Protection();
-                out_track.Items.Clear();
-                out_size.Items.Clear();
-                out_dif.Items.Clear();
-                Out_density.Items.Clear();
-                out_rpm.Items.Clear();
-                Process_Nib_Data(true, false, false, true); /// false flag instructs the routine NOT to process CBM tracks again
+                    if (NDS.cbm.Any(x => x == 6)) RL_Remove_Protection();
+                    else Check_Cyan_Loader(true);
+                    out_track.Items.Clear();
+                    out_size.Items.Clear();
+                    out_dif.Items.Clear();
+                    Out_density.Items.Clear();
+                    out_rpm.Items.Clear();
+                    Process_Nib_Data(true, false, false, true); /// false flag instructs the routine NOT to process CBM tracks again
             }
         }
     }

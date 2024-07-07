@@ -10,6 +10,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace V_Max_Tool
 {
@@ -47,7 +48,7 @@ namespace V_Max_Tool
 
             };
 
-        private readonly int[] sectors_by_Density = { 21, 19, 18, 17 };
+        //private readonly int[] sectors_by_Density = { 21, 19, 18, 17 };
 
         private readonly byte[] density_map = {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/*  1 - 10 */
@@ -169,6 +170,7 @@ namespace V_Max_Tool
             NDS.Gap_Sector = new int[len];
             NDS.Track_ID = new int[len];
             NDS.Prot_Method = string.Empty;
+            NDS.t18_ID = new byte[0];
             // NDA is the destination or output array
             NDA.Track_Data = new byte[len][];
             NDA.Sector_Zero = new int[len];
@@ -220,7 +222,7 @@ namespace V_Max_Tool
             Protected_Tracks.Visible = (vmx > 0 || vpl > 0 || rlk > 0 || mps > 0);
         }
 
-        (bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, int) Set_Adjust_Options(bool rb_vm)
+        (bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool, int) Set_Adjust_Options(bool rb_vm, bool cynldr = false)
         {
             bool v2a = false, v3a = false, vpa = false, v2adj = false, v2cust = false, v3adj = false, v3cust = false, cbmadj = false;
             bool sl = false, fl = false, vpadj = false;
@@ -294,7 +296,7 @@ namespace V_Max_Tool
                 if (VPL_rb.Checked || Adj_cbm.Checked || vpadj) fnappend = mod; else fnappend = vorp;
                 vpl_lead = Lead_ptn.SelectedIndex;
             }
-            if (NDS.cbm.Any(x => x == 6))
+            if (NDS.cbm.Any(x => x == 6) || cynldr)
             {
                 RL_Fix.Visible = true;
             }
@@ -608,9 +610,24 @@ namespace V_Max_Tool
             else return string.Empty;
         }
 
-        byte[] Remove_Weak_Bits(byte[] data)
+        byte[] Remove_Weak_Bits(byte[] data, bool aggressive = false)
         {
-            for (int i = 0; i < data.Length; i++) if (blank.Any(x => x == data[i])) data[i] = 0x00;
+            byte[] z = IArray(5, 0x00);
+            for (int i = 0; i < data.Length; i++)
+            {
+                if (blank.Any(x => x == data[i]))
+                {
+                    if (aggressive && i + z.Length - 1 < data.Length)
+                    {
+                        Buffer.BlockCopy(z, 0, data, i, z.Length);
+                        //data[i + 1] = 0x00;
+                        i += z.Length - 1;
+
+                    }
+                    else data[i] = 0x00;
+                }
+
+            }
             return data;
         }
 
@@ -730,9 +747,8 @@ namespace V_Max_Tool
 
         byte[] IArray(int size, byte value = 0)
         {
-            byte[] temp = new byte[size];
-            for (int i = 0; i < size; i++) temp[i] = value;
-            return temp;
+            if (size > 0) return Enumerable.Repeat(value, size).ToArray();
+            else return new byte[0];
         }
 
         (bool, int) Find_Data(string find, byte[] data, int clen, int start_pos = -1)
@@ -1184,7 +1200,7 @@ namespace V_Max_Tool
             /// these loaders are guaranteed to work and the loader code has not been modified from original. (these are not "cracked" loaders)
             rak1 = Decompress(XOR(Resources.rak1, 0xab));
             cldr_id = Decompress(XOR(Resources.cyan, 0xc1));
-            /// RapidLok v6/7 patches
+            /// RapidLok Patches
             rl6_t18s3[0, 0] = new byte[] { 0x60, 0x9b, 0x2a, 0x7d };
             rl6_t18s3[1, 0] = new byte[] { 0xea, 0xf4, 0xb7, 0xb3, 0xba };
             rl6_t18s3[2, 0] = new byte[] { 0x75, 0x73, 0xdc, 0x3d, 0x27, 0xd6 };
