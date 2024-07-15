@@ -46,12 +46,12 @@ namespace V_Max_Tool
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
             write.Write(Encoding.ASCII.GetBytes("MNIB-1541-RAW"));
-            byte[] htks = FastArray.Init(3, 0x00);
-            if (tracks > 42) htks[0] = 0x03; else htks[0] = 0x01;
+            byte[] htks = new byte[] { 0x03, 0x00, 0x00 };
+            if (tracks > 42) htks[2] = 0x01;
             write.Write(htks);
             for (int i = 0; i < tracks; i++)
             {
-                if (tracks > 42) write.Write((byte)i); else write.Write((byte)(i * 2));
+                if (tracks > 42) write.Write((byte)(i + 2)); else write.Write((byte)((i + 2) * 2));
                 if (NDS.cbm[i] > 0) write.Write((byte)(3 - Get_Density(NDG.Track_Length[i])));
                 else write.Write((byte)0x00);
             }

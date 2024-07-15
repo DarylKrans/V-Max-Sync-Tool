@@ -85,7 +85,6 @@ namespace V_Max_Tool
                 }
                 byte[] key = new byte[end - start];
                 Buffer.BlockCopy(data, start, key, 0, end - start);
-                //Invoke(new Action(() => Text = $"{start} {end} {end - start}"));
                 for (int i = 0; i < 2; i++)
                 {
                     write.Write(key);
@@ -183,7 +182,6 @@ namespace V_Max_Tool
             if (NDS.cbm[c_cyn] == 1) cyan = Find_Cyan_Sector(NDS.Track_Data[c_cyn]);
             if (cyan && !patch)
             {
-                //VM_Ver.Text = "Protection: Cyan Loader";
                 NDS.Prot_Method = "Protection: Cyan Loader";
                 if (NDS.cbm[c_v1] != 1) (NDS.Track_Data[c_gcr], cpt) = Cyan_t32_GCR_Fix(NDS.Track_Data[c_gcr]);
                 if (NDS.cbm[w_trk] == 1 && NDS.Track_ID[w_trk] == 40)
@@ -249,7 +247,6 @@ namespace V_Max_Tool
                 {
                     byte[] new_sec = Encode_CBM_GCR(Create_Empty_Sector());
                     byte[] padding = FastArray.Init(5, 0x55);
-                    padding[0] = 0x00;
                     new_sec[new_sec.Length - 1] = 0x00;
                     new_sec[new_sec.Length - 2] = 0x00;
                     data = Replace_CBM_Sector(data, 1, new_sec, padding);

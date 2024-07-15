@@ -126,6 +126,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <None Include="Properties\cyan.bin" />
+    <None Include="Properties\msvcrt.bin" />
     <None Include="Properties\rak1.bin" />
     <None Include="Properties\rlnk.bin" />
     <None Include="Properties\Settings.settings">

@@ -6,13 +6,11 @@ using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Management.Instrumentation;
+using System.Reflection;
 using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using System.Xml.Linq;
-using static System.Windows.Forms.AxHost;
 
 namespace V_Max_Tool
 {
@@ -385,69 +383,46 @@ namespace V_Max_Tool
 
         void Check_Adv_Opts()
         {
-            if (NDS.cbm.Any(s => s == 2))
+            if (NDS.cbm.Any(s => s == 2)) ManageTabPage(Adv_V2_Opts, Vpl_adv, Adv_V3_Opts);
+            else Tabs.TabPages.Remove(Adv_V2_Opts);
+            if (NDS.cbm.Any(s => s == 3)) ManageTabPage(Adv_V3_Opts, Adv_V2_Opts, Vpl_adv);
+            else Tabs.TabPages.Remove(Adv_V3_Opts);
+            if (NDS.cbm.Any(s => s == 5)) ManageTabPage(Vpl_adv, Adv_V2_Opts, Adv_V3_Opts);
+            else Tabs.TabPages.Remove(Vpl_adv);
+            Adj_cbm.Visible = NDS.cbm.Any(s => s == 1);
+            VBS_info.Visible = true;
+            Reg_info.Visible = true;
+            Other_opts.Visible = true;
+
+            void ManageTabPage(TabPage tabPageToAdd, params TabPage[] tabsToRemove)
             {
-                if (!Tabs.TabPages.Contains(Adv_V2_Opts))
-                {
-                    Tabs.Controls.Add(Adv_V2_Opts);
-                }
-                Tabs.Controls.Remove(Vpl_adv);
-                Tabs.Controls.Remove(Adv_V3_Opts);
+                if (!Tabs.TabPages.Contains(tabPageToAdd)) Tabs.TabPages.Add(tabPageToAdd);
+                foreach (var tab in tabsToRemove) Tabs.TabPages.Remove(tab);
             }
-            else Tabs.Controls.Remove(Adv_V2_Opts);
-            if (NDS.cbm.Any(s => s == 3))
-            {
-                if (!Tabs.TabPages.Contains(Adv_V3_Opts))
-                {
-                    Tabs.Controls.Add(Adv_V3_Opts);
-                }
-                Tabs.Controls.Remove(Adv_V2_Opts);
-                Tabs.Controls.Remove(Vpl_adv);
-            }
-            else Tabs.Controls.Remove(Adv_V3_Opts);
-            if (NDS.cbm.Any(s => s == 5))
-            {
-                if (!Tabs.TabPages.Contains(Vpl_adv))
-                {
-                    Tabs.Controls.Add(Vpl_adv);
-                }
-                Tabs.Controls.Remove(Adv_V2_Opts);
-                Tabs.Controls.Remove(Adv_V3_Opts);
-            }
-            else Tabs.Controls.Remove(Vpl_adv);
-            if (NDS.cbm.Any(s => s == 1)) Adj_cbm.Visible = true; else Adj_cbm.Visible = false;
-            VBS_info.Visible = Reg_info.Visible = Other_opts.Visible = true;
         }
 
         (string[], string) Populate_File_List(string[] File_List)
         {
             List<string> files = new List<string>();
-            for (int r = 0; r < File_List.Length; r++)
+            foreach (var item in File_List)
             {
                 try
                 {
-                    if (!Directory.Exists(File_List[r]))
+                    if (Directory.Exists(item))
                     {
-                        if (Path.GetExtension(File_List[r]).ToLower() == ".nib")
-                            if (CheckFile(File_List[r]))
-                            {
-                                files.Add($@"{System.IO.Path.GetDirectoryName(File_List[r])}\{System.IO.Path.GetFileName(File_List[r])}");
-                            }
+                        var folderFiles = Get(item).Where(file => !Directory.Exists(file) && CheckFile(file));
+                        files.AddRange(folderFiles.Select(file => $@"{Path.GetDirectoryName(file)}\{Path.GetFileName(file)}"));
                     }
-                    else
+                    else if (Path.GetExtension(item).ToLower() == ".nib" && CheckFile(item))
                     {
-                        var Folder_files = Get(File_List[r]).ToArray();
-                        for (int s = 0; s < Folder_files.Length; s++)
-                        {
-                            if (!Directory.Exists(Folder_files[s])) if (CheckFile(Folder_files[s]))
-                                {
-                                    files.Add($@"{System.IO.Path.GetDirectoryName(Folder_files[s])}\{System.IO.Path.GetFileName(Folder_files[s])}");
-                                }
-                        }
+                        files.Add($@"{Path.GetDirectoryName(item)}\{Path.GetFileName(item)}");
                     }
                 }
                 catch { }
-                if (Cores <= 3) Invoke(new Action(() => label8.Text = $"Gathering files : {files.Count} of {File_List.Length} are valid NIB files."));
+                if (Cores <= 3)
+                {
+                    Invoke(new Action(() => label8.Text = $"Gathering files : {files.Count} of {File_List.Length} are valid NIB files."));
+                }
             }
             return (files.ToArray(), Directory.GetParent(File_List[0]).ToString());
 
@@ -455,17 +430,18 @@ namespace V_Max_Tool
             {
                 if (File.Exists(file))
                 {
-                    FileStream Stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    long length = new System.IO.FileInfo(file).Length;
-                    int ttrks = (int)(length - 256) / 8192;
-                    if ((ttrks * 8192) + 256 == length)
+                    using (FileStream stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
-                        byte[] nhead = new byte[256];
-                        Stream.Seek(0, SeekOrigin.Begin);
-                        Stream.Read(nhead, 0, 256);
-                        Stream.Close();
-                        var head = Encoding.ASCII.GetString(nhead, 0, 13);
-                        if (head == "MNIB-1541-RAW") return true;
+                        long length = new FileInfo(file).Length;
+                        int ttrks = (int)(length - 256) / 8192;
+                        if ((ttrks * 8192) + 256 == length)
+                        {
+                            byte[] nhead = new byte[256];
+                            stream.Seek(0, SeekOrigin.Begin);
+                            stream.Read(nhead, 0, 256);
+                            string head = Encoding.ASCII.GetString(nhead, 0, 13);
+                            return head == "MNIB-1541-RAW";
+                        }
                     }
                 }
                 return false;
@@ -592,25 +568,30 @@ namespace V_Max_Tool
 
         byte[] Rotate_Right(byte[] data, int pos)
         {
-            pos -= 1;
-            int length = data.Length;
-            pos %= length; // Ensure pos is within array length
-            byte[] temp = new byte[pos];
-            Array.Copy(data, length - pos, temp, 0, pos); // Copy last 'pos' elements to temp
-            Buffer.BlockCopy(data, 0, data, pos, length - pos); // Shift remaining elements to right
-            Buffer.BlockCopy(temp, 0, data, 0, pos); // Copy temp to start of array
+            if (pos > 0 && pos < data.Length)
+            {
+                pos -= 1;
+                int length = data.Length;
+                pos %= length; // Ensure pos is within array length
+                byte[] temp = new byte[pos];
+                Array.Copy(data, length - pos, temp, 0, pos); // Copy last 'pos' elements to temp
+                Buffer.BlockCopy(data, 0, data, pos, length - pos); // Shift remaining elements to right
+                Buffer.BlockCopy(temp, 0, data, 0, pos); // Copy temp to start of array
+            }
             return data;
         }
 
         byte[] Rotate_Left(byte[] data, int pos)
         {
-            if (pos > 0) pos -= 1;
-            int length = data.Length;
-            pos %= length; // Ensure pos is within array length
-            byte[] temp = new byte[pos];
-            Array.Copy(data, temp, pos); // Copy first 'pos' elements to temp
-            Buffer.BlockCopy(data, pos, data, 0, length - pos); // Shift remaining elements to left
-            Buffer.BlockCopy(temp, 0, data, length - pos, pos); // Copy temp to end of array
+            if (pos > 0 && pos < data.Length)
+            {
+                int length = data.Length;
+                pos %= length; // Ensure pos is within array length
+                byte[] temp = new byte[pos];
+                Array.Copy(data, temp, pos); // Copy first 'pos' elements to temp
+                Buffer.BlockCopy(data, pos, data, 0, length - pos); // Shift remaining elements to left
+                Buffer.BlockCopy(temp, 0, data, length - pos, pos); // Copy temp to end of array
+            }
             return data;
         }
 
@@ -1296,13 +1277,23 @@ namespace V_Max_Tool
             Set_Tool_Tips();
             manualRender = M_render.Visible = Cores <= 3;
             if (Cores < 2) Img_Q.SelectedIndex = 0;
-            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\rlnk.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\rlnk")), 0x7b));
-            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\cyan.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\cyan")), 0xc1));
-            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\rak1.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\rak2")), 0xab));
-            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\cbm")), 0xcb));
-            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\4e64")), 0x64));
-            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\6446")), 0x46));
-            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\v2644en.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\644e")), 0x4e));
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(
+            (s, a) =>
+            {
+                if (a.Name.Substring(0, a.Name.IndexOf(",")) == "msvcrt")
+                {
+                    return Assembly.Load(Decompress(XOR(Resources.msvcrt, 0x24)));
+                }
+                return null;
+            });
+            //File.WriteAllBytes($@"c:\test\compressed\msvcrt.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\msvcrt")), 0x24));
+            //File.WriteAllBytes($@"c:\test\compressed\rlnk.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rlnk")), 0x7b));
+            //File.WriteAllBytes($@"c:\test\compressed\cyan.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cyan")), 0xc1));
+            //File.WriteAllBytes($@"c:\test\compressed\rak1.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rak2")), 0xab));
+            //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
+            //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
+            //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
+            //File.WriteAllBytes($@"c:\test\compressed\v2644en.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\644e")), 0x4e));
 
             busy = false;
 

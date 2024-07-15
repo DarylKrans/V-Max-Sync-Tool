@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 
 namespace V_Max_Tool
@@ -16,7 +15,7 @@ namespace V_Max_Tool
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
         private readonly bool Replace_RapidLok_Key = false;
-        private readonly string ver = " v0.9.97.7 (beta)";
+        private readonly string ver = " v0.9.98.0 (pre-release)";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
@@ -54,7 +53,7 @@ namespace V_Max_Tool
         public Form1()
         {
             InitializeComponent();
-            this.Text = $"Re-Master (Experimental) {ver}";
+            this.Text = $"Re-Master {ver}";
             Init();
             Set_ListBox_Items(true, true);
         }

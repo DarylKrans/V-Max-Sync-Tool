@@ -373,25 +373,29 @@ namespace V_Max_Tool
             int head_len = Convert.ToInt32(t_info[2]);
             int sec_zero;
             byte[] find = FastArray.Init(4, 0xa5);
+            byte[] comp = new byte[4];
             find[0] = start_byte[0];
             int vs = Convert.ToInt32(t_info[3]);
             try { Buffer.BlockCopy(data, data_start, temp_data, 0, data_end - data_start); } catch { }
             for (int i = 0; i < temp_data.Length - 5; i++)
             {
-                Buffer.BlockCopy(temp_data, i, compare, 0, compare.Length);
-                if (Match(find, compare))
+                if (temp_data[i] == find[0])
                 {
-                    if (i > 5)
+                    Buffer.BlockCopy(temp_data, i, comp, 0, comp.Length);
+                    if (Match(comp, find))
                     {
-                        sec_zero = i - 5;
-                        temp_data = Rotate_Left(temp_data, i - 5);
+                        if (i > 5)
+                        {
+                            sec_zero = i - 5;
+                            temp_data = Rotate_Left(temp_data, i - 5);
+                        }
+                        else
+                        {
+                            temp_data = Rotate_Right(temp_data, i + 5);
+                            sec_zero = i + 5;
+                        }
+                        break;
                     }
-                    else
-                    {
-                        temp_data = Rotate_Right(temp_data, i + 5);
-                        sec_zero = i + 5;
-                    }
-                    break;
                 }
             }
             if (Fix_Sync) /// <- if the "Fix_Sync" bool is true, otherwise just return track info without any adjustments
@@ -425,6 +429,7 @@ namespace V_Max_Tool
                             Buffer.BlockCopy(temp_data, s_pos, compare, 0, compare.Length);
 
                             if (vm2_ver[vs].Any(s => s == Hex_Val(compare))) // <- checks to verify header pattern is in the list of valid headers
+
                             {
                                 /// check that it's not sector 0 which needs sync, then check if a sync marker is before the header start byte.  If not, its a syncless track
                                 if (!V2_Add_Sync.Checked)

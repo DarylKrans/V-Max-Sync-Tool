@@ -5,12 +5,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace V_Max_Tool
 {
@@ -849,10 +847,13 @@ namespace V_Max_Tool
                             }
                             if (acbm)
                             {
-                                if ((track == 18 && (NDS.cbm.Any(x => x == 5) || NDS.cbm.Any(x => x == 6))) || (track == 40 && cyn_ldr))
+                                bool condition1 = (track == 18 && (NDS.cbm.Any(x => x == 5) || NDS.cbm.Any(x => x == 6)));
+                                bool condition2 = (track == 40 && (cyn_ldr || NDS.sectors[trk] < 17));
+                                bool condition3 = (track > 34 && NDS.sectors[trk] < 17);
+                                if (condition1 || condition2 || condition3)
                                 {
-                                    if (temp.Length < density[1]) temp = Lengthen_Track(temp);
-                                    if (temp.Length > density[1]) temp = Shrink_Track(temp, 1);
+                                    if (temp.Length < density[density_map[track]]) temp = Lengthen_Track(temp);
+                                    if (temp.Length > density[density_map[track]]) temp = Shrink_Track(temp, density_map[track]);
                                 }
                                 else
                                 {
@@ -868,9 +869,8 @@ namespace V_Max_Tool
                             }
                             if (track == 18)
                             {
-                                if (!(NDS.cbm.Any(x => x == 2) || NDS.cbm.Any(x => x == 3) || NDS.cbm.Any(x => x == 4) || NDS.cbm.Any(x => x == 5)
-                                    || NDS.cbm.Any(x => x == 6) || NDS.cbm.Any(x => x == 7) || NDS.cbm.Any(x => x == 8) || NDS.cbm.Any(x => x == 9)
-                                    || NDS.cbm.Any(x => x == 10) || NDS.cbm.Any(x => x == 11)) && NDS.sectors[trk] == 19)
+                                int[] cbmRange = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+                                if (cbmRange.All(x => !NDS.cbm.Any(y => y == x)) && NDS.sectors[trk] == 19)
                                 {
                                     int sec = 0;
                                     (rad, temp, sec) = Radwar(temp);
@@ -881,6 +881,7 @@ namespace V_Max_Tool
                                     }
                                 }
                             }
+                            if (track == 40 && NDS.sectors[trk] < 17) temp = Remove_Weak_Bits(temp);
                             Set_Dest_Arrays(temp, trk);
                         }
                         catch
@@ -1127,112 +1128,94 @@ namespace V_Max_Tool
                 HashSet<byte> blankSet = new HashSet<byte>(blank);
                 int b = 0;
                 int snc = 0;
+            
                 for (int i = 0; i < d.Length; i++)
                 {
-                    //if (blank.Any(x => x == d[i])) b++;d
-                    if (blankSet.Contains(data[i])) b++;
+                    if (blankSet.Contains(d[i])) b++;
                     if (d[i] == 0xff) snc++;
+            
                     try
                     {
                         if (d[i] == 0xff && d[i + 1] == ssp[1])
                         {
-                            byte[] ss = new byte[ssp.Length];
-                            Buffer.BlockCopy(d, i, ss, 0, ss.Length);
-                            if (Match(ssp, ss))
-                            {
-                                int pad = 0;
-                                for (int j = 0; j < d.Length; j++)
-                                {
-                                    if (d[j] == 0x55 || d[j] == 0xaa) pad++;
-                                    if (pad > 3000) return (11, false);
-                                }
-                            }
+                            if (CheckPattern(ssp, i) && CheckPadding(0)) return (11, false);
                         }
-                        if ((d[i] == gmt[0]))
+            
+                        if (d[i] == gmt[0])
                         {
                             byte[] gm = new byte[gmt.Length];
                             try
                             {
                                 Buffer.BlockCopy(d, i, gm, 0, gmt.Length);
                                 for (int j = 1; j < gmt.Length; j++) gm[j] &= gmt[j];
-                                if (Match(gm, gmt))
-                                {
-                                    int pad = 0;
-                                    for (int j = 0; j < d.Length; j++)
-                                    {
-                                        if (d[j] == 0x55 || d[j] == 0xaa) pad++;
-                                        if (pad > 3000) return (11, false);
-                                    }
-                                }
+                                if (Match(gm, gmt) && CheckPadding(0)) return (11, false);
                             }
                             catch { }
+                        }
+            
+                        if (ps1.Contains(d[i]) || ps2.Contains(d[i]))
+                        {
+                            if ((d[i] == ps1[0] && CheckPattern(ps1, i)) || (d[i] == ps2[0] && CheckPattern(ps2, i)))
+                            {
+                                return (8, false);
+                            }
+                        }
+            
+                        if ((trk > 35 && trk < 41) && d[i] == ramb[0] || (i > 0 && d[i] == 0xff && d[i - 1] != 0xff))
+                        {
+                            if (d[i] == 0xff)
+                            {
+                                int ps = i;
+                                int sc = 0;
+                                while (ps < i + 150 && ps < d.Length)
+                                {
+                                    if (d[ps] != 0xff) break;
+                                    ps++; sc++;
+                                    if (sc > 140) break;
+                                }
+            
+                                if (sc >= 108 && sc <= 132 && CheckPadding(0)) return (9, false);
+                            }
+                            else if (CheckPattern(ramb, i))
+                            {
+                                int ptn = 0;
+                                int itt = 0;
+                                while (i + (itt * ramb.Length) < d.Length)
+                                {
+                                    if (!CheckPattern(ramb, i + (itt * ramb.Length))) break;
+                                    ptn++;
+                                    if (ptn > 100) return (9, false);
+                                    itt++;
+                                }
+                                return (9, false);
+                            }
                         }
                     }
                     catch { }
-                    if (ps1.Any(x => x == d[i]) || ps2.Any(x => x == d[i]))
-                    {
-                        try
-                        {
-                            if (ps1[0] == d[i] || ps2[0] == d[i])
-                            {
-                                byte[] s1 = new byte[ps1.Length];
-                                byte[] s2 = new byte[ps2.Length];
-                                Buffer.BlockCopy(d, i, s1, 0, s1.Length);
-                                Buffer.BlockCopy(d, i, s2, 0, s2.Length);
-                                if (Match(ps1, s1) || Match(ps2, s2)) return (8, false);
-                            }
-                        }
-                        catch { }
-                    }
-                    if (d[i] == ramb[0] || (i > 0 && (d[i] == 0xff && d[i - 1] != 0xff)))
-                    {
-                        if (d[i] == 0xff)
-                        {
-                            int ps = i;
-                            int sc = 0;
-                            while (ps < i + 150 && ps < d.Length)
-                            {
-                                if (d[ps] != 0xff) break;
-                                ps++; sc++;
-                                if (sc > 140) break;
-                            }
-                            if (Enumerable.Range(108, 132).Contains(sc))
-                            {
-                                ps = 0;
-                                sc = 0;
-                                while (ps < data.Length)
-                                {
-                                    if (data[ps] == 0x55) sc++;
-                                    if (sc > 4000 && trk < 41) return (9, false);
-                                    ps++;
-                                }
-                            }
-                        }
-                        else
-                            try
-                            {
-                                byte[] cmp = new byte[ramb.Length];
-                                Buffer.BlockCopy(d, i, cmp, 0, cmp.Length);
-                                if (Match(ramb, cmp))
-                                {
-                                    int ptn = 0;
-                                    int itt = 0;
-                                    while (i + (itt * cmp.Length) < d.Length)
-                                    {
-                                        Buffer.BlockCopy(d, i + (ptn * cmp.Length), cmp, 0, cmp.Length);
-                                        if (Match(cmp, ramb)) ptn++;
-                                        if (ptn > 100) return (9, false);
-                                        itt++;
-                                    }
-                                }
-                                if (Match(ramb, cmp)) return (9, false);
-                            }
-                            catch { }
-                    }
                 }
+            
                 if (b > 1000 && snc < 10) return (0, false);
                 if (snc > 1000 && trk == 36) return (7, false);
                 return (0, true);
+            
+                bool CheckPattern(byte[] pattern, int pos)
+                {
+                    if (pos + pattern.Length >= d.Length - 1) return false;
+                    byte[] compare = new byte[pattern.Length];
+                    Buffer.BlockCopy(d, pos, compare, 0, pattern.Length);
+                    return Match(pattern, compare);
+                }
+            
+                bool CheckPadding(int start)
+                {
+                    int pad = 0;
+                    for (int j = start; j < d.Length; j++)
+                    {
+                        if (d[j] == 0x55 || d[j] == 0xaa) pad++;
+                        if (pad > 3000) return true;
+                    }
+                    return false;
+                }
             }
 
             bool Check_Loader(byte[] d)

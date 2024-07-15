@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -144,7 +145,6 @@ namespace V_Max_Tool
                     else len = vpl_density[d] - ((r << 1) + 1);
                 }
                 temp = new byte[vpl_density[d]];
-                //Write_Lead(100, 400);
                 Write_Lead(offset + 5, vpl_density[d] - ((tend - tstart) >> 3) - (offset >> 3));
                 if (VPL_presync.Checked) Add_Pre_Sync();
                 otmp = new BitArray(Flip_Endian(temp));
@@ -200,10 +200,10 @@ namespace V_Max_Tool
             {
                 if (leadptn > 0)
                 {
-                    temp[(offset / 8) - 4] = 0xff;
-                    temp[(offset / 8) - 3] = 0xff;
-                    temp[(offset / 8) - 2] = 0x55;
-                    temp[(offset / 8) - 1] = 0x55;
+                    temp[(offset >> 3) - 4] = 0xff;
+                    temp[(offset >> 3) - 3] = 0xff;
+                    temp[(offset >> 3) - 2] = 0x55;
+                    temp[(offset >> 3) - 1] = 0x55;
                 }
             }
 
@@ -218,77 +218,60 @@ namespace V_Max_Tool
 
         byte[] Decode_Vorpal(BitArray source, int sector = -1, bool dec = true)
         {
-            int snc_cnt = 0;
-            int psec = 0;
-            int sub = 0;
-            BitArray sec_data = new BitArray(160 * 8);
-            if (!dec)
-            {
-                sec_data = new BitArray(165 * 8);
-                sub = 8 * 5;
-            }
+            int snc_cnt = 0, psec = 0, sub = dec ? 0 : 8 * 5;
+            BitArray sec_data = new BitArray(dec ? (160 * 8) : (165 * 8));
+
             byte[] decoded = new byte[0];
+
             for (int k = 0; k < source.Length; k++)
             {
-                if (source[k]) snc_cnt++;
+                if (source[k])
+                    snc_cnt++;
                 if (!source[k])
                 {
                     if (snc_cnt == 8)
                     {
-                        var dep = k + 7;
+                        int dep = k + 7;
+
                         if (psec == sector)
                         {
                             try
                             {
-                                for (int i = 0; i < sec_data.Count; i++)
+                                for (int i = 0; i < sec_data.Length; i++)
                                 {
                                     sec_data[i] = source[dep + i];
                                 }
-                                if (dec) return Decode_Vorpal_GCR(Bit2Byte(sec_data));
-                                else return (Bit2Byte(sec_data));
+
+                                return dec ? Decode_Vorpal_GCR(Bit2Byte(sec_data)) : Bit2Byte(sec_data);
                             }
                             catch { }
                         }
+
                         psec++;
-                        k += sec_data.Count - sub;
+                        k += sec_data.Length - sub;
                     }
                     snc_cnt = 0;
                 }
             }
+
             return decoded;
         }
 
         (byte[], int, int, int, int, int, int[], string[]) Get_Vorpal_Track_Length(byte[] data, int trk = -1)
         {
-
-            int d = trk;
-            if (tracks > 42) d = (trk / 2) + 1;
-            int sec_size = 0;
-            if (trk < 0) trk = 0;
-            int lead_len = 0;
-            int sub = 1; /// <- # of bits to subtract from 'data_end' position marker
-            int compare_len = 16; /// <- sets the number of bytes to compare with for finding the end of the track
+            int d = (tracks > 42) ? (trk / 2) + 1 : trk;
+            int sec_size = 0, lead_len = 0, sub = 1, compare_len = 16;
             int min_skip_len = vpl_density[density_map[d]] - 100;
-            int max_track_size = 7900;
-            int data_start = 0;
-            int data_end = 0;
-            int track_len = 0;
-            bool single_rotation = false;
-            bool start_found = false;
-            bool end_found = false;
-            bool lead_in_Found = false;
-            bool repeat = false;
-            string sz = string.Empty;
-            int track_lead_in = 0;
-            int sectors = 0;
-            int snc_cnt = 0;
-            string sid = string.Empty;
+            int max_track_size = 7900, data_start = 0, data_end = 0, track_len = 0, track_lead_in = 0, sectors = 0, snc_cnt = 0;
+            string sz = string.Empty, sid = string.Empty;
+            bool single_rotation = false, start_found = false, end_found = false, lead_in_Found = false, repeat = false;
             List<string> sec_header = new List<string>();
             List<string> sec_hdr = new List<string>();
             List<int> sec_pos = new List<int>();
             byte[] tdata = new byte[0];
             BitArray source = new BitArray(Flip_Endian(data));
             BitArray lead_in = new BitArray(leadIn_std.Length);
+
             for (int k = 0; k < source.Length; k++)
             {
                 if (source[k]) snc_cnt++;
@@ -298,97 +281,150 @@ namespace V_Max_Tool
                     {
                         if (k - ((com << 3) + 8) > 0)
                         {
-                            /// checking for [00110011 00 11111111] sector 0 marker
                             if (!lead_in_Found && (!source[k - 10] && !source[k - 9]))
                             {
                                 sz = " * sector 0";
                                 (lead_in_Found, track_lead_in) = Get_LeadIn_Position(k);
                             }
                             else sz = string.Empty;
+
                             byte[] sec_ID = Bit2Byte(source, k - ((com << 3) >> 1), com << 3);
                             sid = Hex_Val(sec_ID);
+
                             if (!sec_header.Any(x => x == sid))
                             {
                                 sec_header.Add(sid);
                                 sec_pos.Add(k >> 3);
-                                if (!batch) try { sec_hdr.Add($"pos ({k >> 3}) Header (kinda) {sid.Substring(15, 20)} Size ({sec_size >> 3}){sz}"); } catch { }
+
+                                if (!batch && sec_size >> 3 > 0)
+                                {
+                                    try { sec_hdr.Add($"pos ({k >> 3}) Header (kinda) {sid.Substring(15, 20)} Size ({sec_size >> 3}){sz}"); }
+                                    catch { }
+                                }
+
                                 sec_size = 0;
+
                                 if (!start_found)
                                 {
                                     data_start = k;
                                     start_found = true;
                                 }
-                                k += 1180; sec_size += 1180; /// if a sector is found, skips over the next (x) bits before starting to look for the next sector
+
+                                k += 1180; // Skip over the next (x) bits after finding a sector
+                                sec_size += 1180;
                             }
                             else
                             {
-                                if (!batch) try { if (!repeat) { sec_hdr.Add($"* Repeat * pos {k >> 3} {Hex_Val(sec_ID).Substring(15, 20)}"); repeat = true; } } catch { }
+                                if (!batch)
+                                {
+                                    try
+                                    {
+                                        if (!repeat)
+                                        {
+                                            sec_hdr.Add($"* Repeat * pos {k >> 3} {Hex_Val(sec_ID).Substring(15, 20)}");
+                                            repeat = true;
+                                        }
+                                    }
+                                    catch { }
+                                }
+
                                 if (!end_found)
                                 {
                                     data_end = k - sub;
                                     end_found = true;
                                 }
                             }
+
                             sectors = sec_header.Count;
-                            if (!single_rotation && end_found) break;
+
+                            if (!single_rotation && end_found)
+                                break;
                         }
                     }
                     snc_cnt = 0;
                 }
                 sec_size++;
             }
-            int spl = 0;
+
             track_len = (data_end - data_start) + 1;
-            if (single_rotation) tdata = Bit2Byte(source, data_start, track_len);
+
+            if (single_rotation)
+                tdata = Bit2Byte(source, data_start, track_len);
             else
             {
+                int spl = 0;
                 BitArray temp = new BitArray(track_len);
+
                 int pos = track_lead_in;
+
                 for (int i = 0; i < track_len; i++)
                 {
                     temp[i] = source[pos];
                     pos++;
-                    if (pos > data_end) { spl = i; pos = data_start; }
+
+                    if (pos > data_end)
+                    {
+                        spl = i;
+                        pos = data_start;
+                    }
                 }
+
                 tdata = Bit2Byte(temp);
             }
+
             return (tdata, data_start, data_end, track_len, track_lead_in, sectors, sec_pos.ToArray(), sec_hdr.ToArray());
 
             (bool, int) Get_LeadIn_Position(int position)
             {
                 BitArray isRealend = new BitArray(compare_len << 3);
                 bool leadF = false;
-                int leadin = 0;
-                int l = position - 18;
+                int leadin = 0, l = position - 18;
                 byte[] pre_sync = Bit2Byte(source, position - 18, 8);
+
                 if (pre_sync[0] == 0x33)
                 {
                     bool equal = false;
+
                     while (!equal)
                     {
                         l -= leadIn_std.Length;
                         lead_len += leadIn_std.Length;
-                        if (l < 0) { l = 0; break; }
-                        bool a = false; bool b = false;
-                        for (int i = 0; i < lead_in.Length; i++) lead_in[i] = source[l + i];
+
+                        if (l < 0)
+                        {
+                            l = 0;
+                            break;
+                        }
+
+                        bool a = false, b = false;
+                        lead_in = new BitArray(leadIn_std.Length);
+
+                        for (int i = 0; i < lead_in.Length; i++)
+                            lead_in[i] = source[l + i];
+
                         a = ((BitArray)leadIn_std.Clone()).Xor(lead_in).OfType<bool>().All(e => !e);
                         b = ((BitArray)leadIn_alt.Clone()).Xor(lead_in).OfType<bool>().All(e => !e);
                         equal = !a && !b;
                     }
+
                     if (l != 0)
                     {
                         byte[] te;
+
                         var u = l;
-                        try
+
+                        for (int i = 0; i < 32; i++)
                         {
-                            for (int i = 0; i < 32; i++)
+                            te = Flip_Endian(Bit2Byte(source, u - i, 8));
+
+                            if (te?.Length > 0 && te[0] == 0xbd)
                             {
-                                te = Flip_Endian(Bit2Byte(source, u - i, 8));
-                                if (te[0] == 0xbd) { l = u - (i + 1); break; }
+                                l = u - (i + 1);
+                                break;
                             }
                         }
-                        catch { }
                     }
+
                     leadin = l + leadIn_std.Count - 1;
                     isRealend = BitCopy(source, l, 16 << 3);
                 }
@@ -399,20 +435,25 @@ namespace V_Max_Tool
                     start_found = true;
                     int q = min_skip_len << 3;
                     BitArray rcompp = new BitArray(isRealend.Count);
+
                     while (q < source.Length - (rcompp.Length))
                     {
                         rcompp = BitCopy(source, q, isRealend.Length);
+
                         if (((BitArray)isRealend.Clone()).Xor(rcompp).OfType<bool>().All(e => !e))
                         {
                             end_found = true;
                             data_end = q - sub;
-                            single_rotation = true; /// <- entire track contained within the start and end point of the source array
+                            single_rotation = true;
                             break;
                         }
+
                         q++;
                     }
                 }
+
                 leadF = true;
+
                 return (leadF, leadin);
             }
         }

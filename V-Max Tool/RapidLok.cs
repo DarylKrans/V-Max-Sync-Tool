@@ -1,5 +1,4 @@
 ﻿using System;
-using System.CodeDom.Compiler;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -241,52 +240,50 @@ namespace V_Max_Tool
 
             void Rebuild_RapidLok_Track()
             {
-                int den = 0;
-                if (track >= 18) den = 1;
+                int den = (track >= 18) ? 1 : 0; // Determine density index based on track number
                 int rem = density[den];
-                int sb_sync = 20;   /// <- sets the sync length before the 0x7b sector
-                int id_sync = 40;   /// <- sets the sync length before the Track ID
-                int sz_sync = 60;   /// <- sets the sync length before the first sector
+                int sb_sync = 20;   // Sync length before the 0x7b sector
+                int id_sync = 40;   // Sync length before the Track ID
+                int sz_sync = 60;   // Sync length before the first sector
                 byte[] os_sync = FastArray.Init(5, 0xff);
                 byte gap = 0x00;
                 byte pad = 0x55;
-                MemoryStream buffer = new MemoryStream();
-                BinaryWriter write = new BinaryWriter(buffer);
-                int cursec = first_sector;
-                if (cursec == sectors || cursec == -1) cursec = 0;
-                if (sb_sec > 0)
+                using (MemoryStream buffer = new MemoryStream())
                 {
-                    write.Write(FastArray.Init(sb_sync, 0xff));
-                    write.Write((byte)pad);
-                    if (nsb == 0) write.Write(FastArray.Init(sb_sec - 1, 0x7b));
-                    else write.Write(FastArray.Init(nsb, 0x7b));
-                }
-                write.Write(FastArray.Init(id_sync, 0xff));
-                write.Write(Verify_Track_ID(tid));   /// <- writes the track ID
-                write.Write(FastArray.Init(sz_sync - os_sync.Length, 0xff));
-                rem -= (((int)buffer.Length) + (sectors * (583 + 7 + (os_sync.Length * 2))));
-                rem /= (sectors * 2);
-                if (rem < 0) rem = 5;
-                byte[] sector_gap = FastArray.Init(rem, gap);   /// <- sets the gap length after each sector header before the block sync
-                if (sectors >= 11)
-                {
-                    for (int i = 0; i < sectors; i++)
+                    BinaryWriter write = new BinaryWriter(buffer);
+                    int cursec = (first_sector == sectors || first_sector == -1) ? 0 : first_sector;
+                    if (sb_sec > 0)
                     {
-                        if (sec_data?[cursec].Length == 583)
-                        {
-                            write.Write(os_sync);
-                            write.Write(sec_head[cursec]);
-                            write.Write(sector_gap);
-                            write.Write(os_sync);
-                            write.Write(sec_data[cursec]); /// <- writes the block data and is error-handled in case the block data is missing
-                            write.Write(sector_gap);
-                        }
-                        cursec++;
-                        if (cursec == sectors) cursec = 0;
+                        write.Write(FastArray.Init(sb_sync, 0xff));
+                        write.Write(pad);
+                        write.Write((nsb == 0) ? FastArray.Init(sb_sec - 1, 0x7b) : FastArray.Init(nsb, 0x7b));
                     }
-                    while (buffer.Length < density[den]) write.Write((byte)pad); /// <- fills the track with padding byte to fit the track density
+                    write.Write(FastArray.Init(id_sync, 0xff));
+                    write.Write(Verify_Track_ID(tid));
+                    write.Write(FastArray.Init(sz_sync - os_sync.Length, 0xff));
+                    rem -= (int)buffer.Length + (sectors * (583 + 7 + (os_sync.Length * 2)));
+                    rem /= (sectors * 2);
+                    if (rem < 0) rem = 5;
+                    byte[] sector_gap = FastArray.Init(rem, gap);
+                    if (sectors >= 11)
+                    {
+                        for (int i = 0; i < sectors; i++)
+                        {
+                            if (sec_data?[cursec]?.Length == 583)
+                            {
+                                write.Write(os_sync);
+                                write.Write(sec_head[cursec]);
+                                write.Write(sector_gap);
+                                write.Write(os_sync);
+                                write.Write(sec_data[cursec]);
+                                write.Write(sector_gap);
+                            }
+                            cursec = (cursec + 1) % sectors;
+                        }
+                        if (buffer.Length < density[den]) write.Write((FastArray.Init(density[den] - (int)buffer.Length, pad)));
+                    }
+                    adata = buffer.ToArray();
                 }
-                adata = buffer.ToArray();
             }
 
             byte[] Verify_Track_ID(byte[] tk_id)
@@ -306,163 +303,179 @@ namespace V_Max_Tool
 
             void Compare()
             {
-                if (pos + (10 * 8) < source.Length)
+                const int bitBlockSize = 10 * 8;
+                if (pos + bitBlockSize >= source.Length) return;
+                c = Bit2Byte(source, pos, bitBlockSize);
+                if (Match(RLok_7b, c)) HandleRLok7bMatch();
+                else if (trk_id) HandleTrackId(c);
+                else
                 {
-                    c = Bit2Byte(source, pos, 10 * 8);
-                    if (Match(RLok_7b, c))
+                    if (c[0] == 0x52 && tid.Length == 0)
                     {
-                        if (sevenb)
-                        {
-                            end_found = true;
-                            d_end = pos;
-                        }
-                        if (!sevenb)
-                        {
-                            sevenb = true;
-                            sevenb_pos = pos;
-                            if (sb_sec == 0)
-                            {
-                                int sl = 0;
-                                int tsnc = 0;
-                                for (int i = pos; i < source.Length; i++)
-                                {
-                                    if (source[i]) tsnc++;
-                                    if (!source[i])
-                                    {
-                                        if (tsnc >= 16)
-                                        {
-                                            sb_sec = (sl - tsnc - 8) >> 3;
-                                            a_headers.Add($"pos ({pos >> 3}) 0x7B sector Length {sb_sec} First sector = {first_sector + 1}");
-                                            break;
-                                        }
-                                        tsnc = 0;
-                                    }
-                                    sl++;
-                                }
-                            }
-                            first_sector = sectors;
-                        }
-                        if (!start_found)
-                        {
-                            start_found = true;
-                            d_start = pos;
-                        }
-                    }
-                    if (trk_id)
-                    {
-                        if (c[0] == 0x52)
-                        {
-                            end_found = true;
-                            d_end = pos;
-                        }
-                    }
-                    if (!trk_id)
-                    {
-                        if (c[0] == 0x52)
-                        {
-                            if (tid.Length == 0)
-                            {
-                                tid = Bit2Byte(source, pos, 12 * 8);
-                                a_headers.Add($"pos ({pos >> 3}) Track ID {Hex_Val(Decode_CBM_GCR(tid))}");
-                            }
-                            if (!start_found)
-                            {
-                                start_found = true;
-                                d_start = pos;
-                            }
-                        }
-                    }
-                    if (c[0] == 0x75 && (c[4] == 0xd6 || c[5] == 0xed))
-                    {
-                        if (!start_found)
-                        {
-                            start_found = true;
-                            d_start = pos;
-                        }
-                        string head = Hex_Val(c, 0, 7); //6
-                        if (!headers.Any(x => x == head))
-                        {
-                            a_headers.Add($"pos ({pos / 8}) {head}");
-                            sectors++;
-                            if (build)
-                            {
-                                int tpos = pos;
-                                int tsnc = 0;
-                                while (tpos < source.Length - 16)
-                                {
-                                    if (source[tpos]) tsnc++;
-                                    if (!source[tpos])
-                                    {
-                                        if (tsnc > 24)
-                                        {
-                                            byte[] cc = Bit2Byte(source, tpos, 16);
-                                            if (cc[0] == 0x6b || (cc[0] == 0x55 && cc[1] == 0x55))
-                                            {
-                                                byte[] sdt = new byte[0];
-                                                if (pos + (rl_seclen << 3) < source.Length)
-                                                {
-                                                    if (cc[0] == 0x6b)
-                                                    {
-                                                        sdt = FastArray.Init(rl_seclen, 0x00);
-                                                        sdt = Bit2Byte(source, tpos, sdt.Length << 3);
-                                                    }
-                                                }
-                                                if (pos + (rl_seclen << 3) > source.Length && cc[0] == 0x6b)
-                                                {
-                                                    if (cc[0] != 0x55)
-                                                    {
-                                                        sdt = Bit2Byte(source, tpos);
-                                                        int dif = rl_seclen - sdt.Length;
-                                                        byte[] comp = new byte[16];
-                                                        Buffer.BlockCopy(sdt, sdt.Length - 16, comp, 0, 16);
-                                                        byte[] find = new byte[0];
-                                                        for (int i = 0; i < 8000; i++)
-                                                        {
-                                                            find = Bit2Byte(source, i, comp.Length << 3);
-                                                            if (Match(find, comp))
-                                                            {
-                                                                int rpos = i + (comp.Length << 3);
-                                                                byte[] rem = new byte[dif];
-                                                                rem = Bit2Byte(source, rpos, dif << 3);
-                                                                MemoryStream buffer = new MemoryStream();
-                                                                BinaryWriter write = new BinaryWriter(buffer);
-                                                                write.Write(sdt);
-                                                                write.Write(rem);
-                                                                sdt = buffer.ToArray();
-                                                                break;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                if (cc[0] == 0x55) sdt = FastArray.Init(rl_seclen, 0x55);
-                                                sec_data.Add(sdt);
-                                                secds_pos.Add(tpos);
-                                                secde_pos.Add(tpos + (rl_seclen * 8));
-                                                break;
-                                            }
-                                        }
-                                        tsnc = 0;
-                                    }
-                                    tpos++;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (!end_found)
-                            {
-                                end_found = true;
-                                d_end = pos;
-                                a_headers.Add($"pos ({pos / 8}) {head} ** Repeat **");
-                            }
-                        }
-                        headers.Add(Hex_Val(c, 0, 7)); //6
-                        byte[] shd = new byte[7];
-                        Buffer.BlockCopy(c, 0, shd, 0, 7);
-                        sec_head.Add(shd);
-                        sec_pos.Add(pos);
+                        tid = Bit2Byte(source, pos, 12 * 8);
+                        a_headers.Add($"pos ({pos >> 3}) Track ID {Hex_Val(Decode_CBM_GCR(tid))}");
                     }
                 }
+                if (c[0] == 0x75 && (c[4] == 0xd6 || c[5] == 0xed)) HandleC0x75(c);
+            }
+
+            void HandleRLok7bMatch()
+            {
+                if (sevenb)
+                {
+                    end_found = true;
+                    d_end = pos;
+                }
+                else
+                {
+                    sevenb = true;
+                    sevenb_pos = pos;
+                    if (sb_sec == 0)
+                    {
+                        FindSbSec();
+                    }
+                    first_sector = sectors;
+                }
+
+                if (!start_found)
+                {
+                    start_found = true;
+                    d_start = pos;
+                }
+            }
+
+            void HandleTrackId(byte[] d)
+            {
+                if (d[0] == 0x52)
+                {
+                    end_found = true;
+                    d_end = pos;
+                }
+            }
+
+            void FindSbSec()
+            {
+                int sl = 0;
+                int tsnc = 0;
+                for (int i = pos; i < source.Length; i++)
+                {
+                    if (source[i]) tsnc++;
+                    else
+                    {
+                        if (tsnc >= 16)
+                        {
+                            sb_sec = (sl - tsnc - 8) >> 3;
+                            a_headers.Add($"pos ({pos >> 3}) 0x7B sector Length {sb_sec} First sector = {first_sector + 1}");
+                            break;
+                        }
+                        tsnc = 0;
+                    }
+                    sl++;
+                }
+            }
+
+            void HandleC0x75(byte[] d)
+            {
+                if (!start_found)
+                {
+                    start_found = true;
+                    d_start = pos;
+                }
+                string head = Hex_Val(d, 0, 7); //6
+                if (!headers.Any(x => x == head))
+                {
+                    a_headers.Add($"pos ({pos / 8}) {head}");
+                    sectors++;
+                    if (build) BuildSectorData();
+                }
+                else
+                {
+                    if (!end_found)
+                    {
+                        end_found = true;
+                        d_end = pos;
+                        a_headers.Add($"pos ({pos / 8}) {head} ** Repeat **");
+                    }
+                }
+                headers.Add(Hex_Val(d, 0, 7)); //6
+                byte[] shd = new byte[7];
+                Buffer.BlockCopy(d, 0, shd, 0, 7);
+                sec_head.Add(shd);
+                sec_pos.Add(pos);
+            }
+
+            void BuildSectorData()
+            {
+                int tpos = pos;
+                int tsnc = 0;
+                while (tpos < source.Length - 16)
+                {
+                    if (source[tpos]) tsnc++;
+                    else
+                    {
+                        if (tsnc > 24)
+                        {
+                            byte[] cc = Bit2Byte(source, tpos, 16);
+                            byte[] sdt = DetermineSectorData(cc, tpos);
+                            if (sdt != null)
+                            {
+                                sec_data.Add(sdt);
+                                secds_pos.Add(tpos);
+                                secde_pos.Add(tpos + (rl_seclen * 8));
+                                break;
+                            }
+                        }
+                        tsnc = 0;
+                    }
+                    tpos++;
+                }
+            }
+
+            byte[] DetermineSectorData(byte[] cc, int tpos)
+            {
+                if (cc[0] == 0x6b || (cc[0] == 0x55 && cc[1] == 0x55))
+                {
+                    if (pos + (rl_seclen << 3) < source.Length)
+                    {
+                        if (cc[0] == 0x6b)
+                        {
+                            byte[] sdt = FastArray.Init(rl_seclen, 0x00);
+                            sdt = Bit2Byte(source, tpos, sdt.Length << 3);
+                            return sdt;
+                        }
+                    }
+                    else if (cc[0] == 0x6b)
+                    {
+                        byte[] sdt = HandleIncompleteSector(cc, tpos);
+                        return sdt;
+                    }
+                    if (cc[0] == 0x55) return FastArray.Init(rl_seclen, 0x55);
+                }
+                return null;
+            }
+
+            byte[] HandleIncompleteSector(byte[] cc, int tpos)
+            {
+                byte[] sdt = Bit2Byte(source, tpos);
+                int dif = rl_seclen - sdt.Length;
+                byte[] comp = new byte[16];
+                Buffer.BlockCopy(sdt, sdt.Length - 16, comp, 0, 16);
+                for (int i = 0; i < 8000; i++)
+                {
+                    byte[] find = Bit2Byte(source, i, comp.Length << 3);
+                    if (Match(find, comp))
+                    {
+                        int rpos = i + (comp.Length << 3);
+                        byte[] rem = Bit2Byte(source, rpos, dif << 3);
+                        MemoryStream buffer = new MemoryStream();
+                        BinaryWriter write = new BinaryWriter(buffer);
+                        write.Write(sdt);
+                        write.Write(rem);
+                        sdt = buffer.ToArray();
+                        break;
+                    }
+                }
+                return sdt;
             }
         }
     }

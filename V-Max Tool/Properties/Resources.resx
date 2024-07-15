@@ -121,6 +121,9 @@
   <data name="cyan" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>cyan.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="msvcrt" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>msvcrt.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="rak1" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>rak1.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>

@@ -43,13 +43,11 @@ namespace V_Max_Tool
 
         byte[] Rebuild_CBM(byte[] data, int sectors, byte[] Disk_ID, int t_density, int trk)
         {
-            //if (tracks > 42) trk = (trk / 2) + 1; else trk += 1;
             BitArray tk = new BitArray(Flip_Endian(data));
             int sector_len = 10 + 325 + 10;
             int gap_len = 25;
             int gap_sync = 0;
             byte s = 0x00;
-            //byte[] sync = new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff };
             byte[] sync = FastArray.Init(5, 0xff); // { 0xff, 0xff, 0xff, 0xff, 0xff };
             if (s != 0xff || gap_sync <= 10) gap_sync = 0;
             int sector_gap = (density[t_density] - ((sector_len * sectors) + gap_len + gap_sync)) / (sectors * 2);
@@ -107,7 +105,6 @@ namespace V_Max_Tool
             byte[] sec_hdr = new byte[10];
             byte[] Disk_ID = new byte[4];
             BitArray source = new BitArray(Flip_Endian(data));
-            //List<string> list = new List<string>();
             List<int> list = new List<int>();
             List<string> dchr = new List<string>();
             List<string> headers = new List<string>();
@@ -149,8 +146,6 @@ namespace V_Max_Tool
                 headers.Add($"{data_start} {data_end} {start_found} {end_found}");
             }
             var len = (data_end - data_start);
-            //list.Add($"{(len) / 8} {data_start} {data_end}");
-            //try { File.WriteAllLines($@"C:\Replace_RapidLok_Key\t{trk}", dchr.ToArray()); } catch { }
             return (data_start, data_end, sector_zero, len, headers.ToArray(), sectors, s_st, total_sync, Disk_ID, s_pos, track_id);
 
             void add_total()
@@ -258,7 +253,6 @@ namespace V_Max_Tool
                                 sectors = list.Count;
                             }
                         }
-                        //list.Add(h);
                         list.Add(sect);
                     }
                 }
