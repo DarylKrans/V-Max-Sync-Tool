@@ -9,21 +9,20 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-        void Export_File(int last_track = -1, int fat_track = -1)
+        void Export_File(int last_track = -1)
         {
             Save_Dialog.FileName = $"{fname}{fnappend}";
-            if (Out_Type) Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib";
-            else Save_Dialog.Filter = "G64|*.g64";
+            Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib";
             Save_Dialog.Title = "Save File";
             if (Save_Dialog.ShowDialog() == DialogResult.OK)
             {
                 string fs = Save_Dialog.FileName;
-                if (Save_Dialog.FilterIndex == 1) Make_G64(fs, last_track, fat_track);
+                if (Save_Dialog.FilterIndex == 1) Make_G64(fs, last_track);
                 if (Save_Dialog.FilterIndex == 2) Make_NIB(fs);
                 if (Save_Dialog.FilterIndex == 3)
                 {
                     Make_NIB($@"{Path.GetDirectoryName(fs)}\{Path.GetFileNameWithoutExtension(fs)}.nib");
-                    Make_G64($@"{Path.GetDirectoryName(fs)}\{Path.GetFileNameWithoutExtension(fs)}.g64", last_track, fat_track);
+                    Make_G64($@"{Path.GetDirectoryName(fs)}\{Path.GetFileNameWithoutExtension(fs)}.g64", last_track);
                 }
                 if (nib_error || g64_error)
                 {
@@ -44,11 +43,24 @@ namespace V_Max_Tool
 
         void Make_NIB(string fname)
         {
-            //if (!Directory.Exists($@"{dirname}\Output")) Directory.CreateDirectory($@"{dirname}\Output");
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
-            write.Write(nib_header);
-            for (int i = 0; i < tracks; i++) write.Write(NDA.Track_Data[i]);
+            write.Write(Encoding.ASCII.GetBytes("MNIB-1541-RAW"));
+            byte[] htks = FastArray.Init(3, 0x00);
+            if (tracks > 42) htks[0] = 0x03; else htks[0] = 0x01;
+            write.Write(htks);
+            for (int i = 0; i < tracks; i++)
+            {
+                if (tracks > 42) write.Write((byte)i); else write.Write((byte)(i * 2));
+                if (NDS.cbm[i] > 0) write.Write((byte)(3 - Get_Density(NDG.Track_Length[i])));
+                else write.Write((byte)0x00);
+            }
+            write.Write(FastArray.Init(256 - (int)buffer.Length, 0x00));
+            for (int i = 0; i < tracks; i++)
+            {
+                if (NDA.Track_Data?[i] != null) write.Write(NDA.Track_Data[i]);
+                else write.Write(FastArray.Init(8192, 0x00));
+            }
             try
             {
                 File.WriteAllBytes(fname, buffer.ToArray());
@@ -62,7 +74,7 @@ namespace V_Max_Tool
             write.Close();
         }
 
-        void Make_G64(string fname, int l_trk, int f_trk)
+        void Make_G64(string fname, int l_trk)
         {
             if (l_trk < 0) l_trk = tracks;
             if (!Directory.Exists(Path.GetDirectoryName(fname))) Directory.CreateDirectory(Path.GetDirectoryName(fname));
@@ -83,10 +95,12 @@ namespace V_Max_Tool
             write.Write(m);
             int offset = 684 + watermark.Length;
             int th = 0;
+            int[] tp = new int[84];
             int[] td = new int[84];
             if (tracks > 42) Big(l_trk);
             else Small(l_trk);
-            for (int i = 0; i < 84; i++) write.Write(td[i]);
+            for (int i = 0; i < tp.Length; i++) write.Write(tp[i]);
+            for (int i = 0; i < td.Length; i++) write.Write(td[i]);
             write.Write(watermark);
             for (int i = 0; i < l_trk; i++)
             {
@@ -125,48 +139,40 @@ namespace V_Max_Tool
                 {
                     if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < secF.Length - 1)
                     {
-                        if (i <= trk) write.Write((int)offset + th); // else write.Write((int)0);
+                        if (i <= trk) tp[i] = offset + th;
                         prev_ofs = offset + th;
                         th += 2;
                         if (DB_g64.Checked) offset += m; else offset += NDG.Track_Data[i].Length;
-                        if (i <= trk) td[i] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[i] = 0;
+                        if (i <= trk) td[i] = 3 - Get_Density(NDG.Track_Data[i].Length);
                     }
                     else if (i > 0 && NDG.Fat_Track[i - 1] && NDG.Fat_Track[i + 1])
                     {
-                        write.Write((int)(prev_ofs));
+                        tp[i] = prev_ofs;
                         td[i] = td[i - 1];
                     }
-                    else write.Write((int)0);
                 }
             }
 
             void Small(int trk) /// 42 track nib file
             {
                 int r = 0;
-                int prev_ofs = 0;
+                int prev_ofs;
                 for (int i = 0; i < 42; i++)
                 {
-                    bool fat = false;
                     if (i < NDG.Track_Data.Length && NDG.Track_Length[i] > 6000 && NDS.cbm[i] < secF.Length - 1)
                     {
-                        if (i <= trk) write.Write((int)offset + th); else write.Write((int)0);
+                        if (i <= trk) tp[i * 2] = offset + th;
                         prev_ofs = offset + th;
                         th += 2;
                         if (DB_g64.Checked) offset += m; else offset += NDG.Track_Data[i].Length;
                         if (i <= trk) td[r] = 3 - Get_Density(NDG.Track_Data[i].Length); else td[r] = 0;
-                        r++; td[r] = 0; r++;
+                        r += 2;
                         if (i + 1 < trk && (NDG.Fat_Track[i] && NDG.Fat_Track[i + 1]))
                         {
-                            write.Write((int)(prev_ofs));
+                            tp[(i * 2) + 1] = prev_ofs;
                             td[r - 1] = td[r - 2];
-                            fat = true;
                         }
                     }
-                    else
-                    {
-                        write.Write((int)0);
-                    }
-                    if (!fat) write.Write((int)0);
                 }
             }
         }

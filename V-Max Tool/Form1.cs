@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 
 namespace V_Max_Tool
@@ -14,6 +15,7 @@ namespace V_Max_Tool
     {
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
+        private readonly bool Replace_RapidLok_Key = false;
         private readonly string ver = " v0.9.97.7 (beta)";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
@@ -47,16 +49,12 @@ namespace V_Max_Tool
         private Semaphore Task_Limit = new Semaphore(3, 3);
         Thread Worker_Main;
         Thread Worker_Alt;
-        Thread[] Task;
+        Thread[] Job;
 
         public Form1()
         {
             InitializeComponent();
             this.Text = $"Re-Master (Experimental) {ver}";
-            //byte[] gm = new byte[] { 0x69, 0x50, 0x50, 0xa0, 0xa0 };
-            //byte[] test = new byte[] { 0x69, 0x59, 0x57, 0xa9, 0xa7 };
-            //test[1] &= gm[1]; test[2] &= gm[2]; test[3] &= gm[3]; test[4] &= gm[4];
-            //Text = Hex_Val(test);
             Init();
             Set_ListBox_Items(true, true);
         }
@@ -174,7 +172,7 @@ namespace V_Max_Tool
                         }
                         Stream.Close();
                         var lab = $"Total Tracks {tracks}, G64 Track Size {tr_size:N0} bytes";
-                        Out_Type = false;
+                        //Out_Type = false;
                         Process(false, lab);
                     }
                     else
@@ -290,7 +288,8 @@ namespace V_Max_Tool
 
         private void Make(object sender, EventArgs e)
         {
-            Export_File(end_track, fat_trk);
+            //Export_File(end_track, fat_trk);
+            Export_File(end_track);
         }
 
         private void F_load_CheckedChanged(object sender, EventArgs e)
@@ -649,14 +648,14 @@ namespace V_Max_Tool
         {
             if (!busy && RL_Fix.Checked)
             {
-                    if (NDS.cbm.Any(x => x == 6)) RL_Remove_Protection();
-                    else Check_Cyan_Loader(true);
-                    out_track.Items.Clear();
-                    out_size.Items.Clear();
-                    out_dif.Items.Clear();
-                    Out_density.Items.Clear();
-                    out_rpm.Items.Clear();
-                    Process_Nib_Data(true, false, false, true); /// false flag instructs the routine NOT to process CBM tracks again
+                if (NDS.cbm.Any(x => x == 6)) RL_Remove_Protection();
+                else Check_Cyan_Loader(true);
+                out_track.Items.Clear();
+                out_size.Items.Clear();
+                out_dif.Items.Clear();
+                Out_density.Items.Clear();
+                out_rpm.Items.Clear();
+                Process_Nib_Data(true, false, false, true); /// false flag instructs the routine NOT to process CBM tracks again
             }
         }
     }

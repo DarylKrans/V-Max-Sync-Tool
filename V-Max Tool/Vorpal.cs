@@ -86,13 +86,13 @@ namespace V_Max_Tool
             if (leadptn == 0) lead_in = new byte[] { 0xd5, 0x35, 0x4d, 0x53, 0x54 };
             if (leadptn == 1)
             {
-                lead_in = IArray(5, 0x55);
+                lead_in = FastArray.Init(5, 0x55);
                 lead_out = 0x55;
                 stop = 0x55;
             }
             if (leadptn == 2)
             {
-                lead_in = IArray(5, 0xaa);
+                lead_in = FastArray.Init(5, 0xaa);
                 lead_out = 0xaa;
                 stop = 0xaa;
 
@@ -158,7 +158,7 @@ namespace V_Max_Tool
                 for (int i = 0; i < tend - tstart; i++) otmp[offset + i] = source[tstart + i];
             }
             catch { }
-            temp = Flip_Endian(Bit2Byte(otmp));
+            temp = Bit2Byte(otmp);
             Check_Sync();
             return temp;
 
@@ -244,8 +244,8 @@ namespace V_Max_Tool
                                 {
                                     sec_data[i] = source[dep + i];
                                 }
-                                if (dec) return Decode_Vorpal_GCR(Flip_Endian(Bit2Byte(sec_data)));
-                                else return (Flip_Endian(Bit2Byte(sec_data)));
+                                if (dec) return Decode_Vorpal_GCR(Bit2Byte(sec_data));
+                                else return (Bit2Byte(sec_data));
                             }
                             catch { }
                         }
@@ -305,7 +305,7 @@ namespace V_Max_Tool
                                 (lead_in_Found, track_lead_in) = Get_LeadIn_Position(k);
                             }
                             else sz = string.Empty;
-                            byte[] sec_ID = Flip_Endian(Bit2Byte(source, k - ((com << 3) >> 1), com << 3));
+                            byte[] sec_ID = Bit2Byte(source, k - ((com << 3) >> 1), com << 3);
                             sid = Hex_Val(sec_ID);
                             if (!sec_header.Any(x => x == sid))
                             {
@@ -339,7 +339,7 @@ namespace V_Max_Tool
             }
             int spl = 0;
             track_len = (data_end - data_start) + 1;
-            if (single_rotation) tdata = Flip_Endian(Bit2Byte(source, data_start, track_len));
+            if (single_rotation) tdata = Bit2Byte(source, data_start, track_len);
             else
             {
                 BitArray temp = new BitArray(track_len);
@@ -350,7 +350,7 @@ namespace V_Max_Tool
                     pos++;
                     if (pos > data_end) { spl = i; pos = data_start; }
                 }
-                tdata = Flip_Endian(Bit2Byte(temp));
+                tdata = Bit2Byte(temp);
             }
             return (tdata, data_start, data_end, track_len, track_lead_in, sectors, sec_pos.ToArray(), sec_hdr.ToArray());
 
@@ -360,7 +360,7 @@ namespace V_Max_Tool
                 bool leadF = false;
                 int leadin = 0;
                 int l = position - 18;
-                byte[] pre_sync = Flip_Endian(Bit2Byte(source, position - 18, 8));
+                byte[] pre_sync = Bit2Byte(source, position - 18, 8);
                 if (pre_sync[0] == 0x33)
                 {
                     bool equal = false;
@@ -379,11 +379,15 @@ namespace V_Max_Tool
                     {
                         byte[] te;
                         var u = l;
-                        for (int i = 0; i < 32; i++)
+                        try
                         {
-                            te = Bit2Byte(source, u - i, 8);
-                            if (te[0] == 0xbd) { l = u - (i + 1); break; }
+                            for (int i = 0; i < 32; i++)
+                            {
+                                te = Flip_Endian(Bit2Byte(source, u - i, 8));
+                                if (te[0] == 0xbd) { l = u - (i + 1); break; }
+                            }
                         }
+                        catch { }
                     }
                     leadin = l + leadIn_std.Count - 1;
                     isRealend = BitCopy(source, l, 16 << 3);

@@ -49,7 +49,8 @@ namespace V_Max_Tool
             int gap_len = 25;
             int gap_sync = 0;
             byte s = 0x00;
-            byte[] sync = new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff };
+            //byte[] sync = new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff };
+            byte[] sync = FastArray.Init(5, 0xff); // { 0xff, 0xff, 0xff, 0xff, 0xff };
             if (s != 0xff || gap_sync <= 10) gap_sync = 0;
             int sector_gap = (density[t_density] - ((sector_len * sectors) + gap_len + gap_sync)) / (sectors * 2);
             gap_len = density[t_density] - gap_sync - ((sector_len + (sector_gap * 2)) * sectors);
@@ -149,7 +150,7 @@ namespace V_Max_Tool
             }
             var len = (data_end - data_start);
             //list.Add($"{(len) / 8} {data_start} {data_end}");
-            //try { File.WriteAllLines($@"C:\test\t{trk}", dchr.ToArray()); } catch { }
+            //try { File.WriteAllLines($@"C:\Replace_RapidLok_Key\t{trk}", dchr.ToArray()); } catch { }
             return (data_start, data_end, sector_zero, len, headers.ToArray(), sectors, s_st, total_sync, Disk_ID, s_pos, track_id);
 
             void add_total()
@@ -159,7 +160,7 @@ namespace V_Max_Tool
 
             void Compare(int p)
             {
-                d = Flip_Endian(Bit2Byte(source, pos, comp));
+                d = Bit2Byte(source, pos, comp);
                 bool skip = false;
                 if (pos == 0 && d[0] == 0x52)
                 {
@@ -173,7 +174,7 @@ namespace V_Max_Tool
                         {
                             if (sc > 12)
                             {
-                                byte[] dd = Flip_Endian(Bit2Byte(source, test, comp));
+                                byte[] dd = Bit2Byte(source, test, comp);
                                 if (dd[0] != 0x52) break;
                                 if (dd[0] == 0x52) { skip = true; break; }
                             }
@@ -186,7 +187,7 @@ namespace V_Max_Tool
                 {
                     for (int i = 1; i < sz.Length; i++) d[i] &= sz[i];
                     h = Hex_Val(d);
-                    dec_hdr = Decode_CBM_GCR(Flip_Endian(Bit2Byte(source, pos, 80)));
+                    dec_hdr = Decode_CBM_GCR(Bit2Byte(source, pos, 80));
                     sect = Convert.ToInt32(dec_hdr[2]);
 
                     if (dec_hdr[2] < 21 && (dec_hdr[3] > 0 && dec_hdr[3] < 43))
@@ -331,7 +332,7 @@ namespace V_Max_Tool
                         }
                         Pad_Bits(dest_pos - (y + expected_sync + 8), (8 - y) + 1, d);
                     }
-                    return Rotate_Right(Flip_Endian(Bit2Byte(d, 0, bcnt << 3)), 6);
+                    return Rotate_Right(Bit2Byte(d, 0, bcnt << 3), 6);
                 }
             }
             return data;
@@ -381,7 +382,7 @@ namespace V_Max_Tool
 
             (byte[], bool) Decode_Sector()
             {
-                sec = Flip_Endian(Bit2Byte(source, pos, sector_data));
+                sec = Bit2Byte(source, pos, sector_data);
                 if (!decode) return (sec, false);
                 byte[] d_sec = Decode_CBM_GCR(sec);
                 /// Calculate block checksum
@@ -394,7 +395,7 @@ namespace V_Max_Tool
             {
                 int cl = 5;
                 if (!decode) cl = 10;
-                byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
+                byte[] d = Bit2Byte(source, pos, cl * 8);
                 if (d[0] == 0x52)
                 {
                     byte[] g = Decode_CBM_GCR(d);
@@ -442,7 +443,7 @@ namespace V_Max_Tool
                                 pos += sec.Length;
                                 for (int i = 0; i < pad.Count; i++) source[pos + i] = pad[i];
                             }
-                            return Flip_Endian(Bit2Byte(source));
+                            return Bit2Byte(source);
                         }
                     }
                     sync = false;
@@ -455,7 +456,7 @@ namespace V_Max_Tool
             bool Compare()
             {
                 int cl = 5;
-                byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
+                byte[] d = Bit2Byte(source, pos, cl * 8);
                 if (d[0] == 0x52)
                 {
                     byte[] g = Decode_CBM_GCR(d);
@@ -517,7 +518,7 @@ namespace V_Max_Tool
 
             bool Compare()
             {
-                byte[] d = Flip_Endian(Bit2Byte(source, pos, cl * 8));
+                byte[] d = Bit2Byte(source, pos, cl * 8);
                 if (d[0] == 0x52)
                 {
                     byte[] g = Decode_CBM_GCR(d);

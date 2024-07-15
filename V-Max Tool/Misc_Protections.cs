@@ -57,9 +57,12 @@ namespace V_Max_Tool
                     if (Match(exp, comp)) { start = pos; break; }
                     pos--;
                 }
-                for (int i = 0; i < 184; i++) write.Write((byte)0xeb);
+                //for (int i = 0; i < 184; i++) write.Write((byte)0xeb);
+                write.Write(FastArray.Init(184, 0xeb));
                 for (int i = start; i < end; i++) write.Write((byte)data[i]);
-                while (buffer.Length < density[3]) write.Write((byte)0xd7);
+                if (buffer.Length < density[3]) write.Write(FastArray.Init(density[3] - (int)buffer.Length, 0xd7));
+                //while (buffer.Length < density[3]) write.Write((byte)0xd7);
+                //Invoke(new Action(() => Text = $"{start} {end} {end - start}"));
             }
 
             void Slayer2()
@@ -82,6 +85,7 @@ namespace V_Max_Tool
                 }
                 byte[] key = new byte[end - start];
                 Buffer.BlockCopy(data, start, key, 0, end - start);
+                //Invoke(new Action(() => Text = $"{start} {end} {end - start}"));
                 for (int i = 0; i < 2; i++)
                 {
                     write.Write(key);
@@ -244,7 +248,7 @@ namespace V_Max_Tool
                 if (exists)
                 {
                     byte[] new_sec = Encode_CBM_GCR(Create_Empty_Sector());
-                    byte[] padding = IArray(5, 0x55);
+                    byte[] padding = FastArray.Init(5, 0x55);
                     padding[0] = 0x00;
                     new_sec[new_sec.Length - 1] = 0x00;
                     new_sec[new_sec.Length - 2] = 0x00;
@@ -276,7 +280,7 @@ namespace V_Max_Tool
         byte[] Securispeed(byte[] data)
         {
             byte[] key = new byte[density[3]];
-            byte[] sync = IArray(5, 0xff);
+            byte[] sync = FastArray.Init(5, 0xff);
             int start = 0;
             int pos = 0;
             bool weak = false;
@@ -303,7 +307,6 @@ namespace V_Max_Tool
                                 weak = true;
                                 pos = i;
                                 end = true;
-                                //if (pos == 0) start = 5;
                                 break;
                             }
                         }
@@ -317,6 +320,11 @@ namespace V_Max_Tool
             if (weak) data = Remove_Weak_Bits(data, true);
             if (start == 5) Buffer.BlockCopy(sync, 0, key, 0, sync.Length);
             Buffer.BlockCopy(data, 0, key, start, key.Length - start);
+            if (key[0] == gmt[0])
+            {
+                key = Rotate_Right(key, 6);
+                Buffer.BlockCopy(sync, 0, key, 0, sync.Length);
+            }
             return key;
         }
 

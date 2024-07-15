@@ -6,11 +6,13 @@ using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Management.Instrumentation;
 using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using static System.Windows.Forms.AxHost;
 
 namespace V_Max_Tool
 {
@@ -588,16 +590,28 @@ namespace V_Max_Tool
             return data;
         }
 
-        byte[] Rotate_Left(byte[] data, int s)
+        byte[] Rotate_Right(byte[] data, int pos)
         {
-            s -= 1;
-            return data.Skip(s).Concat(data.Take(s)).ToArray();
+            pos -= 1;
+            int length = data.Length;
+            pos %= length; // Ensure pos is within array length
+            byte[] temp = new byte[pos];
+            Array.Copy(data, length - pos, temp, 0, pos); // Copy last 'pos' elements to temp
+            Buffer.BlockCopy(data, 0, data, pos, length - pos); // Shift remaining elements to right
+            Buffer.BlockCopy(temp, 0, data, 0, pos); // Copy temp to start of array
+            return data;
         }
 
-        byte[] Rotate_Right(byte[] data, int s)
+        byte[] Rotate_Left(byte[] data, int pos)
         {
-            s -= 1;
-            return data.Skip(data.Length - s).Concat(data.Take(data.Length - s)).ToArray();
+            if (pos > 0) pos -= 1;
+            int length = data.Length;
+            pos %= length; // Ensure pos is within array length
+            byte[] temp = new byte[pos];
+            Array.Copy(data, temp, pos); // Copy first 'pos' elements to temp
+            Buffer.BlockCopy(data, pos, data, 0, length - pos); // Shift remaining elements to left
+            Buffer.BlockCopy(temp, 0, data, length - pos, pos); // Copy temp to end of array
+            return data;
         }
 
         string Hex_Val(byte[] data, int start = 0, int end = -1)
@@ -612,38 +626,48 @@ namespace V_Max_Tool
 
         byte[] Remove_Weak_Bits(byte[] data, bool aggressive = false)
         {
-            byte[] z = IArray(5, 0x00);
+            HashSet<byte> blankSet = new HashSet<byte>(blank);
             for (int i = 0; i < data.Length; i++)
             {
-                if (blank.Any(x => x == data[i]))
+                if (blankSet.Contains(data[i]))
                 {
-                    if (aggressive && i + z.Length - 1 < data.Length)
+                    if (aggressive && i + 5 <= data.Length)
                     {
-                        Buffer.BlockCopy(z, 0, data, i, z.Length);
-                        //data[i + 1] = 0x00;
-                        i += z.Length - 1;
-
+                        data[i] = 0x00;
+                        data[i + 1] = 0x00;
+                        data[i + 2] = 0x00;
+                        data[i + 3] = 0x00;
+                        data[i + 4] = 0x00;
+                        i += 5;
                     }
-                    else data[i] = 0x00;
+                    else data[i] = 0x00; // Zero out the byte
                 }
-
             }
             return data;
         }
 
         byte[] Bit2Byte(BitArray bits, int start = 0, int length = -1)
         {
-            BitArray temp = new BitArray(0);
             if (length < 0) length = bits.Length - start;
-            if (start >= 0 && length != -1 && start + length <= bits.Length)
+
+            if (start >= 0 && length > 0 && start + length <= bits.Length)
             {
-                temp = new BitArray(length);
-                for (int i = 0; i < length; i++) temp[i] = bits[start + i];
+                int byteLength = (length - 1) / 8 + 1;
+                byte[] ret = new byte[byteLength];
+                for (int i = 0; i < length; i++)
+                {
+                    if (bits[start + i])
+                    {
+                        int index = i / 8;
+                        int bitOffset = i % 8;
+                        ret[index] |= (byte)(1 << (7 - bitOffset));
+                    }
+                }
+                return (ret);
             }
-            byte[] ret = new byte[((temp.Count - 1) / 8) + 1];
-            temp.CopyTo(ret, 0);
-            return ret;
+            else return new byte[0];
         }
+
 
         BitArray BitCopy(BitArray bits, int start = 0, int length = -1)
         {
@@ -667,14 +691,14 @@ namespace V_Max_Tool
         public String Byte_to_Binary(Byte[] data)  // (use this for .NET 3.5 build) Note: only 100ms longer
         {
             BitArray bits = new BitArray(Flip_Endian(data));
-            string b = "";
+            StringBuilder b = new StringBuilder();
             for (int counter = 0; counter < bits.Length; counter++)
             {
-                b += (bits[counter] ? "1" : "0");
+                b.Append((bits[counter] ? "1" : "0"));
                 if ((counter + 1) % 8 == 0)
-                    b += " ";
+                    b.Append(" ");
             }
-            return b;
+            return b.ToString();
         }
 
         void Pad_Bits(int position, int count, BitArray bitarray)
@@ -707,27 +731,17 @@ namespace V_Max_Tool
             return i;
         }
 
-        BitArray Flip_Bits(BitArray bits)
-        {
-            BitArray f = new BitArray(bits);
-            for (int i = 0; i < bits.Count; i++)
-            {
-                f[i] = bits[7 - i];
-            }
-            return f;
-        }
-
         byte[] Flip_Endian(byte[] data)
         {
-            byte[] n = new byte[data.Length];
+
+            byte[] temp = new byte[data.Length];
+            byte b;
             for (int i = 0; i < data.Length; i++)
             {
-                byte[] l = new byte[1];
-                l[0] = data[i];
-                BitArray t = Flip_Bits(new BitArray(l));
-                t.CopyTo(n, i);
+                b = data[i];
+                temp[i] = ((byte)((((b * 0x0802 & 0x22110) | (b * 0x8020 & 0x88440)) * 0x10101) >> 16));
             }
-            return n;
+            return temp;
         }
 
         bool Check_Version(string find, byte[] sdat, int clen)
@@ -745,20 +759,38 @@ namespace V_Max_Tool
             return expecting.SequenceEqual(have);
         }
 
-        byte[] IArray(int size, byte value = 0)
+        (bool, int) Find_Data(string find, byte[] data, int start_pos = -1)
         {
-            if (size > 0) return Enumerable.Repeat(value, size).ToArray();
-            else return new byte[0];
-        }
-
-        (bool, int) Find_Data(string find, byte[] data, int clen, int start_pos = -1)
-        {
+            byte[] temp = Hex_String_To_ByteArray(find);
             if (start_pos < 0) start_pos = 0;
-            for (int i = start_pos; i < data.Length - find.Length; i++)
+            byte[] comp = new byte[temp.Length];
+            for (int i = start_pos; i < data.Length - temp.Length; i++)
             {
-                if (Hex_Val(data, i, clen) == find) return (true, i);
+                if (data[i] == temp[0])
+                {
+                    Buffer.BlockCopy(data, i, comp, 0, temp.Length);
+                    if (Match(temp, comp)) return (true, i);
+                }
             }
             return (false, 0);
+        }
+
+        byte[] Hex_String_To_ByteArray(string hex)
+        {
+            hex = hex.Replace("-", "");
+            if (hex.Length % 2 != 1)
+            {
+                byte[] tmp = new byte[hex.Length >> 1];
+                for (int i = 0; i < hex.Length >> 1; ++i) tmp[i] = (byte)((Val(hex[i << 1]) << 4) + (Val(hex[(i << 1) + 1])));
+                return tmp;
+            }
+            return new byte[0];
+
+            int Val(char current)
+            {
+                int val = (int)current;
+                return val - (val < 58 ? 48 : 55);
+            }
         }
 
         int Get_Cores()
@@ -928,89 +960,80 @@ namespace V_Max_Tool
 
         byte[] Decode_CBM_GCR(byte[] gcr)
         {
-            byte hnib;
-            byte lnib;
             byte[] plain = new byte[(gcr.Length / 5) * 4];
             for (int i = 0; i < gcr.Length / 5; i++)
             {
-                hnib = GCR_decode_high[gcr[(i * 5) + 0] >> 3];
-                lnib = GCR_decode_low[((gcr[(i * 5) + 0] << 2) | (gcr[(i * 5) + 1] >> 6)) & 0x1f];
-                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 0] = hnib |= lnib;
-                else plain[(i * 4) + 0] = 0x00;
-
-                hnib = GCR_decode_high[(gcr[(i * 5) + 1] >> 1) & 0x1f];
-                lnib = GCR_decode_low[((gcr[(i * 5) + 1] << 4) | (gcr[(i * 5) + 2] >> 4)) & 0x1f];
-                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 1] = hnib |= lnib;
-                else plain[(i * 4) + 1] = 0x00;
-
-                hnib = GCR_decode_high[((gcr[(i * 5) + 2] << 1) | (gcr[(i * 5) + 3] >> 7)) & 0x1f];
-                lnib = GCR_decode_low[(gcr[(i * 5) + 3] >> 2) & 0x1f];
-                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 2] = hnib |= lnib;
-                else plain[(i * 4) + 2] = 0x00;
-
-                hnib = GCR_decode_high[((gcr[(i * 5) + 3] << 3) | (gcr[(i * 5) + 4] >> 5)) & 0x1f];
-                lnib = GCR_decode_low[gcr[(i * 5) + 4] & 0x1f];
-                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 3] = hnib |= lnib;
-                else plain[(i * 4) + 3] = 0x00;
+                int baseIndex = i * 5;
+                byte b1 = gcr[baseIndex];
+                byte b2 = gcr[baseIndex + 1];
+                plain[(i * 4) + 0] = CombineNibbles((byte)(b1 >> 3), (byte)(((b1 << 2) | (b2 >> 6)) & 0x1f));
+                b1 = gcr[baseIndex + 1];
+                b2 = gcr[baseIndex + 2];
+                plain[(i * 4) + 1] = CombineNibbles((byte)((b1 >> 1) & 0x1f), (byte)(((b1 << 4) | (b2 >> 4)) & 0x1f));
+                b1 = gcr[baseIndex + 2];
+                b2 = gcr[baseIndex + 3];
+                plain[(i * 4) + 2] = CombineNibbles((byte)(((b1 << 1) | (b2 >> 7)) & 0x1f), (byte)((b2 >> 2) & 0x1f));
+                b1 = gcr[baseIndex + 3];
+                b2 = gcr[baseIndex + 4];
+                plain[(i * 4) + 3] = CombineNibbles((byte)(((b1 << 3) | (b2 >> 5)) & 0x1f), (byte)(b2 & 0x1f));
             }
             return plain;
+
+            byte CombineNibbles(byte highNibble, byte lowNibble)
+            {
+                byte hnib = GCR_decode_high[highNibble];
+                byte lnib = GCR_decode_low[lowNibble];
+                if (hnib == 0xff || lnib == 0xff) return 0x00;
+                else return (byte)(hnib | lnib);
+            }
         }
 
         byte[] Encode_CBM_GCR(byte[] plain)
         {
             int l = plain.Length / 4;
             byte[] gcr = new byte[l * 5];
-
             for (int i = 0; i < l; i++)
             {
-                gcr[0 + (i * 5)] = (byte)(GCR_encode[(plain[0 + (i * 4)]) >> 4] << 3);
-                gcr[0 + (i * 5)] |= (byte)(GCR_encode[(plain[0 + (i * 4)]) & 0x0f] >> 2);
-
-                gcr[1 + (i * 5)] = (byte)(GCR_encode[(plain[0 + (i * 4)]) & 0x0f] << 6);
-                gcr[1 + (i * 5)] |= (byte)(GCR_encode[(plain[1 + (i * 4)]) >> 4] << 1);
-                gcr[1 + (i * 5)] |= (byte)(GCR_encode[(plain[1 + (i * 4)]) & 0x0f] >> 4);
-
-                gcr[2 + (i * 5)] = (byte)(GCR_encode[(plain[1 + (i * 4)]) & 0x0f] << 4);
-                gcr[2 + (i * 5)] |= (byte)(GCR_encode[(plain[2 + (i * 4)]) >> 4] >> 1);
-
-                gcr[3 + (i * 5)] = (byte)(GCR_encode[(plain[2 + (i * 4)]) >> 4] << 7);
-                gcr[3 + (i * 5)] |= (byte)(GCR_encode[(plain[2 + (i * 4)]) & 0x0f] << 2);
-                gcr[3 + (i * 5)] |= (byte)(GCR_encode[(plain[3 + (i * 4)]) >> 4] >> 3);
-
-                gcr[4 + (i * 5)] = (byte)(GCR_encode[(plain[3 + (i * 4)]) >> 4] << 5);
-                gcr[4 + (i * 5)] |= GCR_encode[(plain[3 + (i * 4)]) & 0x0f];
+                int baseIndex = i * 4;
+                byte p1 = plain[baseIndex];
+                byte p2 = plain[baseIndex + 1];
+                byte p3 = plain[baseIndex + 2];
+                byte p4 = plain[baseIndex + 3];
+                gcr[0 + (i * 5)] = (byte)((GCR_encode[p1 >> 4] << 3) | (GCR_encode[p1 & 0x0f] >> 2));
+                gcr[1 + (i * 5)] = (byte)((GCR_encode[p1 & 0x0f] << 6) | (GCR_encode[p2 >> 4] << 1) | (GCR_encode[p2 & 0x0f] >> 4));
+                gcr[2 + (i * 5)] = (byte)((GCR_encode[p2 & 0x0f] << 4) | (GCR_encode[p3 >> 4] >> 1));
+                gcr[3 + (i * 5)] = (byte)((GCR_encode[p3 >> 4] << 7) | (GCR_encode[p3 & 0x0f] << 2) | (GCR_encode[p4 >> 4] >> 3));
+                gcr[4 + (i * 5)] = (byte)((GCR_encode[p4 >> 4] << 5) | GCR_encode[p4 & 0x0f]);
             }
             return gcr;
         }
 
         byte[] Decode_Vorpal_GCR(byte[] gcr)
         {
-            byte hnib;
-            byte lnib;
             byte[] plain = new byte[(gcr.Length / 5) * 4];
             for (int i = 0; i < gcr.Length / 5; i++)
             {
-                hnib = VPL_decode_high[gcr[(i * 5) + 0] >> 3];
-                lnib = VPL_decode_low[((gcr[(i * 5) + 0] << 2) | (gcr[(i * 5) + 1] >> 6)) & 0x1f];
-                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 0] = hnib |= lnib;
-                else plain[(i * 4) + 0] = 0x00;
-
-                hnib = VPL_decode_high[(gcr[(i * 5) + 1] >> 1) & 0x1f];
-                lnib = VPL_decode_low[((gcr[(i * 5) + 1] << 4) | (gcr[(i * 5) + 2] >> 4)) & 0x1f];
-                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 1] = hnib |= lnib;
-                else plain[(i * 4) + 1] = 0x00;
-
-                hnib = VPL_decode_high[((gcr[(i * 5) + 2] << 1) | (gcr[(i * 5) + 3] >> 7)) & 0x1f];
-                lnib = VPL_decode_low[(gcr[(i * 5) + 3] >> 2) & 0x1f];
-                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 2] = hnib |= lnib;
-                else plain[(i * 4) + 2] = 0x00;
-
-                hnib = VPL_decode_high[((gcr[(i * 5) + 3] << 3) | (gcr[(i * 5) + 4] >> 5)) & 0x1f];
-                lnib = VPL_decode_low[gcr[(i * 5) + 4] & 0x1f];
-                if (!(hnib == 0xff || lnib == 0xff)) plain[(i * 4) + 3] = hnib |= lnib;
-                else plain[(i * 4) + 3] = 0x00;
+                int baseIndex = i * 5;
+                byte b1 = gcr[baseIndex];
+                byte b2 = gcr[baseIndex + 1];
+                plain[(i * 4) + 0] = CombineNibbles(VPL_decode_high[b1 >> 3], VPL_decode_low[((b1 << 2) | (b2 >> 6)) & 0x1f]);
+                b1 = gcr[baseIndex + 1];
+                b2 = gcr[baseIndex + 2];
+                plain[(i * 4) + 1] = CombineNibbles(VPL_decode_high[(b1 >> 1) & 0x1f], VPL_decode_low[((b1 << 4) | (b2 >> 4)) & 0x1f]);
+                b1 = gcr[baseIndex + 2];
+                b2 = gcr[baseIndex + 3];
+                plain[(i * 4) + 2] = CombineNibbles(VPL_decode_high[((b1 << 1) | (b2 >> 7)) & 0x1f], VPL_decode_low[(b2 >> 2) & 0x1f]);
+                b1 = gcr[baseIndex + 3];
+                b2 = gcr[baseIndex + 4];
+                plain[(i * 4) + 3] = CombineNibbles(VPL_decode_high[((b1 << 3) | (b2 >> 5)) & 0x1f], VPL_decode_low[b2 & 0x1f]);
             }
             return plain;
+
+            byte CombineNibbles(byte highNibble, byte lowNibble)
+            {
+                if (highNibble == 0xff || lowNibble == 0xff) return 0x00;
+                else return (byte)(highNibble | lowNibble);
+            }
         }
 
         byte[] Build_BlockHeader(int track, int sector, byte[] ID)
@@ -1071,30 +1094,33 @@ namespace V_Max_Tool
         {
             if (Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"])
             {
-                this.Update();
-                Draw?.Abort();
-                circ?.Abort();
-                flat?.Abort();
-                check_alive?.Abort();
-                flat?.Join();
-                try
+                if (!batch)
                 {
-                    if (!dontDrawFlat)
+                    this.Update();
+                    Draw?.Abort();
+                    circ?.Abort();
+                    flat?.Abort();
+                    check_alive?.Abort();
+                    flat?.Join();
+                    try
                     {
-                        flat_large?.Dispose();
-                        flat = new Thread(new ThreadStart(() => Draw_Flat_Tracks(false, timeout)));
-                        flat.Start();
+                        if (!dontDrawFlat)
+                        {
+                            flat_large?.Dispose();
+                            flat = new Thread(new ThreadStart(() => Draw_Flat_Tracks(false, timeout)));
+                            flat.Start();
+                        }
+                        circle?.Dispose();
+                        circ = new Thread(new ThreadStart(() => Draw_Circular_Tracks(timeout)));
+                        circ.Start();
                     }
-                    circle?.Dispose();
-                    circ = new Thread(new ThreadStart(() => Draw_Circular_Tracks(timeout)));
-                    circ.Start();
+                    catch { }
+                    drawn = true;
+                    GC.Collect();
+                    busy = false;
+                    Draw = new Thread(new ThreadStart(() => Progress_Thread_Check(timeout)));
+                    Draw.Start();
                 }
-                catch { }
-                drawn = true;
-                GC.Collect();
-                busy = false;
-                Draw = new Thread(new ThreadStart(() => Progress_Thread_Check(timeout)));
-                Draw.Start();
             }
         }
 
@@ -1200,6 +1226,9 @@ namespace V_Max_Tool
             /// these loaders are guaranteed to work and the loader code has not been modified from original. (these are not "cracked" loaders)
             rak1 = Decompress(XOR(Resources.rak1, 0xab));
             cldr_id = Decompress(XOR(Resources.cyan, 0xc1));
+            byte[] rlnk = Decompress(XOR(Resources.rlnk, 0x7b));
+            Buffer.BlockCopy(rlnk, 0, rl_nkey, 0, rl_nkey.Length);
+            for (int i = 54; i < rlnk.Length; i++) rl_7b[i - 54] = Convert.ToInt32(rlnk[i]);
             /// RapidLok Patches
             rl6_t18s3[0, 0] = new byte[] { 0x60, 0x9b, 0x2a, 0x7d };
             rl6_t18s3[1, 0] = new byte[] { 0xea, 0xf4, 0xb7, 0xb3, 0xba };
@@ -1224,6 +1253,16 @@ namespace V_Max_Tool
             rl1_t18s9[0, 1] = new byte[] { 0xd5, 0x5e, 0x7b, 0xb6, 0xdb };
             rl1_t18s9[1, 1] = new byte[] { 0x3c, 0xcd, 0x5a, 0xdd, 0x56 };
             RL_Fix.Visible = false;
+            p[0] = new byte[] { 0xd2, 0x4b, 0xff, 0x64 };
+            p[1] = new byte[] { 0x4d, 0x6d, 0x5b, 0xff };
+            p[2] = new byte[] { 0x92, 0x49, 0x24, 0x92 };
+            p[3] = new byte[] { 0x6b, 0xff, 0x65, 0x53 };
+            p[4] = new byte[] { 0x93, 0xff, 0x69, 0x25 };
+            p[5] = new byte[] { 0x33, 0x33, 0x33, 0x33 };
+            p[6] = new byte[] { 0x52, 0x52, 0x52, 0x52 };
+            p[7] = new byte[] { 0x5a, 0x5a, 0x5a, 0x5a };
+            p[8] = new byte[] { 0x69, 0x69, 0x69, 0x69 };
+            p[9] = new byte[] { 0x4b, 0x4b, 0x4b, 0x4b };
             Img_Q.DataSource = Img_Quality;
             Img_Q.SelectedIndex = 2;
             Width = PreferredSize.Width;
@@ -1257,12 +1296,13 @@ namespace V_Max_Tool
             Set_Tool_Tips();
             manualRender = M_render.Visible = Cores <= 3;
             if (Cores < 2) Img_Q.SelectedIndex = 0;
-            //File.WriteAllBytes($@"c:\test\compressed\cyan.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cyan")), 0xc1));
-            //File.WriteAllBytes($@"c:\test\compressed\rak1.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rak2")), 0xab));
-            //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
-            //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
-            //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
-            //File.WriteAllBytes($@"c:\test\compressed\v2644en.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\644e")), 0x4e));
+            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\rlnk.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\rlnk")), 0x7b));
+            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\cyan.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\cyan")), 0xc1));
+            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\rak1.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\rak2")), 0xab));
+            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\cbm")), 0xcb));
+            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\4e64")), 0x64));
+            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\6446")), 0x46));
+            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\compressed\v2644en.bin", XOR(Compress(File.ReadAllBytes($@"c:\Replace_RapidLok_Key\loaders\644e")), 0x4e));
 
             busy = false;
 

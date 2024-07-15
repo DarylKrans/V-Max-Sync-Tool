@@ -103,7 +103,8 @@ namespace V_Max_Tool
                 gap_pos = 0;
                 var d = pos;
                 if (d + 320 > data.Length) d = 0;
-                (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][i]}", data, 3, d);
+                (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][i]}", data);
+                //(found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][i]}", data, 3, d);
                 while (data[pos] != end_byte && (pos < data.Length - 1)) pos++;
                 pos += 320;
                 while (pos < data.Length)
@@ -151,7 +152,7 @@ namespace V_Max_Tool
                 sec_dat[sec] = new byte[Sector_len];
                 try
                 {
-                    (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][sec]}", data, 3, ls_pos);
+                    (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][sec]}", data, ls_pos);
                     /// ---------- remove this if errors occur --------------------
                     ls_pos = pos + 320;
                     if (ls_pos >= data.Length - 320) ls_pos = 0;
@@ -235,7 +236,7 @@ namespace V_Max_Tool
             bool found = false;
             byte[] start_byte = new byte[1];
             byte[] end_byte = new byte[1];
-            byte[] pattern = IArray(6, 0xa5);
+            byte[] pattern = FastArray.Init(6, 0xa5);
             byte[] ignore = new byte[] { 0x7e, 0x7f, 0xff, 0x5f, 0xbf, 0x57 };
             string ptn = Hex_Val(pattern);
             string compare = string.Empty;
@@ -366,12 +367,12 @@ namespace V_Max_Tool
             byte[] start_byte = { t_info[0] };
             byte[] end_byte = { t_info[1] };
             byte[] compare = new byte[4];
-            byte[] pattern = IArray(3, 0xa5);
+            byte[] pattern = FastArray.Init(3, 0xa5);
             byte[] ignore = new byte[] { 0x7e, 0x7f, 0xff, 0x5f, 0xbf, 0x57, 0x5b }; /// possible sync markers to ignore when building track
             bool st = (t_info[4] == 0);
             int head_len = Convert.ToInt32(t_info[2]);
             int sec_zero;
-            byte[] find = IArray(4, 0xa5);
+            byte[] find = FastArray.Init(4, 0xa5);
             find[0] = start_byte[0];
             int vs = Convert.ToInt32(t_info[3]);
             try { Buffer.BlockCopy(data, data_start, temp_data, 0, data_end - data_start); } catch { }

@@ -124,6 +124,9 @@
   <data name="rak1" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>rak1.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="rlnk" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>rlnk.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="v24e64p" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>v24e64p.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>

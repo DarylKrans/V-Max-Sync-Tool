@@ -5,20 +5,23 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-        bool v2cc = false;
-        bool v2aa = false;
-        bool v3cc = false;
-        bool v3aa = false;
-        bool rad = false;
-        int radsec = 0;
+        private bool v2cc = false;
+        private bool v2aa = false;
+        private bool v3cc = false;
+        private bool v3aa = false;
+        private bool rad = false;
+        private int radsec = 0;
         private string fname = "";
         private string fext = "";
         private string fnappend = "";
@@ -27,16 +30,14 @@ namespace V_Max_Tool
         private bool loader_fixed = false;
         private byte[] nib_header = new byte[0];
         private byte[] g64_header = new byte[684];
+        private readonly byte[][] p = new byte[10][];
         private readonly string[] supported = { ".nib", ".g64", ".nbz" }; // Supported file extensions list
         /// vsec = the CBM sector header values & against byte[] sz
         private readonly string[] valid_cbm = { "52-40-05-28", "52-40-05-2C", "52-40-05-48", "52-40-05-4C", "52-40-05-38", "52-40-05-3C", "52-40-05-58", "52-40-05-5C",
             "52-40-05-24", "52-40-05-64", "52-40-05-68", "52-40-05-6C", "52-40-05-34", "52-40-05-74", "52-40-05-78", "52-40-05-54", "52-40-05-A8",
             "52-40-05-AC", "52-40-05-C8", "52-40-05-CC", "52-40-05-B8" };
         /// vmax = the block header values of V-Max v2 sectors (non-CBM sectors)
-        //private readonly string[] secF = { "NDOS", "CBM", "V-Max v2", "V-Max v3", "Loader", "Vorpal", "Unformatted" };
         private readonly string[] secF = { "NDOS", "CBM", "V-Max v2", "V-Max v3", "Loader", "Vorpal", "RapidLok", "RL-Key", "EA", "RA/MB", "Microprose", "GMA", "Unformatted" };
-        private readonly int[] invalid_char = { 0, 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 95,
-            128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139 };
         private int[] jt = new int[42];
 
         void Batch_Get_File_List(string[] files)
@@ -54,7 +55,7 @@ namespace V_Max_Tool
             Invoke(new Action(() => ok = SaveFolder.ShowDialog()));
             if (ok == DialogResult.OK)
             {
-                string parent;// = "";
+                string parent;
                 string[] batch_list;
                 if (Cores <= 3) Invoke(new Action(() => Batch_Box.Visible = true));
                 (batch_list, parent) = Populate_File_List(files);
@@ -224,13 +225,13 @@ namespace V_Max_Tool
                                 {
                                     if (DB_timers.Checked) label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms";
                                 }));
-                                Make_G64(output, end_track, fat_trk);
+                                Make_G64(output, end_track);
                             }
                         }
                         catch { }
                     }
                 }
-                GC.Collect();
+                //GC.Collect();
             }
         }
 
@@ -263,18 +264,18 @@ namespace V_Max_Tool
             else ht = 0;
             /// ------------ Safe Threading Method, Starts as many threads as there are physical CPU cores available ----------------------
             /// ------------ CPU_Killer (true) Starts as many threads as there are jobs to do. (can overwhelm slower CPU's quickly!) ------
-            Task = new Thread[tracks];
+            Job = new Thread[tracks];
             for (int i = 0; i < tracks; i++)
             {
                 int x = i;
                 Task_Limit.WaitOne();
-                Task[i] = new Thread(new ThreadStart(() => Analyze_Track(x)));
-                Task[i].Start();
+                Job[i] = new Thread(new ThreadStart(() => Analyze_Track(x)));
+                Job[i].Start();
                 Update_Progress_Bar(i);
                 if (tracks > 42) i++;
             }
-            foreach (var thread in Task) thread?.Join();
-            Task = new Thread[0];
+            foreach (var thread in Job) thread?.Join();
+            Job = new Thread[0];
             /// -- Checks for false positive of RapidLok Key track on non-RapidLok images
             if (NDS.cbm.Any(x => x == 7) && !NDS.cbm.Any(x => x == 6))
             {
@@ -402,7 +403,6 @@ namespace V_Max_Tool
                         }
                         if (NDS.cbm[i] == 6)
                         {
-                            //Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]} {tr} {le} ({NDG.Track_Data[i].Length})" });
                             Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]} {tr} {le} ({NDS.Track_Length[i]})" });
                             for (int j = 0; j < f[i].Length; j++)
                             {
@@ -554,6 +554,7 @@ namespace V_Max_Tool
                         }
                     }
                 }
+
                 if (NDS.cbm[trk] == 6)
                 {
                     int tk = trk;
@@ -565,29 +566,35 @@ namespace V_Max_Tool
                         NDS.D_Start[trk],
                         NDS.D_End[trk], q,
                         NDS.sectors[trk],
+                        NDS.Header_Len[trk],
                         f[trk]) = RapidLok_Track_Info(NDS.Track_Data[trk], trk, false, new byte[] { 0x00 });
                     NDS.Track_Length[trk] = q;
-                    //Set_Dest_Arrays(temp, trk);
                 }
+
                 if (NDS.cbm[trk] == 7)
                 {
                     rlk++;
-                    byte[] newkey = RapidLok_Key_Fix(NDS.Track_Data[trk]);
+                    byte[] newkey = new byte[0];
+                    if (!Replace_RapidLok_Key) (newkey, NDS.Loader) = RapidLok_Key_Fix(NDS.Track_Data[trk]);
+                    else (newkey, NDS.Loader) = RapidLok_Key_Fix(NDS.Track_Data[trk], rl_nkey);
                     NDS.Track_Length[trk] = newkey.Length << 3;
                     Set_Dest_Arrays(newkey, trk);
                 }
+
                 if (NDS.cbm[trk] == 8)
                 {
                     byte[] EA = Pirate_Slayer(NDS.Track_Data[trk]);
                     NDS.Track_Length[trk] = EA.Length << 3;
                     Set_Dest_Arrays(EA, trk);
                 }
+
                 if (NDS.cbm[trk] == 9)
                 {
                     byte[] RA = RainbowArts(NDS.Track_Data[trk]);
                     NDS.Track_Length[trk] = RA.Length << 3;
                     Set_Dest_Arrays(RA, trk);
                 }
+
                 if (NDS.cbm[trk] == 11)
                 {
                     byte[] GMA = Securispeed(NDS.Track_Data[trk]);
@@ -633,22 +640,16 @@ namespace V_Max_Tool
 
             /// ------------ Safe Threading Method, Starts as many threads as there are physical threads available ------------------------
             var ldt = 255;
-            Task = new Thread[tracks];
+            List<Task> tasks = new List<Task>();
             for (int i = 0; i < tracks; i++)
             {
-
                 int x = i;
                 var y = vpl_lead;
-                if (NDS.cbm[i] != 4)
-                {
-                    Task_Limit.WaitOne();
-                    Task[i] = new Thread(new ThreadStart(() => Process(x, y, true)));
-                    Task[i].Start();
-                }
+                if (NDS.cbm[i] != 4) tasks.Add(Task.Run(() => Process(x, y, false)));
                 else ldt = i;
                 if (tracks > 42) i++;
             }
-            foreach (var thread in Task) thread?.Join();
+            Task.WhenAll(tasks).Wait();
             if (ldt < tracks) Process(ldt, 0, false); /// (false) tells Process not to release the thread because it isn'format in a Semaphore or a thread
             if ((VM_Ver.Text == "No Protection or CBM exploit" || VM_Ver.Text.Contains("Radwar")) && rad)
             {
@@ -711,6 +712,10 @@ namespace V_Max_Tool
                 if (!busy) Data_Viewer();
             }
             sw.Stop();
+            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\rl_key.bin", NDS.Loader);
+            //byte[] rltrks = new byte[tracks];
+            //for (int i = 0; i < tracks; i++) rltrks[i] = (byte)NDS.Header_Len[i];
+            //File.WriteAllBytes($@"c:\Replace_RapidLok_Key\7b_sec.bin", rltrks);
             return sw;
 
             void Process_Track(int trk, bool acbm, bool av2, bool cv2, bool av3, bool cv3, bool avp, int vplead, bool fix, bool sol, bool rvb, bool cmb, bool s_sec, bool cyn) //, bool swp)
@@ -731,8 +736,24 @@ namespace V_Max_Tool
 
             void Process(int track, int vorpal_lead = 0, bool release = true)
             {
-                Process_Track(track, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, vorpal_lead, fl, sl, rb_vm, cbm, short_sector, cyan);
-                if (release) Task_Limit.Release();
+                if (!release) Do_Work();
+                else
+                {
+                    try
+                    {
+                        Task_Limit.WaitOne();
+                        Do_Work();
+                    }
+                    finally
+                    {
+                        Task_Limit.Release();
+                    }
+                }
+
+                void Do_Work()
+                {
+                    Process_Track(track, cbmadj, v2adj, v2cust, v3adj, v3cust, vpadj, vorpal_lead, fl, sl, rb_vm, cbm, short_sector, cyan);
+                }
             }
 
             void Process_MPS(int trk, bool acbm)
@@ -861,7 +882,6 @@ namespace V_Max_Tool
                                 }
                             }
                             Set_Dest_Arrays(temp, trk);
-                            //Set_Dest_Arrays(Remove_Weak_Bits(temp), trk);
                         }
                         catch
                         {
@@ -977,10 +997,13 @@ namespace V_Max_Tool
 
             void Process_RapidLok(int trk)
             {
+                int track = trk;
+                if (tracks > 42) track = (trk / 2);
+                if (!Replace_RapidLok_Key) rl_7b[track] = 0;
                 byte[] temp;
-                int q; int s; int e; int b;
+                int q; int s; int e; int b; int h;
                 string[] f;
-                (temp, s, e, q, b, f) = RapidLok_Track_Info(NDS.Track_Data[trk], trk, true, NDS.t18_ID);
+                (temp, s, e, q, b, h, f) = RapidLok_Track_Info(NDS.Track_Data[trk], trk, true, NDS.t18_ID, rl_7b[track]);
                 Set_Dest_Arrays(temp, trk);
             }
 
@@ -1060,15 +1083,9 @@ namespace V_Max_Tool
                 }
                 byte[] ncomp = new byte[vpl_s0.Length];
                 int pos = 0;
-                BitArray scomp = new BitArray(vpl_s0.Length * 8);
                 while (pos < source.Length - vpl_s0.Length * 8)
                 {
-                    for (int j = 0; j < scomp.Count; j++)
-                    {
-                        scomp[j] = source[pos + j];
-                    }
-                    scomp.CopyTo(ncomp, 0);
-                    ncomp = Flip_Endian(ncomp);
+                    ncomp = Bit2Byte(source, pos, vpl_s0.Length << 3);
                     if (Match(vpl_s0, ncomp) || Match(vpl_s1, ncomp))
                     {
                         if (Check_Vorpal_Sectors(source, pos)) return 5;
@@ -1107,11 +1124,13 @@ namespace V_Max_Tool
 
             (int, bool) Check_Blank(byte[] d)
             {
+                HashSet<byte> blankSet = new HashSet<byte>(blank);
                 int b = 0;
                 int snc = 0;
                 for (int i = 0; i < d.Length; i++)
                 {
-                    if (blank.Any(x => x == d[i])) b++;
+                    //if (blank.Any(x => x == d[i])) b++;d
+                    if (blankSet.Contains(data[i])) b++;
                     if (d[i] == 0xff) snc++;
                     try
                     {
@@ -1136,7 +1155,7 @@ namespace V_Max_Tool
                             {
                                 Buffer.BlockCopy(d, i, gm, 0, gmt.Length);
                                 for (int j = 1; j < gmt.Length; j++) gm[j] &= gmt[j];
-                                if (Match(gm, gmt)) // || Match(gm, gma3))
+                                if (Match(gm, gmt))
                                 {
                                     int pad = 0;
                                     for (int j = 0; j < d.Length; j++)
@@ -1177,7 +1196,7 @@ namespace V_Max_Tool
                                 ps++; sc++;
                                 if (sc > 140) break;
                             }
-                            if (Enumerable.Range(108, 132).Contains(sc))  // return (9, false);
+                            if (Enumerable.Range(108, 132).Contains(sc))
                             {
                                 ps = 0;
                                 sc = 0;
@@ -1218,19 +1237,6 @@ namespace V_Max_Tool
 
             bool Check_Loader(byte[] d)
             {
-                byte[][] p = new byte[10][];
-                /// byte[] p contains a list of commonly repeating patters in the V-Max track 20 loader
-                /// the following (for) statement checks the track for these patters, if 30 matches are found, we assume its a loader track
-                p[0] = new byte[] { 0xd2, 0x4b, 0xff, 0x64 };
-                p[1] = new byte[] { 0x4d, 0x6d, 0x5b, 0xff };
-                p[2] = new byte[] { 0x92, 0x49, 0x24, 0x92 };
-                p[3] = new byte[] { 0x6b, 0xff, 0x65, 0x53 };
-                p[4] = new byte[] { 0x93, 0xff, 0x69, 0x25 };
-                p[5] = new byte[] { 0x33, 0x33, 0x33, 0x33 };
-                p[6] = new byte[] { 0x52, 0x52, 0x52, 0x52 };
-                p[7] = new byte[] { 0x5a, 0x5a, 0x5a, 0x5a };
-                p[8] = new byte[] { 0x69, 0x69, 0x69, 0x69 };
-                p[9] = new byte[] { 0x4b, 0x4b, 0x4b, 0x4b };
                 int l = 0;
                 byte[] cmp = new byte[4];
                 for (int i = 0; i < d.Length - cmp.Length; i++)
@@ -1270,10 +1276,7 @@ namespace V_Max_Tool
                     byte[] cmp = new byte[6];
                     Buffer.BlockCopy(d, p, cmp, 0, cmp.Length);
                     cmp[1] &= RLok1[1]; cmp[2] &= RLok1[2];
-                    if (cmp[0] == RLok1[0] && cmp[1] == 0x90 && cmp[2] == 0x09 && cmp[4] == 0xd6 && cmp[5] == 0xed)
-                    {
-                        return true;
-                    }
+                    if (cmp[0] == RLok1[0] && cmp[1] == 0x90 && cmp[2] == 0x09 && cmp[4] == 0xd6 && cmp[5] == 0xed) return true;
                     return false;
                 }
             }
@@ -1290,7 +1293,7 @@ namespace V_Max_Tool
             var ds = 0;
             bool tr = false;
             bool se = false;
-            string db_Text = "";
+            StringBuilder db_Text = new StringBuilder();
             int bin = 8;
             int hex = 16;
             Invoke(new Action(() =>
@@ -1321,35 +1324,35 @@ namespace V_Max_Tool
                         try
                         {
                             jt[(int)trk] = db_Text.Length;
-                            if (tr) db_Text += $"\n\nTrack ({trk})  Data Format: {secF[NDS.cbm[i]]} {NDG.Track_Data[i].Length} Bytes\n\n";
-                            if (VS_dat.Checked) db_Text += $"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}";
+                            if (tr) db_Text.Append($"\n\nTrack ({trk})  Data Format: {secF[NDS.cbm[i]]} {NDG.Track_Data[i].Length} Bytes\n\n");
+                            if (VS_dat.Checked) db_Text.Append($"{Encoding.ASCII.GetString(Fix_Stops(NDG.Track_Data[i]))}");
                             if (VS_hex.Checked)
                             {
-                                string temp = "";
+                                StringBuilder temp = new StringBuilder();
                                 for (int j = 0; j < NDG.Track_Data[i].Length / hex; j++)
                                 {
-                                    temp += Append_Hex(NDG.Track_Data[i], j * hex, hex);
+                                    temp.Append(Append_Hex(NDG.Track_Data[i], j * hex, hex));
                                 }
                                 var y = (NDG.Track_Data[i].Length / hex) * hex;
                                 if (y < NDG.Track_Data[i].Length)
                                 {
-                                    temp += Append_Hex(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, hex);
+                                    temp.Append(Append_Hex(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, hex));
                                 }
-                                db_Text += temp;
+                                db_Text.Append(temp);
                             }
                             if (VS_bin.Checked)
                             {
-                                string temp = "";
+                                StringBuilder temp = new StringBuilder();
                                 for (int j = 0; j < NDG.Track_Data[i].Length / bin; j++)
                                 {
-                                    temp += Append_Bin(NDG.Track_Data[i], j * bin, bin);
+                                    temp.Append(Append_Bin(NDG.Track_Data[i], j * bin, bin));
                                 }
                                 var y = (NDG.Track_Data[i].Length / bin) * bin;
                                 if (y < NDG.Track_Data[i].Length)
                                 {
-                                    temp += Append_Bin(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, bin);
+                                    temp.Append(Append_Bin(NDG.Track_Data[i], y, NDG.Track_Data[i].Length - y, bin));
                                 }
-                                db_Text += temp;
+                                db_Text.Append(temp);
                             }
                         }
                         catch { }
@@ -1368,7 +1371,7 @@ namespace V_Max_Tool
             {
                 T_jump.Maximum = jmp;
                 if (ds >= 1 && jmp > 0) { T_jump.Visible = Jump.Visible = true; } else { T_jump.Visible = Jump.Visible = false; }
-                Data_Box.Text = db_Text;
+                Data_Box.Text = db_Text.ToString();
                 Disp_Data.Text = "Refresh";
                 DV_pbar.Value = 0;
                 displayed = true;
@@ -1378,7 +1381,7 @@ namespace V_Max_Tool
                 GC.Collect();
                 View_Jump();
                 Data_Box.Visible = true;
-                //if (DV_dec.Checked) File.WriteAllBytes($@"c:\test\{fname}_Decoded.bin", buffer.ToArray());
+                //if (DV_dec.Checked) File.WriteAllBytes($@"c:\Replace_RapidLok_Key\{fname}_Decoded.bin", buffer.ToArray());
 
             }));
 
@@ -1411,39 +1414,39 @@ namespace V_Max_Tool
                             }
                             total += temp[i].Length;
                         }
-                        if (tr) db_Text += $"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]} Length ({total}) bytes\n\n";
+                        if (tr) db_Text.Append($"\n\nTrack ({track})  Data Format: {secF[NDS.cbm[t]]} Length ({total}) bytes\n\n");
                         for (int i = 0; i < NDS.sectors[t]; i++)
                         {
-                            string temp2 = "";
+                            StringBuilder temp2 = new StringBuilder();
                             string ck = "";
                             if (nul[i]) ck = "Checksum OK"; else ck = "Checksum Failed!";
-                            if (se) db_Text += $"\n\nSector ({i + 1}) Length {temp[i].Length} {ck}\n\n";
-                            if (VS_dat.Checked) db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[i]));
+                            if (se) db_Text.Append($"\n\nSector ({i + 1}) Length {temp[i].Length} {ck}\n\n");
+                            if (VS_dat.Checked) db_Text.Append(Encoding.ASCII.GetString(Fix_Stops(temp[i])));
                             if (VS_hex.Checked)
                             {
                                 for (int j = 0; j < temp[i].Length / hex; j++)
                                 {
-                                    temp2 += Append_Hex(temp[i], j * hex, hex);
+                                    temp2.Append(Append_Hex(temp[i], j * hex, hex));
                                 }
                                 var y = (temp[i].Length / hex) * hex;
                                 if (y < temp[i].Length)
                                 {
-                                    temp2 += Append_Hex(temp[i], y, temp[i].Length - y, hex);
+                                    temp2.Append(Append_Hex(temp[i], y, temp[i].Length - y, hex));
                                 }
-                                db_Text += temp2;
+                                db_Text.Append(temp2);
                             }
                             if (VS_bin.Checked)
                             {
                                 for (int j = 0; j < temp[i].Length / bin; j++)
                                 {
-                                    temp2 += Append_Bin(temp[i], j * bin, bin);
+                                    temp2.Append(Append_Bin(temp[i], j * bin, bin));
                                 }
                                 var y = (temp[i].Length / bin) * bin;
                                 if (y < temp[i].Length)
                                 {
-                                    temp2 += Append_Bin(temp[i], y, temp[i].Length - y, bin);
+                                    temp2.Append(Append_Bin(temp[i], y, temp[i].Length - y, bin));
                                 }
-                                db_Text += temp2;
+                                db_Text.Append(temp2);
                             }
                             write.Write(temp[i]);
                         }
@@ -1470,37 +1473,37 @@ namespace V_Max_Tool
                         temp[ii] = Decode_Vorpal(tdata, ii);
                         total += temp[ii].Length;
                     }
-                    if (tr) db_Text += $"\n\nTrack ({track}) {secF[NDS.cbm[t]]} Sectors ({NDS.sectors[t]}) Length ({total}) bytes\n\n";
+                    if (tr) db_Text.Append($"\n\nTrack ({track}) {secF[NDS.cbm[t]]} Sectors ({NDS.sectors[t]}) Length ({total}) bytes\n\n");
                     for (int ii = 0; ii < NDS.sectors[t]; ii++)
                     {
-                        string temp2 = "";
-                        if (se) db_Text += $"\n\nSector ({current}) Length ({temp[ii].Length}) bytes\n\n";
-                        if (VS_dat.Checked) db_Text += Encoding.ASCII.GetString(Fix_Stops(temp[current]));
+                        StringBuilder temp2 = new StringBuilder();
+                        if (se) db_Text.Append($"\n\nSector ({current}) Length ({temp[ii].Length}) bytes\n\n");
+                        if (VS_dat.Checked) db_Text.Append(Encoding.ASCII.GetString(Fix_Stops(temp[current])));
                         if (VS_hex.Checked)
                         {
                             for (int j = 0; j < temp[current].Length / hex; j++)
                             {
-                                temp2 += Append_Hex(temp[current], j * hex, hex);
+                                temp2.Append(Append_Hex(temp[current], j * hex, hex));
                             }
                             var y = (temp[current].Length / hex) * hex;
                             if (y < temp[current].Length)
                             {
-                                temp2 += Append_Hex(temp[current], y, temp[current].Length - y, hex);
+                                temp2.Append(Append_Hex(temp[current], y, temp[current].Length - y, hex));
                             }
-                            db_Text += temp2;
+                            db_Text.Append(temp2);
                         }
                         if (VS_bin.Checked)
                         {
                             for (int j = 0; j < temp[current].Length / bin; j++)
                             {
-                                temp2 += Append_Bin(temp[current], j * bin, bin);
+                                temp2.Append(Append_Bin(temp[current], j * bin, bin));
                             }
                             var y = (temp[current].Length / bin) * bin;
                             if (y < temp[current].Length)
                             {
-                                temp2 += Append_Bin(temp[current], y, temp[current].Length - y, bin);
+                                temp2.Append(Append_Bin(temp[current], y, temp[current].Length - y, bin));
                             }
-                            db_Text += temp2;
+                            db_Text.Append(temp2);
                         }
                         write.Write(temp[current]);
                         current += interleave;
@@ -1517,12 +1520,12 @@ namespace V_Max_Tool
             {
                 string spc = "";
                 if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "   ";
-                string temp = "";
-                temp += $"{Hex_Val(data, pos, length)}    ".Replace('-', ' ');
+                StringBuilder temp = new StringBuilder();
+                temp.Append($"{Hex_Val(data, pos, length)}    ".Replace('-', ' '));
                 byte[] temp2 = new byte[length];
                 Buffer.BlockCopy(data, pos, temp2, 0, length);
-                temp += $"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n";
-                return temp;
+                temp.Append($"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n");
+                return temp.ToString();
             }
 
             string Append_Bin(byte[] data, int pos, int length, int expected_length = 0)
@@ -1531,21 +1534,16 @@ namespace V_Max_Tool
                 Buffer.BlockCopy(data, pos, temp2, 0, length);
                 string spc = "";
                 if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "         ";
-                string temp = "";
-                temp += $"{Byte_to_Binary(temp2)}     ";
-                temp += $"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n";
-                return temp;
+                StringBuilder temp = new StringBuilder();
+                temp.Append($"{Byte_to_Binary(temp2)}     ");
+                temp.Append($"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n");
+                return temp.ToString();
             }
 
             byte[] Fix_Stops(byte[] data)
             {
-                byte[] fix = new byte[data.Length];
-                for (int i = 0; i < data.Length; i++)
-                {
-                    var g = Convert.ToInt32(data[i]);
-                    if (invalid_char.Any(s => s == g) || g > 127) fix[i] = 0x2e; else fix[i] = data[i];
-                }
-                return fix;
+                for (int i = 0; i < data.Length; i++) if ((data[i] >= 0 && data[i] <= 31) || data[i] == 95 || data[i] >= 128) data[i] = 0x2e;
+                return data;
             }
         }
     }

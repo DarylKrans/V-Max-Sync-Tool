@@ -86,7 +86,7 @@ namespace V_Max_Tool
                         dp++;
                         if (dp == d_bArray.Length) dp = 0;
                     }
-                    byte[] cc = Flip_Endian(Bit2Byte(d_bArray));
+                    byte[] cc = Bit2Byte(d_bArray);
                     int sec = 0;
                     for (int i = 0; i < cc.Length - 5; i++)
                     {

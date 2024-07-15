@@ -127,6 +127,7 @@
     </EmbeddedResource>
     <None Include="Properties\cyan.bin" />
     <None Include="Properties\rak1.bin" />
+    <None Include="Properties\rlnk.bin" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

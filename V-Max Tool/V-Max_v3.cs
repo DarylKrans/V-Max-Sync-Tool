@@ -92,7 +92,7 @@ namespace V_Max_Tool
             int oh_len = 0;
             int tlen = 0;
             int fill = 0;
-            byte[] header = IArray(3, 0x49);
+            byte[] header = FastArray.Init(3, 0x49);
             byte[][] sec_data;
             byte[] sb = { 0x49 }; /// start byte of header
             byte[] eb = { 0xee }; /// end byte of header
@@ -122,7 +122,7 @@ namespace V_Max_Tool
             }
             var a = 0;
             bool fnd = false;
-            (fnd, a) = Find_Data($"{Hex_Val(header)}-EE", data, 4);
+            (fnd, a) = Find_Data($"{Hex_Val(header)}-EE", data);
             while (data[a] == 0x49)
             {
                 a -= 1;
@@ -179,8 +179,8 @@ namespace V_Max_Tool
                 catch { };
                 write.Write((byte)0x7f);
                 sec_data[i] = buffer.ToArray();
-                buffer.Close();
-                write.Close();
+                //buffer.Close();
+                //write.Close();
                 tlen += sec_data[i].Length + sync;
             }
             if ((tlen + gap_len + track_ID.Length + (header_len * sectors)) > density[d])
@@ -202,7 +202,7 @@ namespace V_Max_Tool
             int track_len = tlen + track_ID.Length + (header_len * sectors);
             if (sectors < 16)
             {
-                byte[] p_fill = { 0x49, 0xff, 0xaa, 0x55 };
+                //byte[] p_fill = { 0x49, 0xff, 0xaa, 0x55 };
                 fill = (density[d] - track_len);
                 int start = 0;
                 int longest = 0;
@@ -227,18 +227,14 @@ namespace V_Max_Tool
             for (int i = 0; i < sectors; i++)
             {
                 wrt.Write(v3_sector_sync);
-                for (int j = 0; j < header_len; j++) wrt.Write(sb[0]);
+                wrt.Write(FastArray.Init(header_len, sb[0]));
                 try { wrt.Write(sec_data[index]); } catch { }
                 index++;
                 if (index == sectors) index = 0;
             }
             if (track_ID.Length > 0) wrt.Write(track_ID);
-            if (fill > 0)
-            {
-                for (int i = 0; i < fill; i++) wrt.Write((byte)filler);
-            }
-            for (int q = (int)buff.Position; q < density[d]; q++) wrt.Write((byte)gap);
-
+            if (fill > 0) wrt.Write(FastArray.Init(fill, filler));
+            wrt.Write(FastArray.Init(density[d] - (int)buff.Position, gap));
             return buff.ToArray();
         }
 
@@ -256,7 +252,6 @@ namespace V_Max_Tool
             bool end_found = false;
             bool s_zero = false;
             byte sec_0_ID = 0xf3; /// V-Max v3 sector 0 ID marker
-            byte[] header = IArray(2, 0x49); /// V-Max v3 header pattern
             byte head_end = 0xee; /// V-Max v3 header end byte located directly following the 49-49-49 pattern
             byte[] comp = new byte[2];
             byte[] head = new byte[18];
@@ -268,11 +263,10 @@ namespace V_Max_Tool
             string stats = string.Empty;
             for (int i = 0; i < data.Length - comp.Length; i++)
             {
-                Buffer.BlockCopy(data, i, comp, 0, comp.Length);
-                if (Match(comp, header))
+                if (data[i] == 0x49 && data[i + 1] == 0x49)
                 {
                     var a = 0;
-                    while (data[i + a] == header[0]) a++;
+                    while (data[i + a] == 0x49) a++;
                     i += a;
                     if (data[i] == head_end)
                     {
@@ -395,30 +389,30 @@ namespace V_Max_Tool
         {
             byte[] bdata = new byte[data_end - data_start];
             Buffer.BlockCopy(data, data_start, bdata, 0, data_end - data_start);
-            byte[] tdata = Rotate_Left(bdata, ((sector_zero >> 3) - (data_start >> 3)));
+            bdata = Rotate_Left(bdata, ((sector_zero >> 3) - (data_start >> 3)));
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
             int spos = 0;
-            byte[] hd = IArray(2, 0x49);
+            byte[] hd = FastArray.Init(2, 0x49);
             byte[] comp = new byte[2];
             int cust = (int)V3_hlen.Value;
-            while (spos < tdata.Length)
+            while (spos < bdata.Length)
             {
-                if (spos + 2 < tdata.Length && tdata[spos + 2] == hd[0])
+                if (spos + 2 < bdata.Length && bdata[spos + 2] == hd[0])
                 {
                     try
                     {
-                        Buffer.BlockCopy(tdata, spos + 2, comp, 0, comp.Length);
+                        Buffer.BlockCopy(bdata, spos + 2, comp, 0, comp.Length);
                         if (Match(comp, hd))
                         {
                             var a = 0;
-                            while (tdata[spos + a] != hd[0])
+                            while (bdata[spos + a] != hd[0])
                             {
-                                if (!vm3_pos_sync.Any(s => s == tdata[spos + a])) write.Write(tdata[spos + a]);
+                                if (!vm3_pos_sync.Any(s => s == bdata[spos + a])) write.Write(bdata[spos + a]);
                                 a++;
                             }
                             var b = 0;
-                            while (spos + (a + b) < tdata.Length && tdata[spos + (a + b)] == hd[0]) b++;
+                            while (spos + (a + b) < bdata.Length && bdata[spos + (a + b)] == hd[0]) b++;
                             spos += (a + b);
                             if (b < 15 && V3_Custom.Checked) b = cust;
                             write.Write(v3_sector_sync);
@@ -427,7 +421,7 @@ namespace V_Max_Tool
                     }
                     catch { }
                 }
-                if (spos < tdata.Length) write.Write(tdata[spos]);
+                if (spos < bdata.Length) write.Write(bdata[spos]);
                 spos++;
             }
             return (buffer.ToArray(), (int)buffer.Length << 3, 0);
