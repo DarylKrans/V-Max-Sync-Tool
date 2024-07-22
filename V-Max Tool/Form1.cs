@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,7 +17,7 @@ namespace V_Max_Tool
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
         private readonly bool Replace_RapidLok_Key = false;
-        private readonly string ver = " v0.9.98.0 (pre-release)";
+        private readonly string ver = " v0.9.98.1 (pre-release)";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
@@ -225,12 +227,12 @@ namespace V_Max_Tool
                 Dir_screen.Text = "LOAD\"$\",8\nSEARCHING FOR $\nLOADING";
                 loader_fixed = false;
                 Worker_Main?.Abort();
-                Worker_Main = new Thread(new ThreadStart(() => Do_work(get)));
+                Worker_Main = new Thread(new ThreadStart(() => Do_work()));
                 Worker_Main.Start();
             }
         }
 
-        void Do_work(bool out_type)
+        void Do_work()
         {
             Stopwatch parse = new Stopwatch();
             Stopwatch proc = new Stopwatch();
@@ -250,8 +252,7 @@ namespace V_Max_Tool
                         Set_ListBox_Items(false, false);
                         Get_Disk_Directory();
                         linkLabel1.Visible = false;
-                        if (Disk_Dir.Checked) Disk_Dir.Focus();
-                        Out_Type = out_type;
+                        //if (Disk_Dir.Checked) Disk_Dir.Focus();
                         Save_Disk.Visible = true;
                         Source.Visible = Output.Visible = true;
                         label1.Text = $"{fname}{fext}";
@@ -269,7 +270,7 @@ namespace V_Max_Tool
                                 string t = "Something went wrong!";
 
                                 string s = ex.Message;
-                                s = "Image is corrupt and cannot be opened";
+                                //s = "Image is corrupt and cannot be opened";
                                 MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             }
                             Reset_to_Defaults();
@@ -393,10 +394,10 @@ namespace V_Max_Tool
             Check_Before_Draw(false);
         }
 
-        private void Dir_View_CheckedChanged(object sender, EventArgs e)
-        {
-            Dir_screen.Visible = Disk_Dir.Checked;
-        }
+        //private void Dir_View_CheckedChanged(object sender, EventArgs e)
+        //{
+        //    Dir_screen.Visible = Disk_Dir.Checked;
+        //}
 
         private void LinkLabel1_LinkClicked(object sender, System.Windows.Forms.LinkLabelLinkClickedEventArgs e)
         {
@@ -654,8 +655,11 @@ namespace V_Max_Tool
                 out_dif.Items.Clear();
                 Out_density.Items.Clear();
                 out_rpm.Items.Clear();
-                Process_Nib_Data(true, false, false, true); /// false flag instructs the routine NOT to process CBM tracks again
+                Process_Nib_Data(true, false, false, true);
             }
         }
+
+        
     }
 }
+

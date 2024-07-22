@@ -106,6 +106,7 @@ namespace V_Max_Tool
             byte[] Disk_ID = new byte[4];
             BitArray source = new BitArray(Flip_Endian(data));
             List<int> list = new List<int>();
+            List<int> spos = new List<int>();
             List<string> dchr = new List<string>();
             List<string> headers = new List<string>();
             int[] s_pos = new int[22];
@@ -335,69 +336,76 @@ namespace V_Max_Tool
 
         (byte[], bool) Decode_CBM_Sector(byte[] data, int sector, bool decode, BitArray source = null, int pos = 0)
         {
-            byte[] tmp = new byte[0];
             if (source == null) source = new BitArray(Flip_Endian(data));
-            int sector_data = (325 * 8);
-            byte[] sec;
-            bool sector_marker = false;
-            bool sector_found = false;
+
+            const int sectorDataLength = 325 * 8;
+            byte[] tmp = null;
+            bool sectorFound = false;
+            bool sectorMarker = false;
             bool sync = false;
-            int sync_count = 0;
-            Compare();
+            int syncCount = 0;
+
+            CompareSectorMarker();
             while (pos < source.Length - 32)
             {
                 if (source[pos])
                 {
-                    sync_count++;
-                    if (sync_count == 15) sync = true;
+                    syncCount++;
+                    if (syncCount == 15) sync = true;
                 }
-                if (!source[pos])
+                else
                 {
-                    if (sync) sector_marker = Compare();
-                    if (pos + sector_data < source.Length)
+                    if (sync) sectorMarker = CompareSectorMarker();
+                    if (pos + sectorDataLength < source.Length)
                     {
-                        if (sync && sector_found && !sector_marker)
+                        if (sync && sectorFound && !sectorMarker)
                         {
-                            byte[] dec;
-                            bool chksm;
-                            (dec, chksm) = Decode_Sector();
-                            if (!decode) return (dec, chksm);
-                            tmp = new byte[dec.Length - 4];
-                            Buffer.BlockCopy(dec, 1, tmp, 0, tmp.Length);
-                            return (tmp, chksm);
+                            var (decodedSector, checksum) = DecodeSector();
+                            if (!decode) return (decodedSector, checksum);
+
+                            tmp = new byte[decodedSector.Length - 4];
+                            Buffer.BlockCopy(decodedSector, 1, tmp, 0, tmp.Length);
+                            return (tmp, checksum);
                         }
                     }
+
                     sync = false;
-                    sync_count = 0;
+                    syncCount = 0;
                 }
                 pos++;
             }
-            return (tmp, false);
+            return (tmp ?? Array.Empty<byte>(), false);
+            //return (tmp ?? new byte[0], false); /// <- For .Net 3.5 
 
-            (byte[], bool) Decode_Sector()
+            (byte[], bool) DecodeSector()
             {
-                sec = Bit2Byte(source, pos, sector_data);
-                if (!decode) return (sec, false);
-                byte[] d_sec = Decode_CBM_GCR(sec);
-                /// Calculate block checksum
-                int cksm = 0;
-                for (int i = 1; i < 257; i++) cksm ^= d_sec[i];
-                return (d_sec, cksm == d_sec[257]);
+                byte[] sectorBytes = Bit2Byte(source, pos, sectorDataLength);
+                if (!decode) return (sectorBytes, false);
+
+                byte[] decodedSector = Decode_CBM_GCR(sectorBytes);
+                int checksum = 0;
+
+                for (int i = 1; i < 257; i++)
+                    checksum ^= decodedSector[i];
+
+                bool isValid = checksum == decodedSector[257];
+                return (decodedSector, isValid);
             }
 
-            bool Compare()
+            bool CompareSectorMarker()
             {
-                int cl = 5;
-                if (!decode) cl = 10;
-                byte[] d = Bit2Byte(source, pos, cl * 8);
-                if (d[0] == 0x52)
+                int checkLength = decode ? 5 : 10;
+                byte[] header = Bit2Byte(source, pos, checkLength * 8);
+
+                if (header[0] == 0x52)
                 {
-                    byte[] g = Decode_CBM_GCR(d);
-                    if (g[3] > 0 && g[3] < 43)
+                    byte[] decodedHeader = Decode_CBM_GCR(header);
+                    if (decodedHeader[3] > 0 && decodedHeader[3] < 43 && decodedHeader[2] == sector)
                     {
-                        if ((g[2] == sector)) { sector_found = true; return true; }
-                        pos += sector_data;
+                        sectorFound = true;
+                        return true;
                     }
+                    pos += sectorDataLength;
                 }
                 return false;
             }
@@ -405,38 +413,36 @@ namespace V_Max_Tool
 
         byte[] Replace_CBM_Sector(byte[] data, int sector, byte[] new_sector, byte[] padding = null)
         {
-            if (new_sector.Length == 256) new_sector = Build_Sector(new_sector);
+            if (new_sector.Length == 256)
+                new_sector = Build_Sector(new_sector);
+
             BitArray source = new BitArray(Flip_Endian(data));
             BitArray sec = new BitArray(Flip_Endian(new_sector));
-            BitArray pad = new BitArray(0);
-            if (padding != null) pad = new BitArray(Flip_Endian(padding));
+            BitArray pad = padding != null ? new BitArray(Flip_Endian(padding)) : new BitArray(0);
+
             int pos = 0;
-            int sector_data = (325 * 8);
-            bool sector_marker = false;
+            const int sectorDataLength = 325 * 8;
             bool sector_found = false;
             bool sync = false;
+            bool sector_marker = false;
             int sync_count = 0;
-            Compare();
+            sector_marker = Compare();
             while (pos < source.Length - 32)
             {
                 if (source[pos])
                 {
                     sync_count++;
-                    if (sync_count == 15) sync = true;
+                    if (sync_count == 15)
+                        sync = true;
                 }
-                if (!source[pos])
+                else
                 {
                     if (sync) sector_marker = Compare();
-                    if (pos + sector_data < source.Length)
+                    if (pos + sectorDataLength < source.Length)
                     {
                         if (sync && sector_found && !sector_marker)
                         {
-                            for (int i = 0; i < sec.Count; i++) source[pos + i] = sec[i];
-                            if (pad.Length > 0)
-                            {
-                                pos += sec.Length;
-                                for (int i = 0; i < pad.Count; i++) source[pos + i] = pad[i];
-                            }
+                            ReplaceSector(pos, sec, pad, source);
                             return Bit2Byte(source);
                         }
                     }
@@ -445,7 +451,94 @@ namespace V_Max_Tool
                 }
                 pos++;
             }
+
             return data;
+
+            bool Compare()
+            {
+                const int checkLength = 5;
+                byte[] d = Bit2Byte(source, pos, checkLength * 8);
+
+                if (d[0] == 0x52)
+                {
+                    byte[] g = Decode_CBM_GCR(d);
+                    if (g[3] > 0 && g[3] < 43 && g[2] == sector)
+                    {
+                        sector_found = true;
+                        return true;
+                    }
+                    pos += sectorDataLength;
+                }
+                return false;
+            }
+
+            void ReplaceSector(int startPos, BitArray sectorBits, BitArray paddingBits, BitArray sourceBits)
+            {
+                for (int i = 0; i < sectorBits.Count; i++)
+                    sourceBits[startPos + i] = sectorBits[i];
+
+                if (paddingBits.Length > 0)
+                {
+                    startPos += sectorBits.Length;
+                    for (int i = 0; i < paddingBits.Count; i++)
+                        sourceBits[startPos + i] = paddingBits[i];
+                }
+            }
+
+            byte[] Build_Sector(byte[] sect)
+            {
+
+                int checksum = 0;
+                for (int i = 0; i < sect.Length; i++)
+                    checksum ^= sect[i];
+
+                using (MemoryStream buffer = new MemoryStream())
+                {
+                    using (BinaryWriter writer = new BinaryWriter(buffer))
+                    {
+                        writer.Write((byte)0x07);
+                        writer.Write(sect);
+                        writer.Write((byte)checksum);
+                        writer.Write((byte)0x00);
+                        writer.Write((byte)0x00);
+                    }
+                    return Encode_CBM_GCR(buffer.ToArray());
+                }
+            }
+        }
+
+        (bool, int) Find_Sector(BitArray source, int sector, int pos = -1)
+        {
+            if (pos < 0) pos = 0;
+
+            bool sector_found = Compare();
+            if (!sector_found)
+            {
+                bool sync = false;
+                int sync_count = 0;
+
+                while (pos < source.Length - 32)
+                {
+                    if (source[pos])
+                    {
+                        sync_count++;
+                        if (sync_count == 15) sync = true;
+                    }
+                    else
+                    {
+                        if (sync)
+                        {
+                            sector_found = Compare();
+                            if (sector_found) break;
+                        }
+                        sync = false;
+                        sync_count = 0;
+                    }
+                    pos++;
+                }
+            }
+
+            return sector_found ? (true, pos / 8) : (false, -1);
 
             bool Compare()
             {
@@ -454,73 +547,11 @@ namespace V_Max_Tool
                 if (d[0] == 0x52)
                 {
                     byte[] g = Decode_CBM_GCR(d);
-                    if (g[3] > 0 && g[3] < 43)
+                    if (g[3] > 0 && g[3] < 43 && g[2] == sector)
                     {
-                        if ((g[2] == sector)) { sector_found = true; return true; }
-                        pos += sector_data;
+                        return true;
                     }
-                }
-                return false;
-            }
-
-            byte[] Build_Sector(byte[] sect)
-            {
-                int cksum = 0;
-                cksum = 0;
-                for (int i = 0; i < sect.Length; i++) cksum ^= sect[i];
-                MemoryStream buffer = new MemoryStream();
-                BinaryWriter write = new BinaryWriter(buffer);
-                write.Write((byte)0x07);
-                write.Write(sect);
-                write.Write((byte)cksum);
-                write.Write((byte)0x00);
-                write.Write((byte)0x00);
-                return Encode_CBM_GCR(buffer.ToArray());
-            }
-        }
-
-
-        (bool, int) Find_Sector(BitArray source, int sector, int pos = -1)
-        {
-            bool sector_found;
-            bool sync = false;
-            int sync_count = 0;
-            if (pos < 0) pos = 0; else pos *= 8;
-            int cl = 5;
-            sector_found = Compare();
-            if (!sector_found)
-            {
-                while (pos < source.Length - 32)
-                {
-                    if (source[pos])
-                    {
-                        sync_count++;
-                        if (sync_count == 15) sync = true;
-                    }
-                    if (!source[pos])
-                    {
-                        if (sync) sector_found = Compare();
-                        if (sector_found) break;
-                        sync = false;
-                        sync_count = 0;
-                    }
-                    pos++;
-                }
-            }
-            if (sector_found) return (true, pos / 8);
-            else return (false, -1);
-
-            bool Compare()
-            {
-                byte[] d = Bit2Byte(source, pos, cl * 8);
-                if (d[0] == 0x52)
-                {
-                    byte[] g = Decode_CBM_GCR(d);
-                    if (g[3] > 0 && g[3] < 43)
-                    {
-                        if ((g[2] == sector)) { return true; }
-                        pos += (320 * 8);
-                    }
+                    pos += (320 * 8);
                 }
                 return false;
             }
@@ -528,130 +559,152 @@ namespace V_Max_Tool
 
         void Get_Disk_Directory()
         {
-            int l = 0;
             string ret = "Disk Directory ID : n/a";
             var buff = new MemoryStream();
             var wrt = new BinaryWriter(buff);
-            var halftrack = 0;
-            int track = 0;
+            //List<byte[]> d_files = new List<byte[]>();
+            //List<byte[]> d_sec = new List<byte[]>();
+            List<string> d_files = new List<string>();
+            List<string> d_sec = new List<string>();
+
+            //byte[][] d_files = new byte[256][];
+            //byte[][] dsec = new byte[256][];
+            List<string> filename = new List<string>();
+            int halftrack;
+            int track;
             int blocksFree = 0;
             bool c;
-            if (tracks <= 42) { halftrack = 17; track = halftrack + 1; }
-            if (tracks > 42) { halftrack = 34; track = (halftrack / 2) + 1; }
-            byte[] temp;
+            int SelectionLength = 0;
+
+            if (tracks <= 42)
+            {
+                halftrack = 17;
+                track = halftrack + 1;
+            }
+            else
+            {
+                halftrack = 34;
+                track = (halftrack / 2) + 1;
+            }
+
             if (NDS.cbm[halftrack] == 1)
             {
-                byte[] next_sector = new byte[] { (byte)track, 0x00 };
-                byte[] last_sector = new byte[2];
-                int sec_tried = 0;
-                while (Convert.ToInt32(next_sector[0]) == track && sec_tried < NDS.sectors[halftrack])
+                List<string> list = new List<string>();
+                byte[] nextSector = new byte[] { (byte)track, 0x00 };
+                byte[] lastSector = new byte[2];
+                int tnum = Convert.ToInt32(nextSector[0]);
+                int snum = Convert.ToInt32(nextSector[1]);
+                while ((tnum != 0 && tnum < 42) && !list.Any(x => x == Hex_Val(nextSector)))
                 {
-                    Buffer.BlockCopy(next_sector, 0, last_sector, 0, 2);
-                    (temp, c) = Decode_CBM_Sector(NDA.Track_Data[halftrack], Convert.ToInt32(next_sector[1]), true);
+                    list.Add(Hex_Val(nextSector));
+                    //if (snum < 22 && !(tnum == 18 && snum == 0)) d_sec.Add(nextSector);
+                    if (snum < 22 && !(tnum == 18 && snum == 0)) d_sec.Add(Hex_Val(nextSector).Replace("-", ""));
+                    Buffer.BlockCopy(nextSector, 0, lastSector, 0, 2);
+                    byte[] temp;
+                    (temp, c) = Decode_CBM_Sector(NDA.Track_Data[halftrack], Convert.ToInt32(nextSector[1]), true);
+
                     if (temp.Length > 0 && (c || !c))
                     {
-                        Buffer.BlockCopy(temp, 0, next_sector, 0, next_sector.Length);
-                        if (tracks <= 42) halftrack = Convert.ToInt32(next_sector[0]) - 1;
-                        else
-                        {
-                            if ((next_sector[0] - 1) * 2 >= 0) halftrack = (Convert.ToInt32(next_sector[0]) - 1) * 2;
-                        }
+                        Buffer.BlockCopy(temp, 0, nextSector, 0, nextSector.Length);
+                        tnum = Convert.ToInt32(nextSector[0]);
+                        snum = Convert.ToInt32(nextSector[1]);
+
+                        if (tracks <= 42) halftrack = tnum - 1;
+                        else halftrack = (tnum - 1) * 2;
                         wrt.Write(temp);
-                        if (Match(last_sector, next_sector)) break;
                     }
-                    else { ret = "Error processing directory!"; break; }
-                    sec_tried++;
+                    else
+                    {
+                        ret = "Error processing directory!";
+                        break;
+                    }
                 }
+
                 if (buff.Length != 0)
                 {
-                    /// Read track 18 sector 1 if sector 0 signals the end of the directory
                     try
                     {
                         if (buff.Length < 257)
                         {
+                            byte[] temp;
                             (temp, c) = Decode_CBM_Sector(NDA.Track_Data[halftrack], 1, true);
-                            if (c || !c) wrt.Write(temp);
+                            if (c || !c)
+                                wrt.Write(temp);
                         }
                     }
                     catch { }
+
                     byte[] directory = buff.ToArray();
-                    //if (write_dir) File.WriteAllBytes($@"c:\dir", directory);
+
                     if (directory.Length >= 256)
                     {
-                        for (int i = 0; i < 35; i++) if (i != 17) blocksFree += directory[4 + (i * 4)];
+                        for (int i = 0; i < 35; i++)
+                        {
+                            if (i != 17)
+                                blocksFree += directory[4 + (i * 4)];
+                        }
+
                         ret = $"0 \"";
+                        SelectionLength = 0;
                         for (int i = 0; i < 23; i++)
                         {
                             if (directory[144 + i] != 0x00)
                             {
                                 if (i != 16) ret += Encoding.ASCII.GetString(directory, 144 + i, 1).Replace('?', ' ');
                                 else ret += "\"";
+                                SelectionLength = ret.Length - 2;
                             }
-                            l = ret.Length - 2;
                         }
                     }
+
                     if (directory.Length > 256)
                     {
-                        string f_type;
-                        byte[] file = new byte[32];
-                        var blocks = (directory.Length / 256);
-                        for (int i = 1; i < blocks; i++)
+                        for (int i = 1; i < directory.Length / 256; i++)
                         {
+                            byte[] file = new byte[32];
                             for (int j = 0; j < 8; j++)
                             {
                                 Buffer.BlockCopy(directory, 256 * i + (j * 32), file, 0, file.Length);
                                 if (file[2] != 0x00)
                                 {
-                                    f_type = Get_DirectoryFileType(file[2]);
-                                    bool eof = false;
-                                    string f_name = "\"";
-                                    for (int k = 5; k < 21; k++)
-                                    {
-                                        if (file[k] != 0xa0)
-                                        {
-                                            if (file[k] != 0x00) f_name += Encoding.ASCII.GetString(file, k, 1); else f_name += "@";
-                                        }
-                                        else
-                                        {
-                                            if (!eof) f_name += "\""; else f_name += " ";
-                                            eof = true;
-                                        }
-                                    }
-                                    if (!eof) f_name += "\""; else f_name += " ";
-                                    f_name = f_name.Replace('?', '-');
-                                    string sz = $"{BitConverter.ToUInt16(file, 30)}".PadRight(4);
-                                    ret += $"\n{sz} {f_name}{f_type}";
+                                    DiskDir.Entries++;
+                                    file[0] = 0x00; file[1] = 0x00;
+                                    d_files.Add(Hex_Val(file).Replace("-", ""));
+                                    string fType = Get_DirectoryFileType(file[2]);
+                                    string fName = Get_DirectoryFileName(file);
+                                    string sz = $"{BitConverter.ToUInt16(file, 30)}".PadRight(5);
+                                    ret += $"\n{sz}{fName}{fType}";
+                                    filename.Add($"{sz}{fName}{fType}");
                                 }
                             }
                         }
                         ret += $"\n{blocksFree} BLOCKS FREE.";
+                        DiskDir.Entry = new byte[DiskDir.Entries][];
+                        d_temp = new byte[DiskDir.Entries][];
+                        DiskDir.Sectors = new byte[d_sec.Count][];
+                        for (int i = 0; i < DiskDir.Entries; i++)
+                        {
+                            DiskDir.Entry[i] = Hex_String_To_ByteArray(d_files[i]);
+                            d_temp[i] = Hex_String_To_ByteArray(d_files[i]);
+                        }
+                        for (int i = 0; i < d_sec.Count; i++)
+                        {
+                            DiskDir.Sectors[i] = Hex_String_To_ByteArray(d_sec[i]);
+                        }
+                        f_temp = filename.ToArray();
+                        DiskDir.FileName = filename.ToArray();
+                        Dir_Box.Items.Clear();
+                        for (int k = 0; k < filename.Count; k++) Dir_Box.Items.Add(filename[k]);
                     }
                 }
             }
+
             if (ret.Length > 0)
             {
                 Dir_screen.Text = ret;
-                Dir_screen.Select(2, l);
+                Dir_screen.Select(2, SelectionLength);
                 Dir_screen.SelectionBackColor = c64_text;
                 Dir_screen.SelectionColor = C64_screen;
-            }
-
-            string Get_DirectoryFileType(byte b)
-            {
-                string fileType = " ";
-                if ((b | 0x3f) == 0x3f || (b | 0x3f) == 0x7f) fileType = "*";
-                switch (b | 0xf0)
-                {
-                    case 0xf0: fileType += "DEL"; break;
-                    case 0xf1: fileType += "SEQ"; break;
-                    case 0xf2: fileType += "PRG"; break;
-                    case 0xf3: fileType += "USR"; break;
-                    case 0xf4: fileType += "REL"; break;
-                    case 0xf8: fileType += "DEL"; break;
-                    default: fileType += "???"; break;
-                }
-                if ((b | 0x3f) == 0xff || (b | 0x3f) == 0x7f) fileType += "<";
-                return fileType;
             }
         }
 

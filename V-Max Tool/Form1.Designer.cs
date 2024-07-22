@@ -43,10 +43,9 @@
             this.label5 = new System.Windows.Forms.Label();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.Other_opts = new System.Windows.Forms.Panel();
-            this.Disk_Dir = new System.Windows.Forms.RadioButton();
-            this.Trk_Analysis = new System.Windows.Forms.RadioButton();
             this.Adj_cbm = new System.Windows.Forms.CheckBox();
             this.VBS_info = new System.Windows.Forms.Panel();
+            this.RL_Fix = new System.Windows.Forms.CheckBox();
             this.Cust_Density = new System.Windows.Forms.Label();
             this.VM_Ver = new System.Windows.Forms.Label();
             this.Reg_info = new System.Windows.Forms.Panel();
@@ -140,6 +139,13 @@
             this.D_type = new System.Windows.Forms.GroupBox();
             this.DV_dec = new System.Windows.Forms.RadioButton();
             this.DV_gcr = new System.Windows.Forms.RadioButton();
+            this.tabPage3 = new System.Windows.Forms.TabPage();
+            this.Dir_Edit = new System.Windows.Forms.Button();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.Dir_Lock = new System.Windows.Forms.CheckBox();
+            this.Dir_Cancel = new System.Windows.Forms.Button();
+            this.Dir_Apply = new System.Windows.Forms.Button();
+            this.Dir_screen = new System.Windows.Forms.RichTextBox();
             this.Save_Dialog = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
             this.Batch_List_Box = new System.Windows.Forms.ListBox();
@@ -148,7 +154,6 @@
             this.B_cancel = new System.Windows.Forms.Button();
             this.Batch_Bar = new System.Windows.Forms.ProgressBar();
             this.label8 = new System.Windows.Forms.Label();
-            this.Dir_screen = new System.Windows.Forms.RichTextBox();
             this.Drag_pic = new System.Windows.Forms.PictureBox();
             this.Out_density = new System.Windows.Forms.ListBox();
             this.out_rpm = new System.Windows.Forms.ListBox();
@@ -162,7 +167,6 @@
             this.sl = new System.Windows.Forms.ListBox();
             this.ss = new System.Windows.Forms.ListBox();
             this.sf = new System.Windows.Forms.ListBox();
-            this.RL_Fix = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.V2_hlen)).BeginInit();
             this.Tabs.SuspendLayout();
             this.Main.SuspendLayout();
@@ -196,6 +200,8 @@
             this.D_separate.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.T_jump)).BeginInit();
             this.D_type.SuspendLayout();
+            this.tabPage3.SuspendLayout();
+            this.groupBox3.SuspendLayout();
             this.panel1.SuspendLayout();
             this.Batch_Box.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).BeginInit();
@@ -334,7 +340,7 @@
             this.Import_File.Controls.Add(this.label5);
             this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(23, 56);
+            this.Import_File.Location = new System.Drawing.Point(19, 56);
             this.Import_File.Name = "Import_File";
             this.Import_File.Size = new System.Drawing.Size(863, 108);
             this.Import_File.TabIndex = 59;
@@ -371,37 +377,11 @@
             // Other_opts
             // 
             this.Other_opts.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.Other_opts.Controls.Add(this.Disk_Dir);
-            this.Other_opts.Controls.Add(this.Trk_Analysis);
             this.Other_opts.Controls.Add(this.Adj_cbm);
             this.Other_opts.Location = new System.Drawing.Point(617, 61);
             this.Other_opts.Name = "Other_opts";
             this.Other_opts.Size = new System.Drawing.Size(261, 97);
             this.Other_opts.TabIndex = 60;
-            // 
-            // Disk_Dir
-            // 
-            this.Disk_Dir.AutoSize = true;
-            this.Disk_Dir.Location = new System.Drawing.Point(17, 63);
-            this.Disk_Dir.Name = "Disk_Dir";
-            this.Disk_Dir.Size = new System.Drawing.Size(177, 29);
-            this.Disk_Dir.TabIndex = 61;
-            this.Disk_Dir.TabStop = true;
-            this.Disk_Dir.Text = "Disk Directory";
-            this.Disk_Dir.UseVisualStyleBackColor = true;
-            this.Disk_Dir.CheckedChanged += new System.EventHandler(this.Dir_View_CheckedChanged);
-            // 
-            // Trk_Analysis
-            // 
-            this.Trk_Analysis.AutoSize = true;
-            this.Trk_Analysis.Location = new System.Drawing.Point(17, 35);
-            this.Trk_Analysis.Name = "Trk_Analysis";
-            this.Trk_Analysis.Size = new System.Drawing.Size(184, 29);
-            this.Trk_Analysis.TabIndex = 60;
-            this.Trk_Analysis.TabStop = true;
-            this.Trk_Analysis.Text = "Track Analysis";
-            this.Trk_Analysis.UseVisualStyleBackColor = true;
-            this.Trk_Analysis.CheckedChanged += new System.EventHandler(this.Dir_View_CheckedChanged);
             // 
             // Adj_cbm
             // 
@@ -425,6 +405,17 @@
             this.VBS_info.Name = "VBS_info";
             this.VBS_info.Size = new System.Drawing.Size(291, 97);
             this.VBS_info.TabIndex = 22;
+            // 
+            // RL_Fix
+            // 
+            this.RL_Fix.AutoSize = true;
+            this.RL_Fix.Location = new System.Drawing.Point(8, 62);
+            this.RL_Fix.Name = "RL_Fix";
+            this.RL_Fix.Size = new System.Drawing.Size(238, 29);
+            this.RL_Fix.TabIndex = 13;
+            this.RL_Fix.Text = "Patch out Protection";
+            this.RL_Fix.UseVisualStyleBackColor = true;
+            this.RL_Fix.CheckedChanged += new System.EventHandler(this.RL_Fix_CheckedChanged);
             // 
             // Cust_Density
             // 
@@ -1094,6 +1085,7 @@
             this.Adv_ctrl.Controls.Add(this.tabPage2);
             this.Adv_ctrl.Controls.Add(this.tabPage1);
             this.Adv_ctrl.Controls.Add(this.Data_View);
+            this.Adv_ctrl.Controls.Add(this.tabPage3);
             this.Adv_ctrl.Location = new System.Drawing.Point(930, 10);
             this.Adv_ctrl.Name = "Adv_ctrl";
             this.Adv_ctrl.SelectedIndex = 0;
@@ -1585,13 +1577,90 @@
             this.DV_gcr.UseVisualStyleBackColor = true;
             this.DV_gcr.CheckedChanged += new System.EventHandler(this.DV_gcr_CheckedChanged);
             // 
+            // tabPage3
+            // 
+            this.tabPage3.Controls.Add(this.Dir_Edit);
+            this.tabPage3.Controls.Add(this.groupBox3);
+            this.tabPage3.Controls.Add(this.Dir_screen);
+            this.tabPage3.Location = new System.Drawing.Point(4, 37);
+            this.tabPage3.Name = "tabPage3";
+            this.tabPage3.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPage3.Size = new System.Drawing.Size(1145, 1307);
+            this.tabPage3.TabIndex = 4;
+            this.tabPage3.Text = "Disk Directory";
+            this.tabPage3.UseVisualStyleBackColor = true;
+            // 
+            // Dir_Edit
+            // 
+            this.Dir_Edit.Location = new System.Drawing.Point(987, 23);
+            this.Dir_Edit.Name = "Dir_Edit";
+            this.Dir_Edit.Size = new System.Drawing.Size(84, 37);
+            this.Dir_Edit.TabIndex = 41;
+            this.Dir_Edit.Text = "Edit";
+            this.Dir_Edit.UseVisualStyleBackColor = true;
+            this.Dir_Edit.Click += new System.EventHandler(this.Dir_Edit_Click);
+            // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.Dir_Lock);
+            this.groupBox3.Controls.Add(this.Dir_Cancel);
+            this.groupBox3.Controls.Add(this.Dir_Apply);
+            this.groupBox3.Location = new System.Drawing.Point(153, 139);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(794, 1071);
+            this.groupBox3.TabIndex = 40;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Directory Editor";
+            // 
+            // Dir_Lock
+            // 
+            this.Dir_Lock.AutoSize = true;
+            this.Dir_Lock.Location = new System.Drawing.Point(24, 910);
+            this.Dir_Lock.Name = "Dir_Lock";
+            this.Dir_Lock.Size = new System.Drawing.Size(246, 29);
+            this.Dir_Lock.TabIndex = 2;
+            this.Dir_Lock.Text = "Lock Selected File(s)";
+            this.Dir_Lock.UseVisualStyleBackColor = true;
+            this.Dir_Lock.CheckedChanged += new System.EventHandler(this.Dir_Lock_CheckedChanged);
+            // 
+            // Dir_Cancel
+            // 
+            this.Dir_Cancel.Location = new System.Drawing.Point(557, 898);
+            this.Dir_Cancel.Name = "Dir_Cancel";
+            this.Dir_Cancel.Size = new System.Drawing.Size(98, 41);
+            this.Dir_Cancel.TabIndex = 1;
+            this.Dir_Cancel.Text = "Cancel";
+            this.Dir_Cancel.UseVisualStyleBackColor = true;
+            this.Dir_Cancel.Click += new System.EventHandler(this.Dir_Cancel_Click);
+            // 
+            // Dir_Apply
+            // 
+            this.Dir_Apply.Location = new System.Drawing.Point(673, 898);
+            this.Dir_Apply.Name = "Dir_Apply";
+            this.Dir_Apply.Size = new System.Drawing.Size(101, 41);
+            this.Dir_Apply.TabIndex = 0;
+            this.Dir_Apply.Text = "Apply";
+            this.Dir_Apply.UseVisualStyleBackColor = true;
+            this.Dir_Apply.Click += new System.EventHandler(this.Dir_Apply_Click);
+            // 
+            // Dir_screen
+            // 
+            this.Dir_screen.CausesValidation = false;
+            this.Dir_screen.Cursor = System.Windows.Forms.Cursors.Default;
+            this.Dir_screen.Font = new System.Drawing.Font("C64 Pro Mono", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Dir_screen.Location = new System.Drawing.Point(3, 0);
+            this.Dir_screen.Name = "Dir_screen";
+            this.Dir_screen.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
+            this.Dir_screen.Size = new System.Drawing.Size(1136, 1293);
+            this.Dir_screen.TabIndex = 38;
+            this.Dir_screen.Text = "";
+            // 
             // panel1
             // 
             this.panel1.BackColor = System.Drawing.Color.Gainsboro;
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.panel1.Controls.Add(this.Batch_List_Box);
             this.panel1.Controls.Add(this.Batch_Box);
-            this.panel1.Controls.Add(this.Dir_screen);
             this.panel1.Controls.Add(this.Drag_pic);
             this.panel1.Controls.Add(this.Out_density);
             this.panel1.Controls.Add(this.out_rpm);
@@ -1669,18 +1738,6 @@
             this.label8.Size = new System.Drawing.Size(70, 25);
             this.label8.TabIndex = 0;
             this.label8.Text = "label8";
-            // 
-            // Dir_screen
-            // 
-            this.Dir_screen.CausesValidation = false;
-            this.Dir_screen.Cursor = System.Windows.Forms.Cursors.Default;
-            this.Dir_screen.Font = new System.Drawing.Font("C64 Pro Mono", 10.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Dir_screen.Location = new System.Drawing.Point(3, 3);
-            this.Dir_screen.Name = "Dir_screen";
-            this.Dir_screen.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
-            this.Dir_screen.Size = new System.Drawing.Size(892, 1115);
-            this.Dir_screen.TabIndex = 38;
-            this.Dir_screen.Text = "";
             // 
             // Drag_pic
             // 
@@ -1836,17 +1893,6 @@
             this.sf.Size = new System.Drawing.Size(115, 1002);
             this.sf.TabIndex = 26;
             // 
-            // RL_Fix
-            // 
-            this.RL_Fix.AutoSize = true;
-            this.RL_Fix.Location = new System.Drawing.Point(8, 62);
-            this.RL_Fix.Name = "RL_Fix";
-            this.RL_Fix.Size = new System.Drawing.Size(238, 29);
-            this.RL_Fix.TabIndex = 13;
-            this.RL_Fix.Text = "Patch out Protection";
-            this.RL_Fix.UseVisualStyleBackColor = true;
-            this.RL_Fix.CheckedChanged += new System.EventHandler(this.RL_Fix_CheckedChanged);
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
@@ -1910,6 +1956,9 @@
             ((System.ComponentModel.ISupportInitialize)(this.T_jump)).EndInit();
             this.D_type.ResumeLayout(false);
             this.D_type.PerformLayout();
+            this.tabPage3.ResumeLayout(false);
+            this.groupBox3.ResumeLayout(false);
+            this.groupBox3.PerformLayout();
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             this.Batch_Box.ResumeLayout(false);
@@ -1992,8 +2041,6 @@
         private System.Windows.Forms.Label VM_Ver;
         private System.Windows.Forms.Button Save_Disk;
         private System.Windows.Forms.RichTextBox Dir_screen;
-        private System.Windows.Forms.RadioButton Disk_Dir;
-        private System.Windows.Forms.RadioButton Trk_Analysis;
         private System.Windows.Forms.Panel Other_opts;
         private System.Windows.Forms.Button V2_export;
         private System.Windows.Forms.Button V3_Export;
@@ -2054,6 +2101,12 @@
         private System.Windows.Forms.CheckBox DB_core_override;
         private System.Windows.Forms.NumericUpDown DB_cores;
         private System.Windows.Forms.CheckBox RL_Fix;
+        private System.Windows.Forms.TabPage tabPage3;
+        private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.Button Dir_Edit;
+        private System.Windows.Forms.Button Dir_Apply;
+        private System.Windows.Forms.Button Dir_Cancel;
+        private System.Windows.Forms.CheckBox Dir_Lock;
     }
 }
 

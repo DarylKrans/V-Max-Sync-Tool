@@ -28,8 +28,18 @@ namespace V_Max_Tool
         private readonly Color C64_screen = Color.FromArgb(69, 55, 176);   //(44, 41, 213);
         private readonly Color c64_text = Color.FromArgb(135, 122, 237);   //(114, 110, 255); 
         private string def_bg_text;
-        private bool Out_Type = true;
-        private readonly string dir_def = "0 \"DRAG NIB/G64 TO \"START\n664 BLOCKS FREE.";
+        //private int dragIndex = -1;
+        //private bool isDragging = false;
+        //private Point dragStartPoint;
+        //private System.Windows.Forms.Timer scrollTimer;
+        //private int originalTopIndex;
+        //string[] f_temp = new string[0];
+        //byte[][] d_temp = new byte[0][];
+        //private int dropIndex = -1;
+        //private readonly string dir_def = "0 \"DRAG NIB/G64 TO \"START\n664 BLOCKS FREE.";
+        //private readonly byte[] Reverse_Endian_Table = new byte[256];
+        //private readonly BufferedCheckedListBox Dir_Box = new BufferedCheckedListBox();
+        //private readonly CheckedListBox Dir_Box = new CheckedListBox();
 
         private readonly byte[] sector_gap_length = {
                 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,	/*  1 - 10 */
@@ -130,6 +140,7 @@ namespace V_Max_Tool
             Data_Box.Clear();
             Default_Dir_Screen();
             label2.Text = string.Empty;
+            Dir_Box.Items.Clear();
             busy = false;
         }
 
@@ -140,6 +151,75 @@ namespace V_Max_Tool
             Dir_screen.Select(2, 23);
             Dir_screen.SelectionBackColor = c64_text;
             Dir_screen.SelectionColor = C64_screen;
+            DiskDir.Entries = 0;
+            DiskDir.Sectors = new byte[0][];
+            DiskDir.Entry = new byte[0][];
+            DiskDir.FileName = new string[0];
+            Dir_Box.Items.Clear();
+
+        }
+
+        void Update_Dir_Items()
+        {
+            f_temp = new string[DiskDir.Entries];
+            d_temp = new byte[DiskDir.Entries][];
+            for (int i = 0; i < Dir_Box.Items.Count; i++)
+            {
+                for (int j = 0; j < DiskDir.Entries; j++)
+                {
+                    if (DiskDir.FileName[j] == Dir_Box.Items[i].ToString())
+                    {
+                        f_temp[i] = DiskDir.FileName[j];
+                        d_temp[i] = DiskDir.Entry[j];
+                    }
+                }
+            }
+        }
+
+        string Get_DirectoryFileType(byte b)
+        {
+            string fileType = " ";
+            if ((b | 0x3f) == 0x3f || (b | 0x3f) == 0x7f) fileType = "*";
+
+            switch (b | 0xf0)
+            {
+                case 0xf0: fileType += "DEL"; break;
+                case 0xf1: fileType += "SEQ"; break;
+                case 0xf2: fileType += "PRG"; break;
+                case 0xf3: fileType += "USR"; break;
+                case 0xf4: fileType += "REL"; break;
+                case 0xf8: fileType += "DEL"; break;
+                default: fileType += "???"; break;
+            }
+
+            if ((b | 0x3f) == 0xff || (b | 0x3f) == 0x7f) fileType += "<";
+
+            return fileType;
+        }
+
+        string Get_DirectoryFileName(byte[] file)
+        {
+            bool eof = false;
+            string fName = "\"";
+
+            for (int k = 5; k < 21; k++)
+            {
+                if (file[k] != 0xa0)
+                {
+                    if (file[k] != 0x00) fName += Encoding.ASCII.GetString(file, k, 1);
+                    else fName += "@";
+                }
+                else
+                {
+                    if (!eof) fName += "\"";
+                    else fName += " ";
+                    eof = true;
+                }
+            }
+
+            if (!eof) fName += "\"";
+            else fName += " ";
+            return fName.Replace('?', '-');
         }
 
         void Set_Auto_Opts()
@@ -152,7 +232,7 @@ namespace V_Max_Tool
 
         void Set_Arrays(int len)
         {
-            // NDS is the input or source array
+            /// NDS is the input or source array
             NDS.Track_Data = new byte[len][];
             NDS.Sector_Zero = new int[len];
             NDS.Track_Length = new int[len];
@@ -160,7 +240,6 @@ namespace V_Max_Tool
             NDS.D_End = new int[len];
             NDS.cbm = new int[len];
             NDS.sectors = new int[len];
-            NDS.sector_pos = new int[len][];
             NDS.Header_Len = new int[len];
             NDS.cbm_sector = new int[len][];
             NDS.v2info = new byte[len][];
@@ -171,7 +250,7 @@ namespace V_Max_Tool
             NDS.Track_ID = new int[len];
             NDS.Prot_Method = string.Empty;
             NDS.t18_ID = new byte[0];
-            // NDA is the destination or output array
+            /// NDA is the destination or output array
             NDA.Track_Data = new byte[len][];
             NDA.Sector_Zero = new int[len];
             NDA.Track_Length = new int[len];
@@ -179,19 +258,25 @@ namespace V_Max_Tool
             NDA.D_End = new int[len];
             NDA.sectors = new int[len];
             NDA.Total_Sync = new int[len];
-            // NDG is the G64 arrays
+            /// NDG is the G64 arrays
             NDG.Track_Length = new int[len];
             NDG.Track_Data = new byte[len][];
             NDG.L_Rot = false;
             NDG.s_len = new int[len];
             NDG.newheader = new byte[2];
             NDG.Fat_Track = new bool[len];
-            // Original is the arrays that keep the original track data for the Auto Adjust feature
+            /// Original is the arrays that keep the original track data for the Auto Adjust feature
             Original.A = new byte[0];
             Original.G = new byte[0];
             Original.SA = new byte[0];
             Original.SG = new byte[0];
             Original.OT = new byte[len][];
+            /// DiskDir is the arrays that handle directoy entries
+            DiskDir.Entries = 0;
+            DiskDir.Sectors = new byte[0][];
+            DiskDir.Entry = new byte[0][];
+            DiskDir.FileName = new string[0];
+            Dir_Box.Items.Clear();
         }
 
         void Query_Track_Formats()
@@ -560,6 +645,19 @@ namespace V_Max_Tool
             catch { }
         }
 
+        void Build_BitReverseTable()
+        {
+            for (int i = 0; i < 256; i++)
+            {
+                Reverse_Endian_Table[i] = ReverseBits((byte)i);
+            }
+            byte ReverseBits(byte b)
+            {
+                b = (byte)((b * 0x0202020202 & 0x010884422010) % 1023);
+                return b;
+            }
+        }
+
         byte[] XOR(byte[] data, byte value)
         {
             for (int i = 0; i < data.Length; i++) data[i] ^= value;
@@ -714,16 +812,34 @@ namespace V_Max_Tool
 
         byte[] Flip_Endian(byte[] data)
         {
-
-            byte[] temp = new byte[data.Length];
-            byte b;
-            for (int i = 0; i < data.Length; i++)
-            {
-                b = data[i];
-                temp[i] = ((byte)((((b * 0x0802 & 0x22110) | (b * 0x8020 & 0x88440)) * 0x10101) >> 16));
-            }
+            int length = data.Length;
+            byte[] temp = new byte[length];
+            for (int i = 0; i < length; i++) temp[i] = Reverse_Endian_Table[data[i]];
             return temp;
         }
+
+        int Find_Most_Frequent_Format(int[] array)
+        {
+            if (array.Length == 0) return -1;// throw new ArgumentException("Array is empty");
+            Dictionary<int, int> counts = new Dictionary<int, int>();
+            foreach (int num in array)
+            {
+                if (num > 1 && counts.ContainsKey(num)) counts[num]++;
+                else counts[num] = 1;
+            }
+            int mostFrequent = array[0];
+            int maxCount = counts[mostFrequent];
+            foreach (var pair in counts)
+            {
+                if (pair.Value > maxCount)
+                {
+                    mostFrequent = pair.Key;
+                    maxCount = pair.Value;
+                }
+            }
+            return mostFrequent;
+        }
+
 
         bool Check_Version(string find, byte[] sdat, int clen)
         {
@@ -831,11 +947,11 @@ namespace V_Max_Tool
             return temp;
         }
 
-        byte[] Lengthen_Track(byte[] data) // For track 18 on Vorpal images
+        byte[] Lengthen_Track(byte[] data, int Density = 1) // For track 18 on Vorpal images
         {
             if (data.Length > 0)
             {
-                byte[] temp = new byte[density[1]];
+                byte[] temp = new byte[density[Density]];
                 int current = 0;
                 int longest = 0;
                 int pos = 0;
@@ -941,29 +1057,29 @@ namespace V_Max_Tool
 
         byte[] Decode_CBM_GCR(byte[] gcr)
         {
-            byte[] plain = new byte[(gcr.Length / 5) * 4];
+            byte[] plain = new byte[(gcr.Length / 5) << 2];
             for (int i = 0; i < gcr.Length / 5; i++)
             {
                 int baseIndex = i * 5;
                 byte b1 = gcr[baseIndex];
                 byte b2 = gcr[baseIndex + 1];
-                plain[(i * 4) + 0] = CombineNibbles((byte)(b1 >> 3), (byte)(((b1 << 2) | (b2 >> 6)) & 0x1f));
+                plain[(i << 2) + 0] = CombineNibbles((byte)(b1 >> 3), (byte)(((b1 << 2) | (b2 >> 6)) & 0x1f));
                 b1 = gcr[baseIndex + 1];
                 b2 = gcr[baseIndex + 2];
-                plain[(i * 4) + 1] = CombineNibbles((byte)((b1 >> 1) & 0x1f), (byte)(((b1 << 4) | (b2 >> 4)) & 0x1f));
+                plain[(i << 2) + 1] = CombineNibbles((byte)((b1 >> 1) & 0x1f), (byte)(((b1 << 4) | (b2 >> 4)) & 0x1f));
                 b1 = gcr[baseIndex + 2];
                 b2 = gcr[baseIndex + 3];
-                plain[(i * 4) + 2] = CombineNibbles((byte)(((b1 << 1) | (b2 >> 7)) & 0x1f), (byte)((b2 >> 2) & 0x1f));
+                plain[(i << 2) + 2] = CombineNibbles((byte)(((b1 << 1) | (b2 >> 7)) & 0x1f), (byte)((b2 >> 2) & 0x1f));
                 b1 = gcr[baseIndex + 3];
                 b2 = gcr[baseIndex + 4];
-                plain[(i * 4) + 3] = CombineNibbles((byte)(((b1 << 3) | (b2 >> 5)) & 0x1f), (byte)(b2 & 0x1f));
+                plain[(i << 2) + 3] = CombineNibbles((byte)(((b1 << 3) | (b2 >> 5)) & 0x1f), (byte)(b2 & 0x1f));
             }
             return plain;
 
-            byte CombineNibbles(byte highNibble, byte lowNibble)
+            byte CombineNibbles(byte hnib, byte lnib)
             {
-                byte hnib = GCR_decode_high[highNibble];
-                byte lnib = GCR_decode_low[lowNibble];
+                hnib = GCR_decode_high[hnib];
+                lnib = GCR_decode_low[lnib];
                 if (hnib == 0xff || lnib == 0xff) return 0x00;
                 else return (byte)(hnib | lnib);
             }
@@ -971,11 +1087,11 @@ namespace V_Max_Tool
 
         byte[] Encode_CBM_GCR(byte[] plain)
         {
-            int l = plain.Length / 4;
+            int l = plain.Length >> 2;
             byte[] gcr = new byte[l * 5];
             for (int i = 0; i < l; i++)
             {
-                int baseIndex = i * 4;
+                int baseIndex = i << 2;
                 byte p1 = plain[baseIndex];
                 byte p2 = plain[baseIndex + 1];
                 byte p3 = plain[baseIndex + 2];
@@ -991,22 +1107,22 @@ namespace V_Max_Tool
 
         byte[] Decode_Vorpal_GCR(byte[] gcr)
         {
-            byte[] plain = new byte[(gcr.Length / 5) * 4];
+            byte[] plain = new byte[(gcr.Length / 5) << 2];
             for (int i = 0; i < gcr.Length / 5; i++)
             {
                 int baseIndex = i * 5;
                 byte b1 = gcr[baseIndex];
                 byte b2 = gcr[baseIndex + 1];
-                plain[(i * 4) + 0] = CombineNibbles(VPL_decode_high[b1 >> 3], VPL_decode_low[((b1 << 2) | (b2 >> 6)) & 0x1f]);
+                plain[(i << 2) + 0] = CombineNibbles(VPL_decode_high[b1 >> 3], VPL_decode_low[((b1 << 2) | (b2 >> 6)) & 0x1f]);
                 b1 = gcr[baseIndex + 1];
                 b2 = gcr[baseIndex + 2];
-                plain[(i * 4) + 1] = CombineNibbles(VPL_decode_high[(b1 >> 1) & 0x1f], VPL_decode_low[((b1 << 4) | (b2 >> 4)) & 0x1f]);
+                plain[(i << 2) + 1] = CombineNibbles(VPL_decode_high[(b1 >> 1) & 0x1f], VPL_decode_low[((b1 << 4) | (b2 >> 4)) & 0x1f]);
                 b1 = gcr[baseIndex + 2];
                 b2 = gcr[baseIndex + 3];
-                plain[(i * 4) + 2] = CombineNibbles(VPL_decode_high[((b1 << 1) | (b2 >> 7)) & 0x1f], VPL_decode_low[(b2 >> 2) & 0x1f]);
+                plain[(i << 2) + 2] = CombineNibbles(VPL_decode_high[((b1 << 1) | (b2 >> 7)) & 0x1f], VPL_decode_low[(b2 >> 2) & 0x1f]);
                 b1 = gcr[baseIndex + 3];
                 b2 = gcr[baseIndex + 4];
-                plain[(i * 4) + 3] = CombineNibbles(VPL_decode_high[((b1 << 3) | (b2 >> 5)) & 0x1f], VPL_decode_low[b2 & 0x1f]);
+                plain[(i << 2) + 3] = CombineNibbles(VPL_decode_high[((b1 << 3) | (b2 >> 5)) & 0x1f], VPL_decode_low[b2 & 0x1f]);
             }
             return plain;
 
@@ -1071,13 +1187,29 @@ namespace V_Max_Tool
             Set_Dest_Arrays(temp, trk);
         }
 
+        Color ApplyDivisionModifier(Color color, float modifier)
+        {
+            int newR = (int)(color.R / modifier);
+            int newG = (int)(color.G / modifier);
+            int newB = (int)(color.B / modifier);
+            int newA = (int)(color.A); // Include this if you want to modify the alpha channel as well
+
+            // Ensure the new color components are within the valid range (0-255)
+            newR = Math.Max(0, Math.Min(255, newR));
+            newG = Math.Max(0, Math.Min(255, newG));
+            newB = Math.Max(0, Math.Min(255, newB));
+            newA = Math.Max(0, Math.Min(255, newA));
+
+            return Color.FromArgb(newA, newR, newG, newB); // Use newA for alpha, or 255 if you don't modify alpha
+        }
+
         void Check_Before_Draw(bool dontDrawFlat, bool timeout = false)
         {
             if (Adv_ctrl.SelectedTab == Adv_ctrl.TabPages["tabPage2"])
             {
                 if (!batch)
                 {
-                    this.Update();
+                    busy = true;
                     Draw?.Abort();
                     circ?.Abort();
                     flat?.Abort();
@@ -1098,9 +1230,9 @@ namespace V_Max_Tool
                     catch { }
                     drawn = true;
                     GC.Collect();
-                    busy = false;
                     Draw = new Thread(new ThreadStart(() => Progress_Thread_Check(timeout)));
                     Draw.Start();
+                    busy = false;
                 }
             }
         }
@@ -1115,6 +1247,26 @@ namespace V_Max_Tool
             Debug_Button.Visible = debug;
             Other_opts.Visible = false;
             busy = true;
+            /// Directory editing box values
+            groupBox3.Controls.Add(Dir_Box);
+            Dir_Box.DrawMode = DrawMode.OwnerDrawFixed;
+            Dir_Box.CheckOnClick = true;
+            Dir_Box.Font = new Font("Courier new", 9);
+            Dir_Box.Location = new System.Drawing.Point(12, 12);
+            Dir_Box.Size = new System.Drawing.Size(groupBox3.Width - 32, groupBox3.Height - 100);
+            Dir_Box.FormattingEnabled = true;
+            //Dir_Box.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(Dir_Box_ItemCheck);
+            Dir_Box.MouseDown += new MouseEventHandler(Dir_Box_MouseDown);
+            Dir_Box.MouseMove += new MouseEventHandler(Dir_Box_MouseMove);
+            Dir_Box.MouseUp += new MouseEventHandler(Dir_Box_MouseUp);
+            Dir_Box.DragOver += new DragEventHandler(Dir_Box_DragOver);
+            Dir_Box.DragDrop += new DragEventHandler(Dir_Box_DragDrop);
+            Dir_Box.AllowDrop = true;
+            scrollTimer = new System.Windows.Forms.Timer { Interval = 25 };
+            scrollTimer.Tick += new EventHandler(ScrollTimer_Tick);
+            groupBox3.BringToFront();
+            groupBox3.Visible = false;
+            /// ----------------------------
             this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LinkLabel1_LinkClicked);
             Tabs.Controls.Remove(Import_File);
             this.Controls.Add(Import_File);
@@ -1260,8 +1412,6 @@ namespace V_Max_Tool
             Dir_screen.BackColor = C64_screen;
             Dir_screen.ForeColor = c64_text;
             Dir_screen.ReadOnly = true;
-            Trk_Analysis.Checked = true;
-            Dir_screen.Visible = Disk_Dir.Checked;
             Tabs.Controls.Remove(Import_File);
             this.Controls.Add(Import_File);
             Import_File.BringToFront();
@@ -1286,6 +1436,7 @@ namespace V_Max_Tool
                 }
                 return null;
             });
+            Build_BitReverseTable();
             //File.WriteAllBytes($@"c:\test\compressed\msvcrt.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\msvcrt")), 0x24));
             //File.WriteAllBytes($@"c:\test\compressed\rlnk.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rlnk")), 0x7b));
             //File.WriteAllBytes($@"c:\test\compressed\cyan.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cyan")), 0xc1));

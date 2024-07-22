@@ -34,115 +34,100 @@ namespace V_Max_Tool
 
         (byte[], string) Patch_RapidLok(byte[] data)
         {
-            bool patched = false;
-            bool exist = false;
-            bool cksm = false;
-            int pos = 0;
-            string p = " [!]";
-            string f = " (Fixed)";
+            string status = " [!]";
+            string fixedStatus = " (Fixed)";
+            byte[] sector = new byte[0];
+            BitArray source = new BitArray(Flip_Endian(data));
+
+            bool cksm;
             bool[] rl6 = new bool[5];
             bool[] rl2 = new bool[2];
             bool[] rl1 = new bool[2];
-            byte[] sector = new byte[0];
-            BitArray source = new BitArray(Flip_Endian(data));
-            (exist, pos) = Find_Sector(source, 3);
-            if (exist)
+
+            if (TryPatchSector(3, rl6, true, rl6_t18s3, Patch_v6))
             {
-                (sector, cksm) = Decode_CBM_Sector(data, 3, true, source, pos);
-                for (int i = 0; i < sector.Length; i++)
-                {
-                    if (rl6_t18s3[0, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[0, 0].Length))) rl6[0] = true;
-                    if (rl6_t18s3[1, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[1, 0].Length))) rl6[1] = true;
-                    if (rl6_t18s3[2, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[2, 0].Length))) rl6[2] = true;
-                    if (rl6_t18s3[3, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[3, 0].Length))) rl6[3] = true;
-                    if (rl6_t18s3[4, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[4, 0].Length))) rl6[4] = true;
-                }
-                if (rl6.All(x => x == true))
-                {
-                    Patch_v6();
-                    patched = true;
-                    p = f; // " (Fixed)";
-                }
+                status = fixedStatus;
             }
-            if (!patched)
+            else if (TryPatchSector(9, rl2, false, rl2_t18s9, Patch_v2) || TryPatchSector(9, rl1, false, rl1_t18s9, Patch_v1))
             {
-                (exist, pos) = Find_Sector(source, 9);
-                if (exist)
-                {
-                    (sector, cksm) = Decode_CBM_Sector(data, 9, false, source, pos);
-                    for (int i = 0; i < sector.Length; i++)
-                    {
-                        if (rl2_t18s9[0, 0].SequenceEqual(sector.Skip(i).Take(rl2_t18s9[0, 0].Length))) rl2[0] = true;
-                        if (rl2_t18s9[1, 0].SequenceEqual(sector.Skip(i).Take(rl2_t18s9[1, 0].Length))) rl2[1] = true;
-                        if (rl1_t18s9[0, 0].SequenceEqual(sector.Skip(i).Take(rl1_t18s9[0, 0].Length))) rl1[0] = true;
-                        if (rl1_t18s9[1, 0].SequenceEqual(sector.Skip(i).Take(rl1_t18s9[1, 0].Length))) rl1[1] = true;
-                    }
-                    if (rl2.All(x => x == true))
-                    {
-                        Patch_v2();
-                        patched = true;
-                        p = f; //" (Fixed)";
-                    }
-                    if (rl1.All(x => x == true))
-                    {
-                        Patch_v1();
-                        patched = true;
-                        p = f; //" (Fixed)";
-                    }
-                    data = Replace_CBM_Sector(data, 9, sector);
-                }
+                status = fixedStatus;
+                data = Replace_CBM_Sector(data, 9, sector);
             }
-            int r6 = 0;
-            int r2 = 0;
-            int r1 = 0;
-            for (int i = 0; i < rl6.Length; i++) if (rl6[i]) r6++;
-            for (int i = 0; i < rl2.Length; i++) if (rl2[i]) r2++;
-            for (int i = 0; i < rl1.Length; i++) if (rl1[i]) r1++;
-            //Invoke(new Action(() => Text = $"rl6 ({r6}) rl2 ({r2}) rl1 ({r1}) "));
-            return (data, p);
+
+            LogSectorStatus(rl6, rl2, rl1);
+            return (data, status);
 
             void Patch_v2()
             {
-                for (int i = 0; i < sector.Length; i++)
-                {
-                    if (rl2_t18s9[0, 0].SequenceEqual(sector.Skip(i).Take(rl2_t18s9[0, 0].Length))) Buffer.BlockCopy(rl2_t18s9[0, 1], 0, sector, i, rl2_t18s9[0, 1].Length);
-                    if (rl2_t18s9[1, 0].SequenceEqual(sector.Skip(i).Take(rl2_t18s9[1, 0].Length))) Buffer.BlockCopy(rl2_t18s9[1, 1], 0, sector, i, rl2_t18s9[1, 1].Length);
-                }
+                PatchSector(rl2_t18s9);
             }
 
             void Patch_v1()
             {
-                for (int i = 0; i < sector.Length; i++)
-                {
-                    if (rl1_t18s9[0, 0].SequenceEqual(sector.Skip(i).Take(rl1_t18s9[0, 0].Length))) Buffer.BlockCopy(rl1_t18s9[0, 1], 0, sector, i, rl1_t18s9[0, 1].Length);
-                    if (rl1_t18s9[1, 0].SequenceEqual(sector.Skip(i).Take(rl1_t18s9[1, 0].Length))) Buffer.BlockCopy(rl1_t18s9[1, 1], 0, sector, i, rl1_t18s9[1, 1].Length);
-                }
+                PatchSector(rl1_t18s9);
             }
 
             void Patch_v6()
             {
+                PatchSector(rl6_t18s3);
+                data = Replace_CBM_Sector(data, 3, sector);
+
+                (bool exist, int pos) = Find_Sector(source, 6);
+                if (exist)
                 {
-                    for (int i = 0; i < sector.Length; i++)
+                    (sector, cksm) = Decode_CBM_Sector(data, 6, true, source, pos);
+                    PatchSector(rl6_t18s6);
+                    data = Replace_CBM_Sector(data, 6, sector);
+                }
+            }
+
+            bool TryPatchSector(int sectorIndex, bool[] flags, bool decode, byte[,][] patterns, Action patchAction)
+            {
+                (bool exist, int pos) = Find_Sector(source, sectorIndex);
+                if (!exist) return false;
+
+                (sector, cksm) = Decode_CBM_Sector(data, sectorIndex, decode, source, pos);
+                for (int i = 0; i < sector.Length; i++)
+                {
+                    for (int j = 0; j < patterns.GetLength(0); j++)
                     {
-                        if (rl6_t18s3[0, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[0, 0].Length))) Buffer.BlockCopy(rl6_t18s3[0, 1], 0, sector, i, rl6_t18s3[0, 1].Length);
-                        if (rl6_t18s3[1, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[1, 0].Length))) Buffer.BlockCopy(rl6_t18s3[1, 1], 0, sector, i, rl6_t18s3[1, 1].Length);
-                        if (rl6_t18s3[2, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[2, 0].Length))) Buffer.BlockCopy(rl6_t18s3[2, 1], 0, sector, i, rl6_t18s3[2, 1].Length);
-                        if (rl6_t18s3[3, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[3, 0].Length))) Buffer.BlockCopy(rl6_t18s3[3, 1], 0, sector, i, rl6_t18s3[3, 1].Length);
-                        if (rl6_t18s3[4, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s3[4, 0].Length))) Buffer.BlockCopy(rl6_t18s3[4, 1], 0, sector, i, rl6_t18s3[4, 1].Length);
-                    }
-                    data = Replace_CBM_Sector(data, 3, sector);
-                    (exist, pos) = Find_Sector(source, 6);
-                    if (exist)
-                    {
-                        (sector, cksm) = Decode_CBM_Sector(data, 6, true, source, pos);
-                        for (int i = 0; i < sector.Length; i++)
+                        if (patterns[j, 0].SequenceEqual(sector.Skip(i).Take(patterns[j, 0].Length)))
                         {
-                            if (rl6_t18s6[0, 0].SequenceEqual(sector.Skip(i).Take(rl6_t18s6[0, 0].Length))) Buffer.BlockCopy(rl6_t18s6[0, 1], 0, sector, i, rl6_t18s6[0, 1].Length);
+                            flags[j] = true;
                         }
-                        data = Replace_CBM_Sector(data, 6, sector);
-                        p = "Protection Removed!";
                     }
                 }
+
+                if (flags.All(x => x))
+                {
+                    patchAction();
+                    return true;
+                }
+
+                return false;
+            }
+
+            void PatchSector(byte[,][] patterns)
+            {
+                for (int i = 0; i < sector.Length; i++)
+                {
+                    for (int j = 0; j < patterns.GetLength(0); j++)
+                    {
+                        if (patterns[j, 0].SequenceEqual(sector.Skip(i).Take(patterns[j, 0].Length)))
+                        {
+                            Buffer.BlockCopy(patterns[j, 1], 0, sector, i, patterns[j, 1].Length);
+                        }
+                    }
+                }
+            }
+
+            void LogSectorStatus(bool[] rl_6, bool[] rl_2, bool[] rl_1)
+            {
+                int r6 = rl_6.Count(x => x);
+                int r2 = rl_2.Count(x => x);
+                int r1 = rl_1.Count(x => x);
+                // Log sector status
+                //Invoke(new Action(() => Text = $"rl6 ({r6}) rl2 ({r2}) rl1 ({r1}) "));
             }
         }
 

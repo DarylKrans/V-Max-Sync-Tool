@@ -57,12 +57,9 @@ namespace V_Max_Tool
                     if (Match(exp, comp)) { start = pos; break; }
                     pos--;
                 }
-                //for (int i = 0; i < 184; i++) write.Write((byte)0xeb);
                 write.Write(FastArray.Init(184, 0xeb));
                 for (int i = start; i < end; i++) write.Write((byte)data[i]);
                 if (buffer.Length < density[3]) write.Write(FastArray.Init(density[3] - (int)buffer.Length, 0xd7));
-                //while (buffer.Length < density[3]) write.Write((byte)0xd7);
-                //Invoke(new Action(() => Text = $"{start} {end} {end - start}"));
             }
 
             void Slayer2()

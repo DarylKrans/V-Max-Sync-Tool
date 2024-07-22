@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -33,11 +32,14 @@ namespace V_Max_Tool
         private readonly Brush vpl_brush = new SolidBrush(Color.FromArgb(30, 200, 200));
         private readonly Brush rpl_brush = new SolidBrush(Color.FromArgb(200, 200, 30));
         private readonly Brush key_brush = new SolidBrush(Color.FromArgb(30, 200, 30));
+        private readonly Brush[] trk_brush = new SolidBrush[2]; // (Color.FromArgb(200, 200, 200));
         private readonly Color Write_face = Color.FromArgb(41, 40, 36);
         private readonly Color Inner_face = Color.FromArgb(50, 49, 44);
 
         private void Draw_Init_Img(string bg_text)
         {
+            trk_brush[0] = new SolidBrush(Color.FromArgb(200, 200, 200));
+            trk_brush[1] = new SolidBrush(Color.FromArgb(125, 125, 125));
             var m = (Img_Q.SelectedIndex + 1) * 1000;
             circle = new FastBitmap(m, m);
             Draw_Disk(circle, 3, m, this.Text, bg_text);
@@ -51,335 +53,343 @@ namespace V_Max_Tool
         private void Draw_Flat_Tracks(bool interpolate, bool wait)
         {
             if (wait) Thread.Sleep(1000);
+
             string ext = "";
-            var d = 0;
-            Font font = new Font("Ariel", 11);
+            int d = 0;
+            Font font = new Font("Arial", 11);
+            bool halftracks = tracks > 42;
+            double ht = halftracks ? 0.5 : 0;
+            //if (tracks > 42) track = (trk / 2);
+            int trk = (tracks > 42) ? 2 : 1;
             if (!interpolate)
             {
-                double ht;
-                bool halftracks = false;
-                if (tracks > 42)
-                {
-                    ht = 0.5;
-                    halftracks = true;
-                }
-                else ht = 0;
-                flat_large = new Bitmap(8192, (42 * 14) - 16);
+                //flat_large = new Bitmap(8192, (42 * 14) - 16);
+                flat_large = new Bitmap(8224, (42 * 14) - 16);
                 Bitmap t = new Bitmap(flat_large.Width, flat_large.Height);
-                int at = 0;
-                int pt = 0;
-                for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < secF.Length - 1) at++;
-                if (at > 0) Invoke(new Action(() =>
+                int actualTracks = 0, processedTracks = 0;
+
+                // Count valid tracks
+                for (int h = 0; h < tracks; h++)
                 {
-                    Flat_Render.Value = 0;
-                    Flat_Render.Maximum = 100;
-                    Flat_Render.Maximum *= 100;
-                    Flat_Render.Value = Flat_Render.Maximum / 100;
-                    Flat_Render.Visible = true;
-                }));
+                    if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < secF.Length - 1) actualTracks++;
+                }
+
+                if (actualTracks > 0)
+                {
+                    Invoke(new Action(() =>
+                    {
+                        Flat_Render.Value = 0;
+                        Flat_Render.Maximum = 100 * 100;
+                        Flat_Render.Value = Flat_Render.Maximum / 100;
+                        Flat_Render.Visible = true;
+                    }));
+                }
+
                 for (int i = 0; i < tracks; i++)
                 {
-                    if (Out_view.Checked)
+                    bool shouldDrawTrack = false;
+                    if (Out_view.Checked && NDG.Track_Length[i] > min_t_len && NDS.cbm[i] < secF.Length - 1)
                     {
-                        if (NDG.Track_Length[i] > min_t_len && NDS.cbm[i] < secF.Length - 1)
-                        {
-                            d = Get_Density(NDG.Track_Data[i].Length);
-                            t = Draw_Track(flat_large, (42 * 14), NDG.Track_Data[i], (int)ht, 0, 0, NDS.cbm[i], NDS.v2info[i], d, Out_view.Checked, NDS.cbm_sector[i]);
-                            ext = "(flat_tracks).g64";
-                        }
+                        d = Get_Density(NDG.Track_Data[i].Length);
+                        t = Draw_Track(flat_large, (42 * 14), NDG.Track_Data[i], (int)ht, 0, 0, NDS.cbm[i], NDS.v2info[i], d, Out_view.Checked, NDS.cbm_sector[i]);
+                        ext = "(flat_tracks).g64";
+                        shouldDrawTrack = true;
                     }
-                    if (Src_view.Checked)
+                    else if (Src_view.Checked)
                     {
-                        var ds = NDS.D_Start[i];
-                        var de = NDS.D_End[i];
-                        if (NDS.cbm[i] == 1 || NDS.cbm[i] == 5) { ds >>= 3; de >>= 3; } else { ds = 0; de = 8192; }
-                        if (NDS.Track_Data[i].All(s => s != 0x00)) // <- view all tracks that aren't all 0x00 bytes
+                        int ds = NDS.D_Start[i], de = NDS.D_End[i];
+                        d = (NDS.Track_Length?[i] != 0) ? Get_Density(NDS.Track_Length[i] >> 3) : density_map[i / trk];
+                        if (NDS.Track_Data[i].Any(s => s != 0x00)) // View all tracks that aren't all 0x00 bytes
                         {
                             t = Draw_Track(flat_large, (42 * 14), NDS.Track_Data[i], (int)ht, ds, de, NDS.cbm[i], NDS.v2info[i], d, Out_view.Checked, NDS.cbm_sector[i]);
                             ext = $"(flat_tracks){fext}";
+                            shouldDrawTrack = true;
                         }
                     }
-                    if (halftracks) ht += .5; else ht += 1;
-                    pt++;
-                    if (pt - 1 > 0) Invoke(new Action(() => Flat_Render.Maximum = (int)((double)Flat_Render.Value / (double)(pt + 1) * at)));
+
+                    if (shouldDrawTrack)
+                    {
+                        processedTracks++;
+                        if (processedTracks - 1 > 0)
+                        {
+                            Invoke(new Action(() => Flat_Render.Maximum = (int)((double)Flat_Render.Value / (double)(processedTracks + 1) * actualTracks)));
+                        }
+                    }
+
+                    ht += halftracks ? 0.5 : 1;
                 }
+
                 flat_large = (Bitmap)Resize_Image(t, t.Width, t.Height, false, false);
                 flat_small = (Bitmap)Resize_Image(t, pan_defw, pan_defh - 16, false, Flat_Interp.Checked);
-                Add_Text(flat_small, $"{fname}{fnappend}{ext}", Color.FromArgb(40, 40, 40),
-                    Brushes.White, font, 20, flat_small.Height - 20, 600, flat_small.Height);
-                Add_Text(flat_large, $"{fname}{fnappend}{ext}", Color.FromArgb(40, 40, 40),
-                    Brushes.White, font, 20, flat_large.Height - 40, 600, flat_large.Height);
+
+                Add_Text(flat_small, $"{fname}{fnappend}{ext}", Color.FromArgb(40, 40, 40), Brushes.White, font, 20, flat_small.Height - 20, 600, flat_small.Height);
+                Add_Text(flat_large, $"{fname}{fnappend}{ext}", Color.FromArgb(40, 40, 40), Brushes.White, font, 20, flat_large.Height - 40, 600, flat_large.Height);
+
                 Invoke(new Action(() =>
                 {
                     if (Flat_View.Checked)
                     {
-                        if (Img_zoom.Checked)
-                        {
-                            Disk_Image.Cursor = Cursors.Hand;
-                            Disk_Image.Image = flat_large;
-                        }
-                        else
-                        {
-                            Disk_Image.Cursor = Cursors.Arrow;
-                            Disk_Image.Image = flat_small;
-                        }
+                        Disk_Image.Cursor = Img_zoom.Checked ? Cursors.Hand : Cursors.Arrow;
+                        Disk_Image.Image = Img_zoom.Checked ? flat_large : flat_small;
                         Disk_Image.Top = 0;
                         Disk_Image.Left = 0;
                     }
                     Flat_Render.Visible = false;
                 }));
+
                 def_text = $"{fname}{fnappend}{ext}";
                 t.Dispose();
             }
             else
             {
                 flat_small = (Bitmap)Resize_Image(flat_large, pan_defw, pan_defh - 16, false, Flat_Interp.Checked);
-                Add_Text(flat_small, $"{fname}{fnappend}{ext}", Color.FromArgb(40, 40, 40),
-                        Brushes.White, font, 20, flat_small.Height - 20, 600, flat_small.Height);
+                Add_Text(flat_small, $"{fname}{fnappend}{ext}", Color.FromArgb(40, 40, 40), Brushes.White, font, 20, flat_small.Height - 20, 600, flat_small.Height);
                 Disk_Image.Image = flat_small;
             }
+
             GC.Collect();
         }
 
         private void Draw_Circular_Tracks(bool wait)
         {
             if (wait) Thread.Sleep(1000);
-            int at = 0;
-            int pt = 0;
-            for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < secF.Length - 1) at++;
-            int m = 0;
-            double sub = 1.25;
+
+            int scale = 0;
+            int activeTracks = 0;
+            for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < secF.Length - 1) activeTracks++;
             Invoke(new Action(() =>
             {
-                m = Img_Q.SelectedIndex + 1;
+                scale = Img_Q.SelectedIndex + 1;
                 Set_Circular_Draw_Options(false, 0);
             }));
-            int skp = 1;
-            if (tracks <= 42) skp = 2;
-            string fi_ext = ".g64";
-            string fi_nam = $"{fname}{fnappend}";
-            bool v2 = false;
-            sub *= m;
-            int width = m * 1000;
-            int height = m * 1000;
-            int track = 0;
-            int i;
-            int de;
-            int j = 0;
-            int k;
-            int x = width / 2;
-            int y = height / 2;
-            int r = (int)((width / 2) / 1.0316368638f);
-            r = (width / 2) - (15 * m);
-            int len;
-            int t_width = (int)(3.1f * m);
-            Color col;
-            BitArray t_bit = new BitArray(0);
-            circle = new FastBitmap(width, height);
-            if (Src_view.Checked) { fi_ext = ".nib"; fi_nam = $"{fname}"; }
-            int trk = 100;
-            int a = 0;
-            Random rnd = new Random();
-            while (true || a < 1000)
-            {
-                trk = rnd.Next(0, tracks - 1);
-                if (NDS.Track_Length[trk] > 0) break;
-                a++;
-            }
-            Draw_Disk(circle, m, width, $"{fi_nam}{fi_ext}", ToBinary(Encoding.ASCII.GetString(NDS.Track_Data[trk], 0, 2000)));
-            Thread[] Draw = new Thread[tracks];
 
-            while (r > 80 && track < tracks)
+            double sub = 1.25;// * scale;
+            int imageSize = scale * 1000;
+            int x = imageSize >> 1;
+            int y = imageSize >> 1;
+            int radius = (int)(x / 1.0316368638f) + (5 * scale);// - (15 * scale);
+            int trackWidth = (int)(3.1f * scale);
+            string fileExtension = Src_view.Checked ? ".nib" : ".g64";
+            string fileName = $"{fname}{fnappend}{fileExtension}";
+            Random random = new Random();
+            bool isReverse = vm_reverse;
+
+            circle = new FastBitmap(imageSize, imageSize);
+
+            int sampleTrack = GetSampleTrack(random);
+            string bgText = ToBinary(Encoding.ASCII.GetString(NDS.Track_Data[sampleTrack], 0, 2000));
+            Draw_Disk(circle, scale, imageSize, fileName, bgText);
+
+            int skipFactor = tracks <= 42 ? 2 : 1;
+            int progress = 0;
+
+            for (int track = 0; track < tracks && radius > 80; track++)
             {
-                bool v5 = false;
                 if (NDG.Track_Length[track] > min_t_len && NDS.cbm[track] < secF.Length - 1)
                 {
-                    pt++;
-                    v2 = false;
-                    byte[] t_data = Get_Track_Data(track);
-                    len = t_data.Length;
-                    de = Get_Density(len);
-                    if (len > min_t_len)
+                    int sb = 0;
+                    progress++;
+                    byte[] trackData = Get_Track_Data(track);
+                    int dataLength = trackData.Length;
+
+                    if (dataLength > min_t_len)
                     {
-                        for (i = 0; i < t_data.Length; i++)
+                        int density = Get_Density(dataLength);
+                        bool v2 = false;
+                        bool v5 = false;
+                        for (int i = 0; i < dataLength; i++)
                         {
-                            (col, v2, v5) = Get_Color(t_data[i], NDS.v2info[track], track, i, de, NDS.cbm[track], v2, v5);
-                            Draw_Arc(circle, x, y, r + j, i, col);
+                            if (NDS.cbm[track] == 6 && trackData[i] == 0x7b) sb++; else sb = 0;
+                            var (color, updatedV2, updatedV5) = Get_Color(trackData[i], NDS.v2info[track], track, i, density, NDS.cbm[track], v2, v5, sb);
+                            v2 = updatedV2;
+                            v5 = updatedV5;
+                            Draw_Arc(circle, x, y, radius, i, color, track, dataLength, trackWidth, sub);
                         }
-
                     }
-                    if (Circle_View.Checked && Cores <= 3) this.Invoke(new Action(() => Update_Image()));
-                    this.Invoke(new Action(() => Update_Progress_Bar(pt, at)));
-                }
-                r -= (t_width * skp);
-                track += 1;
-            }
-            Invoke(new Action(() => Set_Circular_Draw_Options(true, width)));
 
-            void Draw_Arc(FastBitmap d, int cx, int cy, int radius, int startAngle, Color color)
+                    if (Circle_View.Checked && Cores <= 3) Update_Image();
+                    Invoke(new Action(() => Update_Progress_Bar(progress, activeTracks)));
+                }
+
+                radius -= (trackWidth * skipFactor);
+            }
+
+            Invoke(new Action(() => Set_Circular_Draw_Options(true, imageSize)));
+        }
+
+        private int GetSampleTrack(Random random)
+        {
+            int track = 100;
+            int attempts = 0;
+
+            while (attempts < 1000)
             {
-                int segments = 22 - track / 4;
-                float tempang = (float)(len) / 359.1f;
-                float angle = (startAngle / tempang) * 3.14159265f / 180; // initial angle in radians
-                float angleInc = 3.14159265f / (180 * segments); // angle increment
-                float c, s;
-                for (k = 1; k < segments; k++, angle += angleInc)
+                track = random.Next(0, tracks - 1);
+                if (NDS.Track_Length[track] > 0) break;
+                attempts++;
+            }
+
+            return track;
+        }
+
+        private void Draw_Arc(FastBitmap bitmap, int centerX, int centerY, int radius, int startAngle, Color color, int track, int len, int trackWidth, double sub)
+        {
+            int segments = 22 - track / 4;
+            float tempAngle = len / 359.1f;
+            float angle = (startAngle / tempAngle) * 3.14159265f / 180; // initial angle in radians
+            float angleInc = 3.14159265f / (180 * segments); // angle increment
+
+            for (int k = 1; k < segments; k++, angle += angleInc)
+            {
+                float cos = (float)Math.Cos(angle);
+                float sin = (float)Math.Sin(angle);
+                for (int j = 0; j < trackWidth - (int)sub; j++)
                 {
-                    c = (float)Math.Cos(angle);
-                    s = (float)Math.Sin(angle);
-                    for (j = 0; j < (int)((t_width + m) - (int)sub); j++) d.SetPixel((int)(cx + (radius + j) * c), (int)(cy + (radius + j) * s), color);
+                    bitmap.SetPixel((int)(centerX + (radius + j) * cos), (int)(centerY + (radius + j) * sin), color);
                 }
             }
         }
 
-        private Bitmap Draw_Track(Bitmap bmp, int max_Height, byte[] tdata, int trk, int s, int e, int tf, byte[] v2i, int d, bool w, int[] v)
+        private Bitmap Draw_Track(Bitmap bmp, int maxHeight, byte[] trackData, int track, int start, int end, int trackFormat, byte[] v2info, int densityIndex, bool write, int[] v)
         {
-            Pen pen;
-            bool v2 = false;
-            bool v5 = false;
-            bool rl = false;
-            int t_height = (max_Height / 42) - 4;
-            for (int j = 0; j < tdata.Length; j++)
+            int trackHeight = (maxHeight / 42) - 4;
+            int segmentHeight = (maxHeight - 16) / 42;
+            int c = (track % 2);
+            int sb = 0;
+            int skip = tracks > 42 ? 2 : 1;
+            float div = (c == 0 || trackFormat == 4) ? 1.0f : 1.7f;
+            bool v2 = false, v5 = false; //, rl = false;
+            Pen pen = new Pen(Color.Empty, 1);
+            // Create graphics object once
+            using (var graphics = Graphics.FromImage(bmp))
             {
-                if (w)
+                for (int i = 0; i < trackData.Length; i++)
                 {
-                    if (Cap_margins.Checked)
-                    {
-                        //pen = new Pen(Color.FromArgb(tdata[j] / 2, tdata[j] / 2, tdata[j] / 2), 1);
-                        pen = new Pen(Color.FromArgb(tdata[j], 0, 0), 1);
-                        if (j <= density[d]) pen = new Pen(Color.FromArgb(30, tdata[j], 30));
-                        if (j > density[d] && j < density[d] + 5) pen = new Pen(Color.FromArgb(tdata[j], tdata[j], 30));
-                    }
-                    else pen = new Pen(Color.FromArgb(30, tdata[j], 30));
-                    if (tf == 2 && tdata[j] == v2i[0]) v2 = true;
-                    if (v2 && tdata[j] == v2i[1]) v2 = false;
-                    if (tf == 6 && tdata[j] == 0x00) rl = true;
-                    if (rl && tdata[j] != 0x00) rl = false;
-                    if (Show_sec.Checked && ((tf == 3 && tdata[j] == 0x49) || v2 || rl)) pen = new Pen(Color.FromArgb(30, 30, 255));
-                    if (tf == 5 && Show_sec.Checked)
-                    {
-                        if ((Cap_margins.Checked && (j > s || j < e)) || !Cap_margins.Checked)
-                        {
-                            if (v.Any(x => x == j)) v5 = !v5;
-                            if (v5) pen = new Pen(Color.FromArgb((int)(tdata[j] / 1.5f), (int)(tdata[j] / 1.5f), (int)(tdata[j] / 1.5f)));
-                            else pen = new Pen(Color.FromArgb(0, (int)(tdata[j] / 1.5f), (int)(tdata[j] / 1.5f)));
-                        }
-                    }
-                }
-                else
-                {
-                    if (Cap_margins.Checked)
-                    {
-                        if (j < s || j > e) pen = new Pen(Color.FromArgb(tdata[j], 0, 0), 1); //pen = new Pen(Color.FromArgb(tdata[j], tdata[j], 50));
-                        else pen = new Pen(Color.FromArgb(30, tdata[j], 30));
-                    }
-                    else pen = new Pen(Color.FromArgb(30, tdata[j], 30));
-                    if (tf == 2 && tdata[j] == v2i[0]) v2 = true;
-                    if (v2 && tdata[j] == v2i[1]) v2 = false;
-                    if (tf == 6 && tdata[j] == 0x00) rl = true;
-                    if (rl && tdata[j] != 0x00) rl = false;
-                    if (Show_sec.Checked && ((tf == 3 && tdata[j] == 0x49) || v2 || rl)) pen = new Pen(Color.FromArgb(30, 30, 255));
-                    if (tf == 5 && Show_sec.Checked)
-                    {
-                        if ((Cap_margins.Checked && (j > s || j < e)) || !Cap_margins.Checked)
-                        {
-                            if (v.Any(x => x == j)) v5 = !v5;
-                            if (v5) pen = new Pen(Color.FromArgb((int)(tdata[j] / 1.5f), (int)(tdata[j] / 1.5f), (int)(tdata[j] / 1.5f)));
-                            else pen = new Pen(Color.FromArgb(0, (int)(tdata[j] / 1.5f), (int)(tdata[j] / 1.5f)));
-                        }
-                    }
-                }
-                int x1 = j;
-                int y1 = 0 + (trk * ((max_Height - 16) / 42));
-                int x2 = j;
-                int y2 = t_height + (trk * ((max_Height - 16) / 42));
-                using (var graphics = Graphics.FromImage(bmp))
-                {
+                    byte data = trackData[i];
+                    if (trackFormat == 6 && data == 0x7b) sb++; else sb = 0;
+                    bool inDensityRange = i <= density[densityIndex];
+                    bool inMargins = i > start && i < end;
+
+                    // Use the Get_Color method to determine the color
+                    (Color color, bool newV2, bool newV5) = Get_Color(data, v2info, track * skip, i, densityIndex, trackFormat, v2, v5, sb, true);
+                    pen.Color = ApplyDivisionModifier(color, div);
+                    v2 = newV2;
+                    v5 = newV5;
+
+                    // Draw the line segment
+                    int x1 = i + 32, y1 = track * segmentHeight, x2 = i + 32, y2 = trackHeight + track * segmentHeight;
                     graphics.DrawLine(pen, x1, y1, x2, y2);
                 }
+                Add_Text(bmp, $"{track + 1}", Color.FromArgb(0, 40, 40, 40), trk_brush[c], new Font("Ariel", 11), 0, -5 + (track * 13), 60, 17 * track);
             }
             return bmp;
         }
 
-        private (Color, bool, bool) Get_Color(byte d, byte[] v2info, int track, int position, int density, int track_fmt, bool v2, bool v5)
+
+        private (Color, bool, bool) Get_Color(byte d, byte[] v2info, int track, int position, int density, int trackFmt, bool v2, bool v5, int sb, bool flat = false)
         {
             Color col;
-            if (vm_reverse) // && NDS.cbm[track] > 1)
+            int dd = d >> 1;
+            if (vm_reverse)
             {
-                var sub = 255;
-                if (track_fmt == 1) col = Color.FromArgb(d, (int)(d / 3), d);
-                else
+                int sub = (d == 0) ? 0 : (d == 255) ? 510 : 255;
+                switch (trackFmt)
                 {
-                    if (d == 0) sub = 0; if (d == 255) sub = 255 + 255;
-                    col = Color.FromArgb(30, sub - d, 30);
-                    if (track_fmt == 4) col = Color.FromArgb((int)(d / 1.5f), (int)(d / 1.5f), d);
-                    if (track_fmt == 5) col = Color.FromArgb(0, (int)(d / 1.5f), (int)(d / 1.5f));
-                    if (track_fmt == 6) col = Color.FromArgb((int)(d / 1.5f), (int)(d / 1.5f), 0);
+                    case 0: col = Color.FromArgb(dd, dd, dd); break;
+                    case 1: col = Color.FromArgb(d, d / 3, d); break;
+                    case 4: col = Color.FromArgb(dd, dd, d); break;
+                    case 5: col = Color.FromArgb(0, dd, dd); break;
+                    case 6: col = Color.FromArgb(dd, dd, 0); break;
+                    case 10: col = Color.FromArgb(dd, dd, 0); break;
+                    default: col = Color.FromArgb(30, sub - d, 30); break;
                 }
             }
-            else col = Color.FromArgb(30, d, 30);
+            else
+            {
+                col = Color.FromArgb(30, d, 30);
+            }
+
+            if (flat && trackFmt == 0)
+            {
+                col = Color.FromArgb(dd, dd, dd);
+                return (col, v2, v5);
+            }
+
             if (Cap_margins.Checked)
             {
-                Color bak = col;
-                col = Color.FromArgb(d / 2, d / 2, d / 2);
-                if (!vm_reverse)
+                Color backupColor = col;
+                if (!flat) col = Color.FromArgb(dd, dd, dd);
+                else col = Color.FromArgb(d >> 1, 0, 0);
+                if (position <= this.density[density])
                 {
-                    if (position <= this.density[density]) col = Color.FromArgb(30, d, 30);
-                    if (position > this.density[density] && position < this.density[density] + 5) col = Color.FromArgb(d, d, 30);
+                    col = vm_reverse ? backupColor : Color.FromArgb(30, d, 30);
                 }
-                else
+                else if (position > this.density[density] && position < this.density[density] + 5)
                 {
-                    if (position <= this.density[density]) col = bak;
-                    if (position > this.density[density] && position < this.density[density] + 5) col = Color.FromArgb(d, d, 30);
+                    col = Color.FromArgb(d, d, 30);
                 }
             }
-            if (track_fmt == 2 && d == NDS.v2info[track][0]) v2 = true;
+
+            if (trackFmt == 2 && d == v2info[0]) v2 = true;
             if (v2 && d == v2info[1]) v2 = false;
-            if (Show_sec.Checked && ((track_fmt == 3 && d == 0x49) || v2)) col = Color.FromArgb(30, 30, 255);
-            if (track_fmt == 5 && Show_sec.Checked)
+            if (Show_sec.Checked && ((trackFmt == 3 && d == 0x49) || v2)) col = Color.FromArgb(30, 30, 255);
+
+            if (trackFmt == 5 && Show_sec.Checked && position <= this.density[density])
             {
                 if (NDS.cbm_sector[track].Any(x => x == position)) v5 = !v5;
-                if (v5) col = Color.FromArgb((int)(d / 1.5f), (int)(d / 1.5f), (int)(d / 1.5f));
-                //else col = Color.FromArgb(0, (int)(d / 1.5f), (int)(d / 1.5f));
+                col = v5 ? Color.FromArgb(dd, dd, dd) : col;
             }
-            if (track_fmt == 6 && Show_sec.Checked)
+
+            if (trackFmt == 6 && Show_sec.Checked)
             {
-                if (d == 0xff) col = Color.FromArgb(30, 30, (int)(d));
-                if (d == 0x7b) col = Color.FromArgb(128, 130, 188);
+                if (d == 0xff) col = Color.FromArgb(30, 30, d);
+                if (d == 0x7b && sb > 3) col = Color.FromArgb(128, 130, 188);
             }
+
             return (col, v2, v5);
         }
 
         private byte[] Get_Track_Data(int track)
         {
             byte[] temp = new byte[0];
+
             if (Out_view.Checked)
             {
                 try
                 {
-                    temp = new byte[NDG.Track_Length[track]];
-                    Buffer.BlockCopy(NDG.Track_Data[track], 0, temp, 0, temp.Length);
+                    int length = NDG.Track_Length[track];
+                    temp = new byte[length];
+                    Buffer.BlockCopy(NDG.Track_Data[track], 0, temp, 0, length);
                 }
                 catch { }
             }
+
             if (Src_view.Checked)
             {
-                if (NDS.cbm[track] == 1 && (NDS.D_End[track] - NDS.D_Start[track]) >> 3 >= min_t_len)
+                int start = NDS.D_Start[track] >> 3;
+                int end = NDS.D_End[track] >> 3;
+                int length = end - start;
+
+                if (NDS.cbm[track] == 1 && length >= min_t_len)
                 {
-                    temp = new byte[(NDS.D_End[track] - NDS.D_Start[track]) >> 3];
-                    Buffer.BlockCopy(NDS.Track_Data[track], NDS.D_Start[track] >> 3, temp, 0, (NDS.D_End[track] - NDS.D_Start[track]) >> 3);
+                    temp = new byte[length];
+                    Buffer.BlockCopy(NDS.Track_Data[track], start, temp, 0, length);
                 }
                 else
                 {
-                    temp = new byte[NDS.Track_Data[track].Length];
-                    Buffer.BlockCopy(NDS.Track_Data[track], 0, temp, 0, NDS.Track_Data[track].Length);
+                    length = NDS.Track_Data[track].Length;
+                    temp = new byte[length];
+                    Buffer.BlockCopy(NDS.Track_Data[track], 0, temp, 0, length);
                 }
-                if ((NDS.cbm[track] > 1 && NDS.cbm[track] < 5) && NDS.D_End[track] - NDS.D_Start[track] > min_t_len)
+
+                if (NDS.cbm[track] > 1 && NDS.cbm[track] < 5 && length >= min_t_len)
                 {
-                    temp = new byte[NDS.D_End[track] - NDS.D_Start[track]];
-                    Buffer.BlockCopy(NDS.Track_Data[track], NDS.D_Start[track] >> 3, temp, 0, (NDS.D_End[track] - NDS.D_Start[track]));
+                    length = NDS.D_End[track] - NDS.D_Start[track];
+                    temp = new byte[length];
+                    Buffer.BlockCopy(NDS.Track_Data[track], start, temp, 0, length);
                 }
             }
+
             return temp;
         }
 
@@ -398,7 +408,6 @@ namespace V_Max_Tool
             }
             if (!t && Circle_View.Checked)
             {
-
                 Save_Circle_btn.Visible = t;
                 Disk_Image.Top = 0; Disk_Image.Left = 0;
             }
@@ -448,63 +457,60 @@ namespace V_Max_Tool
 
         private void Draw_Disk(FastBitmap d, int m, int size, string file_name, string bg_text)
         {
-            Brush tx = new SolidBrush(Color.FromArgb(20, 155, 155, 155));
-            Font font = new Font("Ariel", 7.4f * m);
-            Brush b = new SolidBrush(Write_face);
-            Pen p = new Pen(Color.Black, 2);
             using (var g = Graphics.FromImage(d.Bitmap))
             {
-                RectangleF rect = new RectangleF(0, 0, size, size);
-                g.FillRectangle(new SolidBrush(Color.FromArgb(0, 0, 0)), rect);
-                // Draw binary background text
-                Add_Text(d.Bitmap, bg_text, Color.FromArgb(0, 0, 0, 0), tx, font, 0, 0, size, size);
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                // Draw Disk writeable surface area
-                g.FillEllipse(b, 3.5f, 3.5f, d.Width - 10, d.Height - 10);
-                g.DrawEllipse(p, 3.5f, 3.5f, d.Width - 10, d.Height - 10);
-                // Draw inner non-writable surface of disk
-                b = new SolidBrush(Inner_face);
-                g.FillEllipse(b, (float)(275 * m), (float)(275 * m), (float)(450 * m), (float)(450 * m));
-                // Draw inner ring of disk (also used for image name text)
-                g.FillEllipse(new SolidBrush(Color.FromArgb(7, 7, 7)), (float)(350 * m), (float)(350 * m), (float)(300 * m), (float)(300 * m));
-                // Draw remaing disk surface until center hole
-                g.FillEllipse(b, (float)(367.5 * m), (float)(367.5 * m), (float)(265 * m), (float)(265 * m));
-                b = new SolidBrush(Color.FromArgb(0, 0, 0));
-                // Draw index hole
-                g.FillEllipse(b, (float)(380 * m), (float)(380 * m), (float)(240 * m), (float)(240 * m));
-                g.DrawEllipse(p, (float)(380 * m), (float)(380 * m), (float)(240 * m), (float)(240 * m));
-                g.FillEllipse(b, (float)(672.5 * m), (float)(487.5 * m), (float)(20 * m), (float)(20 * m));
-                g.DrawEllipse(p, (float)(672.5 * m), (float)(487.5 * m), (float)(20 * m), (float)(20 * m));
-            }
-            // Print File name on the disk image
-            Brush bsh = new SolidBrush(Color.White);
-            Font fnt = new Font("Arial", (float)(11.6 * m), FontStyle.Regular);
-            DrawCurvedText(Graphics.FromImage(circle.Bitmap), $"{file_name}", new Point((int)(500 * m), (int)(500 * m)), (float)(128.34 * m), 0f, fnt, bsh, false);
-            // Print rotation indicator on the disk image
-            bsh = new SolidBrush(Color.Yellow);
-            fnt = new Font("Arial", (float)(16 * m), FontStyle.Regular);
-            DrawCurvedText(Graphics.FromImage(circle.Bitmap), $"\u2192 noitatoR", new Point((int)(513 * m), (int)(503 * m)), (float)(181.67 * m), 1.45f, fnt, bsh, true);
+                var fontSmall = new Font("Ariel", 7.4f * m);
+                var fontLarge = new Font("Arial", (float)(11.6 * m), FontStyle.Regular);
+                var fontVeryLarge = new Font("Arial", (float)(16 * m), FontStyle.Regular);
 
-            if (vm_reverse)
+                var txBrush = new SolidBrush(Color.FromArgb(20, 155, 155, 155));
+                var writeBrush = new SolidBrush(Write_face);
+                var innerBrush = new SolidBrush(Inner_face);
+                var blackBrush = new SolidBrush(Color.Black);
+                var holeBrush = new SolidBrush(Color.FromArgb(0, 0, 0));
+                var whiteBrush = new SolidBrush(Color.White);
+                var yellowBrush = new SolidBrush(Color.Yellow);
+                var blackPen = new Pen(Color.Black, 2);
+
+                g.FillRectangle(blackBrush, 0, 0, size, size);
+                Add_Text(d.Bitmap, bg_text, Color.FromArgb(0, 0, 0, 0), txBrush, fontSmall, 0, 0, size, size);
+
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                DrawEllipse(g, writeBrush, blackPen, 3.5f, 3.5f, d.Width - 10, d.Height - 10);
+                g.FillEllipse(innerBrush, 275 * m, 275 * m, 450 * m, 450 * m);
+                g.FillEllipse(blackBrush, 350 * m, 350 * m, 300 * m, 300 * m);
+                g.FillEllipse(innerBrush, 367.5f * m, 367.5f * m, 265 * m, 265 * m);
+                DrawEllipse(g, holeBrush, blackPen, 380 * m, 380 * m, 240 * m, 240 * m);
+                DrawEllipse(g, holeBrush, blackPen, 672.5f * m, 487.5f * m, 20 * m, 20 * m);
+
+                DrawCurvedText(g, file_name, new Point((int)(500 * m), (int)(500 * m)), 128.34f * m, 0f, fontLarge, whiteBrush, false);
+                DrawCurvedText(g, "\u2192 noitatoR", new Point((int)(513 * m), (int)(503 * m)), 181.67f * m, 1.45f, fontVeryLarge, yellowBrush, true);
+
+                if (vm_reverse)
+                {
+                    Add_Text(d.Bitmap, "CBM", Color.FromArgb(0, 40, 40, 40), cbm_brush, new Font("Ariel", 11 * m), 1 * m, 1 * m, 60 * m, 17 * m);
+                    if (NDS.cbm.Any(s => s == 2 || s == 3))
+                    {
+                        Add_Text(d.Bitmap, "Loader", Color.FromArgb(0, 40, 40, 40), ldr_brush, new Font("Ariel", 11 * m), 1 * m, 18 * m, 60 * m, 17 * m);
+                        Add_Text(d.Bitmap, "V-Max!", Color.FromArgb(0, 40, 40, 40), vmx_brush, new Font("Ariel", 11 * m), 1 * m, 35 * m, 60 * m, 17 * m);
+                    }
+                    if (NDS.cbm.Any(s => s == 5))
+                    {
+                        Add_Text(d.Bitmap, "Vorpal", Color.FromArgb(0, 40, 40, 40), vpl_brush, new Font("Ariel", 11 * m), 1 * m, 18 * m, 60 * m, 17 * m);
+                    }
+                    if (NDS.cbm.Any(s => s == 6) || NDS.cbm.Any(s => s == 10))
+                    {
+                        string result = (NDS.cbm.Any(s => s == 6)) ? "Rapidlok" : "MicroProse";
+                        Add_Text(d.Bitmap, result, Color.FromArgb(0, 40, 40, 40), rpl_brush, new Font("Ariel", 11 * m), 1 * m, 18 * m, 80 * m, 17 * m);
+                        if (NDS.cbm.Any(s => s == 6)) Add_Text(d.Bitmap, "Key", Color.FromArgb(0, 40, 40, 40), key_brush, new Font("Ariel", 11 * m), 1 * m, 35 * m, 80 * m, 17 * m);
+                    }
+                }
+            }
+
+            void DrawEllipse(Graphics g, Brush fillBrush, Pen outlinePen, float x, float y, float width, float height)
             {
-                Add_Text(circle.Bitmap, "CBM", Color.FromArgb(0, 40, 40, 40), cbm_brush, new Font("Ariel", 11 * m), (int)(1 * m), (int)(1 * m), (int)(60 * m), (int)(17 * m));
-                if (NDS.cbm.Any(s => s == 2) || NDS.cbm.Any(s => s == 3))
-                {
-                    Add_Text(circle.Bitmap, "Loader", Color.FromArgb(0, 40, 40, 40), ldr_brush, new Font("Ariel", 11 * m), (int)(1 * m), (int)(18 * m), (int)(60 * m), (int)(17 * m));
-                    Add_Text(circle.Bitmap, "V-Max!", Color.FromArgb(0, 40, 40, 40), vmx_brush, new Font("Ariel", 11 * m), (int)(1 * m), (int)(35 * m), (int)(60 * m), (int)(17 * m));
-                }
-                if (NDS.cbm.Any(s => s == 5))
-                {
-                    Add_Text(circle.Bitmap, "Vorpal", Color.FromArgb(0, 40, 40, 40), vpl_brush, new Font("Ariel", 11 * m), (int)(1 * m), (int)(18 * m), (int)(60 * m), (int)(17 * m));
-                }
-                if (NDS.cbm.Any(s => s == 6))
-                {
-                    Add_Text(circle.Bitmap, "RapidLok", Color.FromArgb(0, 40, 40, 40), rpl_brush, new Font("Ariel", 11 * m), (int)(1 * m), (int)(18 * m), (int)(80 * m), (int)(17 * m));
-                    Add_Text(circle.Bitmap, "Key", Color.FromArgb(0, 40, 40, 40), key_brush, new Font("Ariel", 11 * m), (int)(1 * m), (int)(35 * m), (int)(80 * m), (int)(17 * m));
-                }
-                //if (NDS.cbm.Any(s => s == 7) )
-                //{
-                //}
+                g.FillEllipse(fillBrush, x, y, width, height);
+                g.DrawEllipse(outlinePen, x, y, width, height);
             }
         }
 
@@ -646,15 +652,22 @@ namespace V_Max_Tool
 
         private void Disk_Image_MouseMove(object sender, MouseEventArgs e)
         {
-            if (Img_zoom.Checked && Disk_Image.Enabled && (Dragging && sender is Control c))
-            {
-                var j = -(c.Width - panPic.Width);
-                var g = -(c.Height - panPic.Height);
-                if ((c.Top <= 0 && (e.Y + c.Top - yPos) <= 0) && (c.Top >= g && (e.Y + c.Top - yPos) >= g)) c.Top = e.Y + c.Top - yPos;
-                if ((c.Left <= 0 && (e.X + c.Left - xPos) <= 0) && (c.Left >= j && (e.X + c.Left - xPos) >= j)) c.Left = e.X + c.Left - xPos;
-                var x = -c.Left; var y = -c.Top;
-                coords.Text = $"x:({x}) y:({y})";
-            }
+            if (!Img_zoom.Checked || !Disk_Image.Enabled || !Dragging || !(sender is Control c))
+                return;
+
+            var maxLeft = -(c.Width - panPic.Width);
+            var maxTop = -(c.Height - panPic.Height);
+
+            var newTop = e.Y + c.Top - yPos;
+            var newLeft = e.X + c.Left - xPos;
+
+            if (newTop <= 0 && newTop >= maxTop)
+                c.Top = newTop;
+
+            if (newLeft <= 0 && newLeft >= maxLeft)
+                c.Left = newLeft;
+
+            coords.Text = $"x:({-c.Left}) y:({-c.Top})";
         }
 
         private void Disk_Image_MouseUp(object sender, MouseEventArgs e)
@@ -664,43 +677,37 @@ namespace V_Max_Tool
 
         private void ImageZoom_CheckedChanged(object sender, EventArgs e)
         {
-            if (circle_full != null)
+            if (circle_full == null) return;
+
+            if (Circle_View.Checked)
             {
-                if (Circle_View.Checked)
+                UpdateDiskImage(Img_zoom.Checked, circle_full, circle_small, true);
+            }
+            else
+            {
+                UpdateDiskImage(Img_zoom.Checked, flat_large, flat_small, false);
+                Flat_Interp.Enabled = !Img_zoom.Checked;
+            }
+
+            void UpdateDiskImage(bool isZoomed, Image largeImage, Image smallImage, bool isCircleView)
+            {
+                Disk_Image.Cursor = isZoomed ? Cursors.Hand : Cursors.Arrow;
+                Disk_Image.Image = isZoomed ? largeImage : smallImage;
+
+                if (isCircleView && isZoomed)
                 {
-                    if (!Img_zoom.Checked)
-                    {
-                        Disk_Image.Cursor = Cursors.Arrow;
-                        Disk_Image.Image = circle_small;
-                        Disk_Image.Top = 0;
-                        Disk_Image.Left = 0;
-                    }
-                    else
-                    {
-                        Disk_Image.Cursor = Cursors.Hand;
-                        Disk_Image.Image = circle_full;
-                        Disk_Image.Top = 0 - ((circle_full.Height / 2) - (panPic.Height / 2)); Disk_Image.Left = 0 - ((circle_full.Width) - panPic.Width);
-                    }
+                    Disk_Image.Top = 0 - ((largeImage.Height / 2) - (panPic.Height / 2));
+                    Disk_Image.Left = 0 - (largeImage.Width - panPic.Width);
                 }
                 else
                 {
-                    if (!Img_zoom.Checked)
-                    {
-                        Disk_Image.Cursor = Cursors.Arrow;
-                        Disk_Image.Image = flat_small;
-                        Disk_Image.Top = 0;
-                        Disk_Image.Left = 0;
-                    }
-                    else
-                    {
-                        Disk_Image.Cursor = Cursors.Hand;
-                        Disk_Image.Image = flat_large;
-                        Disk_Image.Top = 0; Disk_Image.Left = 0;
-                    }
-                    Flat_Interp.Enabled = !Img_zoom.Checked;
+                    Disk_Image.Top = 0;
+                    Disk_Image.Left = 0;
                 }
             }
+
         }
+
         private void Adv_Ctrl_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (!busy)
@@ -732,7 +739,8 @@ namespace V_Max_Tool
                 flat = new Thread(new ThreadStart(() => Draw_Flat_Tracks(false, true)));
                 flat.Start();
                 vm_reverse = !vm_reverse;
-                Check_Before_Draw(true);
+                //Check_Before_Draw(true);
+                Check_Before_Draw(false);
             }
         }
 
@@ -740,45 +748,32 @@ namespace V_Max_Tool
         {
             Flat_Interp.Visible = Flat_View.Checked;
             Rev_View.Visible = Circle_View.Checked;
-            if (!busy)
-            {
-                if (Flat_View.Checked)
-                {
-                    Img_Q.Enabled = false;
-                    if (Img_zoom.Checked)
-                    {
-                        Disk_Image.Image = flat_large;
-                        Cursor(false, 0, 0);
-                    }
-                    else
-                    {
-                        Disk_Image.Image = flat_small;
-                        Cursor(true, 0, 0);
-                    }
-                }
-                if (Circle_View.Checked)
-                {
-                    Img_Q.Enabled = true;
-                    if (Img_zoom.Checked)
-                    {
-                        Disk_Image.Image = circle_full;
-                        Cursor(false, 0 - ((circle_full.Height / 2) - (panPic.Height / 2)), 0 - ((circle_full.Width) - panPic.Width));
-                    }
-                    else
-                    {
-                        Disk_Image.Image = circle_small;
-                        Cursor(true, 0, 0);
-                    }
-                }
 
-                void Cursor(bool cursor, int x, int y)
-                {
-                    if (cursor) Disk_Image.Cursor = Cursors.Arrow; else Disk_Image.Cursor = Cursors.Hand;
-                    Disk_Image.Top = y; Disk_Image.Left = x;
-                }
+            if (busy) return;
+
+            Img_Q.Enabled = Circle_View.Checked;
+
+            if (Flat_View.Checked)
+            {
+                SetImage(Img_zoom.Checked ? flat_large : flat_small, Img_zoom.Checked ? Cursors.Hand : Cursors.Arrow, 0, 0);
             }
+            else if (Circle_View.Checked)
+            {
+                SetImage(Img_zoom.Checked ? circle_full : circle_small, Img_zoom.Checked ? Cursors.Hand : Cursors.Arrow,
+                         Img_zoom.Checked ? 0 - ((circle_full.Height / 2) - (panPic.Height / 2)) : 0,
+                         Img_zoom.Checked ? 0 - ((circle_full.Width) - panPic.Width) : 0);
+            }
+
             Flat_Interp.Enabled = !Img_zoom.Checked;
             label4.Visible = Img_Q.Visible = Circle_View.Checked;
+        }
+
+        private void SetImage(Bitmap image, Cursor cursor, int top, int left)
+        {
+            Disk_Image.Image = image;
+            Disk_Image.Cursor = cursor;
+            Disk_Image.Top = top;
+            Disk_Image.Left = left;
         }
 
         private void Progress_Thread_Check(bool wait)

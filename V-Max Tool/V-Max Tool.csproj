@@ -74,6 +74,9 @@
     <Compile Include="CBM.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Directory_Editor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Misc_Protections.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -17,7 +17,7 @@ namespace V_Max_Tool
         public static int[] D_End = new int[0];
         public static int[] cbm = new int[0];
         public static int[] sectors = new int[0];
-        public static int[][] sector_pos = new int[0][];
+        //public static int[][] sector_pos = new int[0][];
         public static int[] Header_Len = new int[0];
         public static int[][] cbm_sector = new int[0][];
         public static byte[][] v2info = new byte[0][];
@@ -60,11 +60,31 @@ namespace V_Max_Tool
         public static byte[][] OT = new byte[0][];
     }
 
+    public static class DiskDir
+    {
+        public static int Entries = 0;
+        public static byte[][] Sectors = new byte[0][];
+        public static byte[][] Entry = new byte[0][];
+        public static string[] FileName = new string[0];
+    }
+
     class LineColor
     {
         public string Text;
         public Color Color;
     };
+
+    public class BufferedCheckedListBox : CheckedListBox
+    {
+        public BufferedCheckedListBox()
+        {
+            this.DoubleBuffered = true;
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint, true);
+            this.SetStyle(ControlStyles.ResizeRedraw, true);
+            this.UpdateStyles();
+        }
+    }
 
     public class AutoClosingMessageBox
     {

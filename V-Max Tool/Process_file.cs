@@ -78,6 +78,201 @@ namespace V_Max_Tool
             }
         }
 
+        //void Process_Batch(string[] batch_list, string path, string basedir)
+        //{
+        //    Stopwatch btime = new Stopwatch();
+        //    btime.Start();
+        //    bool tempAutoAdjust = Auto_Adjust;
+        //
+        //    SetupBatchProcessing();
+        //
+        //    Worker_Alt?.Abort();
+        //    Worker_Alt = new Thread(new ThreadStart(Start_Work));
+        //    Worker_Alt?.Start();
+        //
+        //    void Start_Work()
+        //    {
+        //        LB_File_List = new List<string>();
+        //
+        //        for (int i = 0; i < batch_list.Length; i++)
+        //        {
+        //            loader_fixed = false;
+        //            NDG.L_Rot = false;
+        //
+        //            if (cancel) break;
+        //
+        //            if (File.Exists(batch_list[i]))
+        //            {
+        //                UpdateUIForFileProcessing(i, batch_list.Length, batch_list[i]);
+        //
+        //                string curfile = GetOutputFilePath(batch_list[i], path, basedir);
+        //                fext = Path.GetExtension(batch_list[0]);
+        //                if (fext.ToLower() == supported[0])
+        //                {
+        //                    Batch_NIB(batch_list[i], curfile);
+        //                }
+        //
+        //                UpdateBatchListBox(curfile);
+        //            }
+        //        }
+        //
+        //        FinalizeBatchProcessing(batch_list.Length, btime);
+        //    }
+        //
+        //    void SetupBatchProcessing()
+        //    {
+        //        Invoke(new Action(() =>
+        //        {
+        //            Reset_to_Defaults();
+        //            busy = true;
+        //            Auto_Adjust = true;
+        //            Set_Auto_Opts();
+        //            busy = false;
+        //            Drag_pic.Visible = Adv_ctrl.Enabled = false;
+        //            Batch_Box.Visible = true;
+        //            batch = true;
+        //            Batch_Bar.Value = 0;
+        //            Batch_Bar.Maximum = 10000;
+        //            Batch_Bar.Value = 100;
+        //            Batch_List_Box.Items.Clear();
+        //            Batch_List_Box.Visible = true;
+        //            Disable_Core_Controls(true);
+        //        }));
+        //    }
+        //
+        //    void UpdateUIForFileProcessing(int fileIndex, int totalFiles, string filePath)
+        //    {
+        //        Invoke(new Action(() =>
+        //        {
+        //            linkLabel1.Visible = false;
+        //            label8.Text = $"Processing file {fileIndex + 1} of {totalFiles}";
+        //            label9.Text = Path.GetFileName(filePath);
+        //            Batch_Bar.Maximum = (int)((double)Batch_Bar.Value / (fileIndex + 1) * totalFiles);
+        //            Import_File.Visible = Cores <= 1;
+        //        }));
+        //    }
+        //
+        //    string GetOutputFilePath(string inputFilePath, string basePath, string baseDir)
+        //    {
+        //        return Path.Combine(basePath, Path.GetDirectoryName(inputFilePath).Replace(baseDir, ""), Path.GetFileNameWithoutExtension(inputFilePath) + fnappend + ".g64");
+        //    }
+        //
+        //    void UpdateBatchListBox(string curfile)
+        //    {
+        //        Invoke(new Action(() =>
+        //        {
+        //            var status = "OK!";
+        //            if (error)
+        //            {
+        //                status = File.Exists(curfile) ? "Completed with errors" : "Error, file not saved";
+        //            }
+        //            else if (File.Exists(curfile))
+        //            {
+        //                long sz = new FileInfo(curfile).Length / 1024;
+        //                status = $"(OK!) {sz:N0}kb";
+        //            }
+        //            else
+        //            {
+        //                status = "Error, file not saved";
+        //            }
+        //            error = false;
+        //            Batch_List_Box.Items.Add($"{Path.GetDirectoryName(curfile).Replace(path, "")}\\{Path.GetFileNameWithoutExtension(curfile).Replace($"{fnappend}", "")} ({status})");
+        //            Batch_List_Box.SelectedIndex = Batch_List_Box.Items.Count - 1;
+        //            Batch_List_Box.SelectedIndex = -1;
+        //            LB_File_List.Add(curfile);
+        //        }));
+        //    }
+        //
+        //    void FinalizeBatchProcessing(int totalFiles, Stopwatch batchTime)
+        //    {
+        //        Invoke(new Action(() =>
+        //        {
+        //            batchTime.Stop();
+        //            if (DB_timers.Checked)
+        //            {
+        //                label2.Text = $"Total Batch-Process time {batchTime.Elapsed.TotalSeconds:F2} seconds";
+        //            }
+        //
+        //            ShowBatchCompletionMessage(totalFiles, batchTime);
+        //
+        //            Import_File.Visible = false;
+        //            Import_Progress_Bar.Value = 0;
+        //            Batch_Bar.Value = 0;
+        //            Batch_Box.Visible = false;
+        //            cancel = false;
+        //            busy = true;
+        //            Auto_Adjust = tempAutoAdjust;
+        //            busy = false;
+        //            Set_Auto_Opts();
+        //            Reset_to_Defaults(false);
+        //            Disable_Core_Controls(false);
+        //        }));
+        //
+        //        batch = false;
+        //    }
+        //
+        //    void ShowBatchCompletionMessage(int totalFiles, Stopwatch batchTime)
+        //    {
+        //        using (Message_Center center = new Message_Center(this))
+        //        {
+        //            string title = cancel ? "Canceled!" : "Done!";
+        //            string message = cancel
+        //                ? "Batch processing canceled by user"
+        //                : $"Batch processing completed..\n {totalFiles} files processed in {batchTime.Elapsed.TotalSeconds:F2} seconds\nAverage {(batchTime.Elapsed.TotalMilliseconds / totalFiles):F2}ms per file";
+        //            MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        //        }
+        //    }
+        //
+        //    void Batch_NIB(string fn, string output)
+        //    {
+        //        using (FileStream stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        //        {
+        //            long length = new FileInfo(fn).Length;
+        //            tracks = (int)(length - 256) / 8192;
+        //
+        //            if ((tracks * 8192) + 256 == length)
+        //            {
+        //                nib_header = new byte[256];
+        //                stream.Read(nib_header, 0, 256);
+        //                Set_Arrays(tracks);
+        //
+        //                for (int i = 0; i < tracks; i++)
+        //                {
+        //                    NDS.Track_Data[i] = new byte[8192];
+        //                    stream.Seek(256 + (8192 * i), SeekOrigin.Begin);
+        //                    stream.Read(NDS.Track_Data[i], 0, 8192);
+        //                    Original.OT[i] = new byte[0];
+        //                }
+        //
+        //                var head = Encoding.ASCII.GetString(nib_header, 0, 13);
+        //                if (head == "MNIB-1541-RAW")
+        //                {
+        //                    try
+        //                    {
+        //                        Stopwatch parse = Parse_Nib_Data();
+        //                        if (!error)
+        //                        {
+        //                            Stopwatch proc = Process_Nib_Data(true, false, true);
+        //                            if (debug)
+        //                            {
+        //                                Invoke(new Action(() =>
+        //                                {
+        //                                    if (DB_timers.Checked)
+        //                                    {
+        //                                        label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} ms, Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms";
+        //                                    }
+        //                                }));
+        //                            }
+        //                            Make_G64(output, end_track);
+        //                        }
+        //                    }
+        //                    catch { }
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
+
         void Process_Batch(string[] batch_list, string path, string basedir)
         {
             Stopwatch btime = new Stopwatch();
@@ -167,7 +362,8 @@ namespace V_Max_Tool
                         if (!cancel)
                         {
                             t = "Done!";
-                            s = $"Batch processing completed..\n in {btime.Elapsed.TotalSeconds:F2} seconds";
+                            s = $"Batch processing completed..\n {batch_list.Length} files processed in {btime.Elapsed.TotalSeconds:F2} seconds\nAverage" +
+                            $" {(btime.Elapsed.TotalMilliseconds / batch_list.Length):F2}ms per file";
                         }
                         else
                         {
@@ -273,12 +469,14 @@ namespace V_Max_Tool
                 if (tracks > 42) i++;
             }
             foreach (var thread in Job) thread?.Join();
+            Check_Formats(); /// <- Checks and corrects falsly identified track formats
             Job = new Thread[0];
             /// -- Checks for false positive of RapidLok Key track on non-RapidLok images
             if (NDS.cbm.Any(x => x == 7) && !NDS.cbm.Any(x => x == 6))
             {
                 for (int i = 0; i < tracks; i++) if (NDS.cbm[i] == 7) NDS.cbm[i] = secF.Length - 1;
             }
+
             bool cust_dens = false;
             bool v2 = false;
             bool v3 = false;
@@ -607,6 +805,39 @@ namespace V_Max_Tool
                 Get_Track_Info(track);
                 Task_Limit.Release();
             }
+
+            void Check_Formats()
+            {
+                int m = Find_Most_Frequent_Format(NDS.cbm);
+                int[] skip = new int[] { 0, 1, 4, 7, 8, 9, 11, secF.Length - 1 };
+                if (!(skip.Any(x => x == m)))
+                {
+                    HashSet<int> ignore = new HashSet<int>();
+                    if (m == 2 || m == 3) ignore.UnionWith(new int[] { 0, 1, 4 });
+                    if (m == 5 || m == 10) ignore.UnionWith(new int[] { 0, 1 });
+                    if (m == 6) ignore.UnionWith(new int[] { 0, 1, 7 });
+                    Change_Fmt(ignore, m);
+                }
+
+                void Change_Fmt(HashSet<int> ign, int format)
+                {
+                    List<int> indicesToUpdate = new List<int>();
+
+                    for (int i = 0; i < NDS.cbm.Length; i++)
+                    {
+                        if (i > 1 && !ign.Contains(NDS.cbm[i]) && NDS.cbm[i] != format && NDS.sectors[i] > 0)
+                        {
+                            indicesToUpdate.Add(i);
+                        }
+                    }
+
+                    foreach (var index in indicesToUpdate)
+                    {
+                        NDS.cbm[index] = format;
+                        Get_Track_Info(index);
+                    }
+                }
+            }
         }
         /// ---------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -848,12 +1079,14 @@ namespace V_Max_Tool
                             if (acbm)
                             {
                                 bool condition1 = (track == 18 && (NDS.cbm.Any(x => x == 5) || NDS.cbm.Any(x => x == 6)));
-                                bool condition2 = (track == 40 && (cyn_ldr || NDS.sectors[trk] < 17));
+                                bool condition2 = (track == 40 && cyn_ldr);
                                 bool condition3 = (track > 34 && NDS.sectors[trk] < 17);
                                 if (condition1 || condition2 || condition3)
                                 {
-                                    if (temp.Length < density[density_map[track]]) temp = Lengthen_Track(temp);
-                                    if (temp.Length > density[density_map[track]]) temp = Shrink_Track(temp, density_map[track]);
+                                    int den = Get_Density(temp.Length);
+                                    if (condition3) den = density_map[track];
+                                    if (temp.Length < density[den]) temp = Lengthen_Track(temp, den);
+                                    if (temp.Length > density[den]) temp = Shrink_Track(temp, den);
                                 }
                                 else
                                 {
@@ -881,7 +1114,7 @@ namespace V_Max_Tool
                                     }
                                 }
                             }
-                            if (track == 40 && NDS.sectors[trk] < 17) temp = Remove_Weak_Bits(temp);
+                            if ((track == 40 && NDS.sectors[trk] < 17)) temp = Remove_Weak_Bits(temp);
                             Set_Dest_Arrays(temp, trk);
                         }
                         catch
@@ -1061,7 +1294,8 @@ namespace V_Max_Tool
                 {
                     (c, ps) = Find_Sector(source, i + 1);
                     /// ------------ Detect Microprose track --------------------------
-                    if (c && (ps >> 3) + seek < data.Length)
+                    //if (c && (ps >> 3) + seek < data.Length)
+                    if (c && ps + seek < data.Length)
                     {
                         int snc = 0;
                         int w = 0;
@@ -1128,19 +1362,19 @@ namespace V_Max_Tool
                 HashSet<byte> blankSet = new HashSet<byte>(blank);
                 int b = 0;
                 int snc = 0;
-            
+
                 for (int i = 0; i < d.Length; i++)
                 {
                     if (blankSet.Contains(d[i])) b++;
                     if (d[i] == 0xff) snc++;
-            
+
                     try
                     {
                         if (d[i] == 0xff && d[i + 1] == ssp[1])
                         {
                             if (CheckPattern(ssp, i) && CheckPadding(0)) return (11, false);
                         }
-            
+
                         if (d[i] == gmt[0])
                         {
                             byte[] gm = new byte[gmt.Length];
@@ -1152,15 +1386,12 @@ namespace V_Max_Tool
                             }
                             catch { }
                         }
-            
+
                         if (ps1.Contains(d[i]) || ps2.Contains(d[i]))
                         {
-                            if ((d[i] == ps1[0] && CheckPattern(ps1, i)) || (d[i] == ps2[0] && CheckPattern(ps2, i)))
-                            {
-                                return (8, false);
-                            }
+                            if ((d[i] == ps1[0] && CheckPattern(ps1, i)) || (d[i] == ps2[0] && CheckPattern(ps2, i))) return (8, false);
                         }
-            
+
                         if ((trk > 35 && trk < 41) && d[i] == ramb[0] || (i > 0 && d[i] == 0xff && d[i - 1] != 0xff))
                         {
                             if (d[i] == 0xff)
@@ -1173,7 +1404,6 @@ namespace V_Max_Tool
                                     ps++; sc++;
                                     if (sc > 140) break;
                                 }
-            
                                 if (sc >= 108 && sc <= 132 && CheckPadding(0)) return (9, false);
                             }
                             else if (CheckPattern(ramb, i))
@@ -1193,11 +1423,11 @@ namespace V_Max_Tool
                     }
                     catch { }
                 }
-            
+
                 if (b > 1000 && snc < 10) return (0, false);
                 if (snc > 1000 && trk == 36) return (7, false);
                 return (0, true);
-            
+
                 bool CheckPattern(byte[] pattern, int pos)
                 {
                     if (pos + pattern.Length >= d.Length - 1) return false;
@@ -1205,7 +1435,7 @@ namespace V_Max_Tool
                     Buffer.BlockCopy(d, pos, compare, 0, pattern.Length);
                     return Match(pattern, compare);
                 }
-            
+
                 bool CheckPadding(int start)
                 {
                     int pad = 0;

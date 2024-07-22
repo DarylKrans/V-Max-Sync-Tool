@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -43,7 +42,7 @@ namespace V_Max_Tool
                 {
                     if (NDS.cbm[t] == 5 || NDS.cbm[t] == 1)
                     {
-                        if (Original.OT[t].Length != 0)
+                        if (Original.OT[t].Length > 6000)
                         {
                             NDG.Track_Data[t] = new byte[Original.OT[t].Length];
                             Buffer.BlockCopy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
