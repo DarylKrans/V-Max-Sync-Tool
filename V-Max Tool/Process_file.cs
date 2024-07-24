@@ -29,7 +29,7 @@ namespace V_Max_Tool
         private byte[] nib_header = new byte[0];
         private byte[] g64_header = new byte[684];
         private readonly byte[][] p = new byte[10][];
-        private readonly string[] supported = { ".nib", ".g64", ".nbz" }; // Supported file extensions list
+        private readonly string[] supported = { ".nib", ".g64", ".d64" }; // Supported file extensions list
         /// vsec = the CBM sector header values & against byte[] sz
         private readonly string[] valid_cbm = { "52-40-05-28", "52-40-05-2C", "52-40-05-48", "52-40-05-4C", "52-40-05-38", "52-40-05-3C", "52-40-05-58", "52-40-05-5C",
             "52-40-05-24", "52-40-05-64", "52-40-05-68", "52-40-05-6C", "52-40-05-34", "52-40-05-74", "52-40-05-78", "52-40-05-54", "52-40-05-A8",
@@ -1728,36 +1728,36 @@ namespace V_Max_Tool
                     }
                 }
             }
+        }
 
-            string Append_Hex(byte[] data, int pos, int length, int expected_length = 0)
-            {
-                string spc = "";
-                if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "   ";
-                StringBuilder temp = new StringBuilder();
-                temp.Append($"{Hex_Val(data, pos, length)}    ".Replace('-', ' '));
-                byte[] temp2 = new byte[length];
-                Buffer.BlockCopy(data, pos, temp2, 0, length);
-                temp.Append($"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n");
-                return temp.ToString();
-            }
+        string Append_Hex(byte[] data, int pos, int length, int expected_length = 0)
+        {
+            string spc = "";
+            if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "   ";
+            StringBuilder temp = new StringBuilder();
+            temp.Append($"{Hex_Val(data, pos, length)}    ".Replace('-', ' '));
+            byte[] temp2 = new byte[length];
+            Buffer.BlockCopy(data, pos, temp2, 0, length);
+            temp.Append($"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n");
+            return temp.ToString();
+        }
 
-            string Append_Bin(byte[] data, int pos, int length, int expected_length = 0)
-            {
-                byte[] temp2 = new byte[length];
-                Buffer.BlockCopy(data, pos, temp2, 0, length);
-                string spc = "";
-                if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "         ";
-                StringBuilder temp = new StringBuilder();
-                temp.Append($"{Byte_to_Binary(temp2)}     ");
-                temp.Append($"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n");
-                return temp.ToString();
-            }
+        string Append_Bin(byte[] data, int pos, int length, int expected_length = 0)
+        {
+            byte[] temp2 = new byte[length];
+            Buffer.BlockCopy(data, pos, temp2, 0, length);
+            string spc = "";
+            if (expected_length > 0) for (int j = 0; j < expected_length - length; j++) spc += "         ";
+            StringBuilder temp = new StringBuilder();
+            temp.Append($"{Byte_to_Binary(temp2)}     ");
+            temp.Append($"{spc}{Encoding.ASCII.GetString(Fix_Stops(temp2))}\n");
+            return temp.ToString();
+        }
 
-            byte[] Fix_Stops(byte[] data)
-            {
-                for (int i = 0; i < data.Length; i++) if ((data[i] >= 0 && data[i] <= 31) || data[i] == 95 || data[i] >= 128) data[i] = 0x2e;
-                return data;
-            }
+        byte[] Fix_Stops(byte[] data)
+        {
+            for (int i = 0; i < data.Length; i++) if ((data[i] >= 0 && data[i] <= 31) || data[i] == 95 || data[i] >= 128) data[i] = 0x2e;
+            return data;
         }
     }
 }

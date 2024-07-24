@@ -33,6 +33,31 @@ using System.Windows.Forms;
 /// byte 1          (sector # of next sector in fiel) 0xff if end of file
 /// byte 2-256      file data
 
+/// CBM File Type bit settings
+///     BIT: 7  6  5  4 | 3  2  1  0
+/// DEL      -  -  -  - | 0  0  0  0
+/// SEQ      -  -  -  - | 0  0  0  1
+/// PRG      -  -  -  - | 0  0  1  0
+/// USR      -  -  -  - | 0  0  1  1
+/// REL      -  -  -  - | 0  1  0  0
+/// OK       1  -  -  - | -  -  -  -
+/// SPLAT    0  -  -  - | -  -  -  -
+/// LOCK     -  1  -  - | -  -  -  -
+
+/// BAM Layout (Block Allocation Map)
+/// t18 s0
+/// byte 0  Track#                      hex 0x12
+/// byte 1  Next sector in directory    hex 0x01
+/// byte 2  hex 0x41
+/// byte 3  hex 0x00
+/// byte 4 - 143 (map of free and allocated blocks) in sets of 4 bytes
+///              byte 0 # of available sectors in track (starting at track 1)
+///              bytes 1 - 3 set each bit to '1' for block available and '0' for used blocks up to the # of sectors in that track
+///              repeat for each track up to 35
+/// 
+
+
+
 
 namespace V_Max_Tool
 {
@@ -40,7 +65,7 @@ namespace V_Max_Tool
     {
         //readonly bool write_dir = false;
         private readonly byte[] sz = { 0x52, 0xc0, 0x0f, 0xfc };
-
+        int SelectionLength = 0;
         byte[] Rebuild_CBM(byte[] data, int sectors, byte[] Disk_ID, int t_density, int trk)
         {
             BitArray tk = new BitArray(Flip_Endian(data));
@@ -424,7 +449,7 @@ namespace V_Max_Tool
             const int sectorDataLength = 325 * 8;
             bool sector_found = false;
             bool sync = false;
-            bool sector_marker = false;
+            bool sector_marker;// = false;
             int sync_count = 0;
             sector_marker = Compare();
             while (pos < source.Length - 32)
@@ -485,25 +510,46 @@ namespace V_Max_Tool
                 }
             }
 
-            byte[] Build_Sector(byte[] sect)
+            //byte[] Build_Sector(byte[] sect)
+            //{
+            //
+            //    int checksum = 0;
+            //    for (int i = 0; i < sect.Length; i++)
+            //        checksum ^= sect[i];
+            //
+            //    using (MemoryStream buffer = new MemoryStream())
+            //    {
+            //        using (BinaryWriter writer = new BinaryWriter(buffer))
+            //        {
+            //            writer.Write((byte)0x07);
+            //            writer.Write(sect);
+            //            writer.Write((byte)checksum);
+            //            writer.Write((byte)0x00);
+            //            writer.Write((byte)0x00);
+            //        }
+            //        return Encode_CBM_GCR(buffer.ToArray());
+            //    }
+            //}
+        }
+
+        byte[] Build_Sector(byte[] sect)
+        {
+
+            int checksum = 0;
+            for (int i = 0; i < sect.Length; i++)
+                checksum ^= sect[i];
+
+            using (MemoryStream buffer = new MemoryStream())
             {
-
-                int checksum = 0;
-                for (int i = 0; i < sect.Length; i++)
-                    checksum ^= sect[i];
-
-                using (MemoryStream buffer = new MemoryStream())
+                using (BinaryWriter writer = new BinaryWriter(buffer))
                 {
-                    using (BinaryWriter writer = new BinaryWriter(buffer))
-                    {
-                        writer.Write((byte)0x07);
-                        writer.Write(sect);
-                        writer.Write((byte)checksum);
-                        writer.Write((byte)0x00);
-                        writer.Write((byte)0x00);
-                    }
-                    return Encode_CBM_GCR(buffer.ToArray());
+                    writer.Write((byte)0x07);
+                    writer.Write(sect);
+                    writer.Write((byte)checksum);
+                    writer.Write((byte)0x00);
+                    writer.Write((byte)0x00);
                 }
+                return Encode_CBM_GCR(buffer.ToArray());
             }
         }
 
@@ -562,19 +608,14 @@ namespace V_Max_Tool
             string ret = "Disk Directory ID : n/a";
             var buff = new MemoryStream();
             var wrt = new BinaryWriter(buff);
-            //List<byte[]> d_files = new List<byte[]>();
-            //List<byte[]> d_sec = new List<byte[]>();
             List<string> d_files = new List<string>();
             List<string> d_sec = new List<string>();
-
-            //byte[][] d_files = new byte[256][];
-            //byte[][] dsec = new byte[256][];
             List<string> filename = new List<string>();
             int halftrack;
             int track;
             int blocksFree = 0;
             bool c;
-            int SelectionLength = 0;
+            SelectionLength = 0;
 
             if (tracks <= 42)
             {
@@ -597,7 +638,6 @@ namespace V_Max_Tool
                 while ((tnum != 0 && tnum < 42) && !list.Any(x => x == Hex_Val(nextSector)))
                 {
                     list.Add(Hex_Val(nextSector));
-                    //if (snum < 22 && !(tnum == 18 && snum == 0)) d_sec.Add(nextSector);
                     if (snum < 22 && !(tnum == 18 && snum == 0)) d_sec.Add(Hex_Val(nextSector).Replace("-", ""));
                     Buffer.BlockCopy(nextSector, 0, lastSector, 0, 2);
                     byte[] temp;
@@ -670,11 +710,9 @@ namespace V_Max_Tool
                                     DiskDir.Entries++;
                                     file[0] = 0x00; file[1] = 0x00;
                                     d_files.Add(Hex_Val(file).Replace("-", ""));
-                                    string fType = Get_DirectoryFileType(file[2]);
-                                    string fName = Get_DirectoryFileName(file);
-                                    string sz = $"{BitConverter.ToUInt16(file, 30)}".PadRight(5);
-                                    ret += $"\n{sz}{fName}{fType}";
-                                    filename.Add($"{sz}{fName}{fType}");
+                                    string sz = Get_FileName(file);
+                                    filename.Add($"{sz}");
+                                    ret += $"\n{sz}";
                                 }
                             }
                         }

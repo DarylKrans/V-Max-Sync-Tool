@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,7 +15,7 @@ namespace V_Max_Tool
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
         private readonly bool Replace_RapidLok_Key = false;
-        private readonly string ver = " v0.9.98.1 (pre-release)";
+        private readonly string ver = " v0.9.98.2 (pre-release)";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
@@ -173,7 +171,6 @@ namespace V_Max_Tool
                         }
                         Stream.Close();
                         var lab = $"Total Tracks {tracks}, G64 Track Size {tr_size:N0} bytes";
-                        //Out_Type = false;
                         Process(false, lab);
                     }
                     else
@@ -192,13 +189,70 @@ namespace V_Max_Tool
                         }
                     }
                 }
+                if (fext.ToLower() == supported[2])
+                {
+                    Data_Box.Clear();
+                    long length = new System.IO.FileInfo(file).Length;
+                    int sectors = (int)length / 256;
+                    byte[][] secdata = new byte[sectors][];
+                    int trk_counter = 0;
+                    tracks = 0;
+                    for (int i = 0; i < sectors; i++)
+                    {
+                        secdata[i] = new byte[256];
+                        Stream.Seek(0 + (i * 256), SeekOrigin.Begin);
+                        Stream.Read(secdata[i], 0, 256);
+                        trk_counter++;
+                        if (trk_counter == Available_Sectors[tracks])
+                        {
+                            trk_counter = 0;
+                            tracks++;
+                        }
+                    }
+                    Track_Info.Items.Clear();
+                    Set_ListBox_Items(true, false);
+                    Set_Arrays(tracks);
+                    byte[] ID = FastArray.Init(4, 0x0f);
+                    ID[1] = secdata[357][163];
+                    ID[0] = secdata[357][162];
+                    int psec = 0;
+                    byte[] sync = FastArray.Init(5, 0xff);
+                    for (int i = 0; i < tracks; i++)
+                    {
+                        MemoryStream buffer = new MemoryStream();
+                        BinaryWriter write = new BinaryWriter(buffer);
+                        int tsec = Available_Sectors[i];
+                        int len = density[density_map[i]];
+                        NDS.Track_Data[i] = FastArray.Init(8192, 0x00);
+                        for (int j = 0; j < tsec; j++)
+                        {
+                            byte[] gap = FastArray.Init(sector_gap_length[i], 0x55);
+                            byte[] sec_header = Build_BlockHeader(i + 1, j, ID);
+                            byte[] sec_data = Build_Sector(secdata[psec]);
+                            write.Write(sync);
+                            write.Write(sec_header);
+                            write.Write(gap);
+                            write.Write(sync);
+                            write.Write(sec_data);
+                            write.Write(gap);
+                            psec++;
+                        }
+                        int dif = len - (int)buffer.Length;
+                        if (dif > 0) write.Write(FastArray.Init(dif, 0x55));
+                        byte[] temp = buffer.ToArray();
+                        Buffer.BlockCopy(temp, 0, NDS.Track_Data[i], 0, temp.Length);
+                        Buffer.BlockCopy(temp, 0, NDS.Track_Data[i], temp.Length, 8192 - temp.Length);
+                    }
+                    var lab = $"Total Tracks ({tracks}), {l}";
+                    Process(true, lab);
+                }
             }
             catch (Exception ex)
             {
                 using (Message_Center center = new Message_Center(this)) // center message box
                 {
                     string t = "Something went wrong!";
-
+            
                     string s = ex.Message;
                     if (s.ToLower().Contains("source array")) s = "Image is corrupt and cannot be opened";
                     MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -219,7 +273,7 @@ namespace V_Max_Tool
                 label2.Text = string.Empty;
                 error = false;
             }
-
+            
             void Process(bool get, string l2)
             {
                 Batch_List_Box.Visible = false;
@@ -252,7 +306,6 @@ namespace V_Max_Tool
                         Set_ListBox_Items(false, false);
                         Get_Disk_Directory();
                         linkLabel1.Visible = false;
-                        //if (Disk_Dir.Checked) Disk_Dir.Focus();
                         Save_Disk.Visible = true;
                         Source.Visible = Output.Visible = true;
                         label1.Text = $"{fname}{fext}";
@@ -288,7 +341,6 @@ namespace V_Max_Tool
 
         private void Make(object sender, EventArgs e)
         {
-            //Export_File(end_track, fat_trk);
             Export_File(end_track);
         }
 
@@ -393,11 +445,6 @@ namespace V_Max_Tool
             drawn = false;
             Check_Before_Draw(false);
         }
-
-        //private void Dir_View_CheckedChanged(object sender, EventArgs e)
-        //{
-        //    Dir_screen.Visible = Disk_Dir.Checked;
-        //}
 
         private void LinkLabel1_LinkClicked(object sender, System.Windows.Forms.LinkLabelLinkClickedEventArgs e)
         {
@@ -658,8 +705,6 @@ namespace V_Max_Tool
                 Process_Nib_Data(true, false, false, true);
             }
         }
-
-        
     }
 }
 

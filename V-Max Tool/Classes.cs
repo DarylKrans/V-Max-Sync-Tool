@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 
 namespace V_Max_Tool
 {
@@ -74,16 +75,122 @@ namespace V_Max_Tool
         public Color Color;
     };
 
-    public class BufferedCheckedListBox : CheckedListBox
+    public class TSA<T>
     {
-        public BufferedCheckedListBox()
+        private readonly T[] array;
+        private readonly object lockObject = new object();
+
+        public TSA(int size)
+        {
+            array = new T[size];
+        }
+
+        public T this[int index]
+        {
+            get
+            {
+                lock (lockObject)
+                {
+                    return array[index];
+                }
+            }
+            set
+            {
+                lock (lockObject)
+                {
+                    array[index] = value;
+                }
+            }
+        }
+
+        public int Length
+        {
+            get
+            {
+                lock (lockObject)
+                {
+                    return array.Length;
+                }
+            }
+        }
+
+        public void CopyTo(T[] destinationArray, int destinationIndex)
+        {
+            lock (lockObject)
+            {
+                array.CopyTo(destinationArray, destinationIndex);
+            }
+        }
+
+        public T[] ToArray()
+        {
+            lock (lockObject)
+            {
+                return (T[])array.Clone();
+            }
+        }
+    }
+
+    public class CustomCheckedListBox : CheckedListBox
+    {
+        public CustomCheckedListBox()
         {
             this.DoubleBuffered = true;
+            this.DrawMode = DrawMode.OwnerDrawFixed;
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
             this.SetStyle(ControlStyles.AllPaintingInWmPaint, true);
             this.SetStyle(ControlStyles.ResizeRedraw, true);
             this.UpdateStyles();
         }
+
+        protected override void OnDrawItem(DrawItemEventArgs e)
+        {
+            base.OnDrawItem(e);
+
+            if (e.Index < 0) return;
+
+            bool isDragging = e.Index == DraggingIndex;
+            bool isChecked = GetItemChecked(e.Index);
+            Brush brush = new SolidBrush(Color.FromArgb(135, 122, 237));
+            Color fore = Color.FromArgb(69, 55, 176);
+
+            // Set the background color based on whether the item is being dragged
+            e.DrawBackground();
+            if (isDragging)
+            {
+                //e.Graphics.FillRectangle(Brushes.White, e.Bounds);
+                e.Graphics.FillRectangle(brush, e.Bounds);
+            }
+            else if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+            {
+                //e.Graphics.FillRectangle(SystemBrushes.Highlight, e.Bounds);
+                e.Graphics.FillRectangle(brush, e.Bounds);
+            }
+
+            // Define the rectangle for the checkbox
+            Rectangle checkboxRect = new Rectangle(e.Bounds.Left + 2, e.Bounds.Top + 3, 16, 16);
+
+            // Draw a checkbox
+            CheckBoxRenderer.DrawCheckBox(e.Graphics, checkboxRect.Location,
+                                          isChecked ? CheckBoxState.CheckedNormal : CheckBoxState.UncheckedNormal);
+
+            // Define the rectangle for the text
+            Rectangle textRect = new Rectangle(e.Bounds.Left + 20, e.Bounds.Top + 2, e.Bounds.Width - 20, e.Bounds.Height);
+
+            // Get the item text and escape ampersands
+            string itemText = Items[e.Index].ToString().Replace("&", "&&");
+
+            // Define Text color for selected items that aren't being dragged
+            bool isSelected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+            Color textColor = isSelected ? fore : SystemColors.ControlText;
+            if (isSelected) TextRenderer.DrawText(e.Graphics, itemText, e.Font, textRect, textColor, TextFormatFlags.Left);
+
+            // Draw the item text
+            else TextRenderer.DrawText(e.Graphics, itemText, e.Font, textRect, isDragging ? Color.White : e.ForeColor, TextFormatFlags.Left);
+
+            e.DrawFocusRectangle();
+        }
+        public int DraggingIndex { get; set; } = -1;
     }
 
     public class AutoClosingMessageBox

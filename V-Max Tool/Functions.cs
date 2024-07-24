@@ -28,18 +28,6 @@ namespace V_Max_Tool
         private readonly Color C64_screen = Color.FromArgb(69, 55, 176);   //(44, 41, 213);
         private readonly Color c64_text = Color.FromArgb(135, 122, 237);   //(114, 110, 255); 
         private string def_bg_text;
-        //private int dragIndex = -1;
-        //private bool isDragging = false;
-        //private Point dragStartPoint;
-        //private System.Windows.Forms.Timer scrollTimer;
-        //private int originalTopIndex;
-        //string[] f_temp = new string[0];
-        //byte[][] d_temp = new byte[0][];
-        //private int dropIndex = -1;
-        //private readonly string dir_def = "0 \"DRAG NIB/G64 TO \"START\n664 BLOCKS FREE.";
-        //private readonly byte[] Reverse_Endian_Table = new byte[256];
-        //private readonly BufferedCheckedListBox Dir_Box = new BufferedCheckedListBox();
-        //private readonly CheckedListBox Dir_Box = new CheckedListBox();
 
         private readonly byte[] sector_gap_length = {
                 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,	/*  1 - 10 */
@@ -142,38 +130,6 @@ namespace V_Max_Tool
             label2.Text = string.Empty;
             Dir_Box.Items.Clear();
             busy = false;
-        }
-
-        void Default_Dir_Screen()
-        {
-            Dir_screen.Clear();
-            Dir_screen.Text = dir_def;
-            Dir_screen.Select(2, 23);
-            Dir_screen.SelectionBackColor = c64_text;
-            Dir_screen.SelectionColor = C64_screen;
-            DiskDir.Entries = 0;
-            DiskDir.Sectors = new byte[0][];
-            DiskDir.Entry = new byte[0][];
-            DiskDir.FileName = new string[0];
-            Dir_Box.Items.Clear();
-
-        }
-
-        void Update_Dir_Items()
-        {
-            f_temp = new string[DiskDir.Entries];
-            d_temp = new byte[DiskDir.Entries][];
-            for (int i = 0; i < Dir_Box.Items.Count; i++)
-            {
-                for (int j = 0; j < DiskDir.Entries; j++)
-                {
-                    if (DiskDir.FileName[j] == Dir_Box.Items[i].ToString())
-                    {
-                        f_temp[i] = DiskDir.FileName[j];
-                        d_temp[i] = DiskDir.Entry[j];
-                    }
-                }
-            }
         }
 
         string Get_DirectoryFileType(byte b)
@@ -724,6 +680,7 @@ namespace V_Max_Tool
             }
             return data;
         }
+        /// -------------------   Bit Operation functions   ---------------------------------------------------------------------------------
 
         byte[] Bit2Byte(BitArray bits, int start = 0, int length = -1)
         {
@@ -746,7 +703,6 @@ namespace V_Max_Tool
             }
             else return new byte[0];
         }
-
 
         BitArray BitCopy(BitArray bits, int start = 0, int length = -1)
         {
@@ -780,6 +736,27 @@ namespace V_Max_Tool
             return b.ToString();
         }
 
+        byte SetBit(byte data, int bitPosition)
+        {
+            return (byte)(data | (1 << bitPosition));
+        }
+
+        byte ClearBit(byte data, int bitPosition)
+        {
+            return (byte)(data & ~(1 << bitPosition));
+        }
+
+        byte ToggleBit(byte data, int bitPosition)
+        {
+            return (byte)(data ^ (1 << bitPosition));
+        }
+
+        bool GetBitStatus(byte value, int bitPosition)
+        {
+            byte mask = (byte)(1 << bitPosition);
+            return (value & mask) != 0;
+        }
+
         void Pad_Bits(int position, int count, BitArray bitarray)
         {
             bool flip = !bitarray[position];
@@ -789,6 +766,7 @@ namespace V_Max_Tool
                 bitarray[i] = flip;
             }
         }
+        /// ---------------------------------------------------------------------------------------------------------------------------------
 
         int VPL_Density(int len)
         {
@@ -1251,21 +1229,28 @@ namespace V_Max_Tool
             groupBox3.Controls.Add(Dir_Box);
             Dir_Box.DrawMode = DrawMode.OwnerDrawFixed;
             Dir_Box.CheckOnClick = true;
-            Dir_Box.Font = new Font("Courier new", 9);
-            Dir_Box.Location = new System.Drawing.Point(12, 12);
-            Dir_Box.Size = new System.Drawing.Size(groupBox3.Width - 32, groupBox3.Height - 100);
+            Dir_Box.Font = new Font("C64 Pro Mono", 12);
+            Dir_Box.BackColor = C64_screen;
+            Dir_Box.ForeColor = c64_text;
+            Dir_Box.Location = new System.Drawing.Point(1, 12);
+            Dir_Box.Size = new System.Drawing.Size(groupBox3.Width - 12, 31 * 19);
             Dir_Box.FormattingEnabled = true;
-            //Dir_Box.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(Dir_Box_ItemCheck);
             Dir_Box.MouseDown += new MouseEventHandler(Dir_Box_MouseDown);
             Dir_Box.MouseMove += new MouseEventHandler(Dir_Box_MouseMove);
             Dir_Box.MouseUp += new MouseEventHandler(Dir_Box_MouseUp);
             Dir_Box.DragOver += new DragEventHandler(Dir_Box_DragOver);
             Dir_Box.DragDrop += new DragEventHandler(Dir_Box_DragDrop);
             Dir_Box.AllowDrop = true;
-            scrollTimer = new System.Windows.Forms.Timer { Interval = 25 };
+            Dir_All.LinkBehavior = LinkBehavior.NeverUnderline;
+            Dir_None.LinkBehavior = LinkBehavior.NeverUnderline;
+            Dir_Rev.LinkBehavior = LinkBehavior.NeverUnderline;
+            Dir_Edit.LinkBehavior = LinkBehavior.NeverUnderline;
+            scrollTimer = new System.Windows.Forms.Timer { Interval = 20 };
             scrollTimer.Tick += new EventHandler(ScrollTimer_Tick);
             groupBox3.BringToFront();
             groupBox3.Visible = false;
+            Dir_Ftype.Enabled = Dir_ChgType.Checked;
+            Dir_Ftype.DataSource = new string[] { "PRG", "SEQ", "USR", "REL", "DEL" };
             /// ----------------------------
             this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LinkLabel1_LinkClicked);
             Tabs.Controls.Remove(Import_File);

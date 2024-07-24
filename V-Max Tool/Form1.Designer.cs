@@ -38,9 +38,6 @@
             this.V2_Auto_Adj = new System.Windows.Forms.CheckBox();
             this.Tabs = new System.Windows.Forms.TabControl();
             this.Main = new System.Windows.Forms.TabPage();
-            this.Import_File = new V_Max_Tool.Gbox();
-            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
-            this.label5 = new System.Windows.Forms.Label();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.Other_opts = new System.Windows.Forms.Panel();
             this.Adj_cbm = new System.Windows.Forms.CheckBox();
@@ -140,11 +137,20 @@
             this.DV_dec = new System.Windows.Forms.RadioButton();
             this.DV_gcr = new System.Windows.Forms.RadioButton();
             this.tabPage3 = new System.Windows.Forms.TabPage();
-            this.Dir_Edit = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.Dir_Lock = new System.Windows.Forms.CheckBox();
+            this.Dir_FStart = new System.Windows.Forms.Label();
+            this.Dir_Info = new System.Windows.Forms.Label();
+            this.linkLabel2 = new System.Windows.Forms.LinkLabel();
+            this.Dir_Lock = new System.Windows.Forms.LinkLabel();
+            this.Dir_None = new System.Windows.Forms.LinkLabel();
+            this.Dir_Rev = new System.Windows.Forms.LinkLabel();
+            this.Dir_All = new System.Windows.Forms.LinkLabel();
+            this.label16 = new System.Windows.Forms.Label();
+            this.Dir_Ftype = new System.Windows.Forms.ComboBox();
+            this.Dir_ChgType = new System.Windows.Forms.CheckBox();
             this.Dir_Cancel = new System.Windows.Forms.Button();
             this.Dir_Apply = new System.Windows.Forms.Button();
+            this.Dir_Edit = new System.Windows.Forms.LinkLabel();
             this.Dir_screen = new System.Windows.Forms.RichTextBox();
             this.Save_Dialog = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
@@ -167,10 +173,12 @@
             this.sl = new System.Windows.Forms.ListBox();
             this.ss = new System.Windows.Forms.ListBox();
             this.sf = new System.Windows.Forms.ListBox();
+            this.Import_File = new V_Max_Tool.Gbox();
+            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
+            this.label5 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.V2_hlen)).BeginInit();
             this.Tabs.SuspendLayout();
             this.Main.SuspendLayout();
-            this.Import_File.SuspendLayout();
             this.Other_opts.SuspendLayout();
             this.VBS_info.SuspendLayout();
             this.Reg_info.SuspendLayout();
@@ -205,6 +213,7 @@
             this.panel1.SuspendLayout();
             this.Batch_Box.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).BeginInit();
+            this.Import_File.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -331,38 +340,6 @@
             this.Main.Size = new System.Drawing.Size(910, 185);
             this.Main.TabIndex = 0;
             this.Main.Text = "File Info";
-            // 
-            // Import_File
-            // 
-            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
-            this.Import_File.BorderColor = System.Drawing.Color.Black;
-            this.Import_File.Controls.Add(this.Import_Progress_Bar);
-            this.Import_File.Controls.Add(this.label5);
-            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(19, 56);
-            this.Import_File.Name = "Import_File";
-            this.Import_File.Size = new System.Drawing.Size(863, 108);
-            this.Import_File.TabIndex = 59;
-            this.Import_File.TabStop = false;
-            this.Import_File.Text = "Parsing Image Data";
-            // 
-            // Import_Progress_Bar
-            // 
-            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
-            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
-            this.Import_Progress_Bar.Size = new System.Drawing.Size(845, 28);
-            this.Import_Progress_Bar.TabIndex = 39;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(6, 68);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(137, 25);
-            this.label5.TabIndex = 38;
-            this.label5.Text = "Processing...";
             // 
             // linkLabel1
             // 
@@ -1579,8 +1556,8 @@
             // 
             // tabPage3
             // 
-            this.tabPage3.Controls.Add(this.Dir_Edit);
             this.tabPage3.Controls.Add(this.groupBox3);
+            this.tabPage3.Controls.Add(this.Dir_Edit);
             this.tabPage3.Controls.Add(this.Dir_screen);
             this.tabPage3.Location = new System.Drawing.Point(4, 37);
             this.tabPage3.Name = "tabPage3";
@@ -1590,42 +1567,144 @@
             this.tabPage3.Text = "Disk Directory";
             this.tabPage3.UseVisualStyleBackColor = true;
             // 
-            // Dir_Edit
-            // 
-            this.Dir_Edit.Location = new System.Drawing.Point(987, 23);
-            this.Dir_Edit.Name = "Dir_Edit";
-            this.Dir_Edit.Size = new System.Drawing.Size(84, 37);
-            this.Dir_Edit.TabIndex = 41;
-            this.Dir_Edit.Text = "Edit";
-            this.Dir_Edit.UseVisualStyleBackColor = true;
-            this.Dir_Edit.Click += new System.EventHandler(this.Dir_Edit_Click);
-            // 
             // groupBox3
             // 
+            this.groupBox3.Controls.Add(this.Dir_FStart);
+            this.groupBox3.Controls.Add(this.Dir_Info);
+            this.groupBox3.Controls.Add(this.linkLabel2);
             this.groupBox3.Controls.Add(this.Dir_Lock);
+            this.groupBox3.Controls.Add(this.Dir_None);
+            this.groupBox3.Controls.Add(this.Dir_Rev);
+            this.groupBox3.Controls.Add(this.Dir_All);
+            this.groupBox3.Controls.Add(this.label16);
+            this.groupBox3.Controls.Add(this.Dir_Ftype);
+            this.groupBox3.Controls.Add(this.Dir_ChgType);
             this.groupBox3.Controls.Add(this.Dir_Cancel);
             this.groupBox3.Controls.Add(this.Dir_Apply);
-            this.groupBox3.Location = new System.Drawing.Point(153, 139);
+            this.groupBox3.Location = new System.Drawing.Point(6, 3);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(794, 1071);
+            this.groupBox3.Size = new System.Drawing.Size(1136, 1289);
             this.groupBox3.TabIndex = 40;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Directory Editor";
             // 
+            // Dir_FStart
+            // 
+            this.Dir_FStart.AutoSize = true;
+            this.Dir_FStart.Location = new System.Drawing.Point(526, 1248);
+            this.Dir_FStart.Name = "Dir_FStart";
+            this.Dir_FStart.Size = new System.Drawing.Size(135, 25);
+            this.Dir_FStart.TabIndex = 17;
+            this.Dir_FStart.Text = "File Location";
+            // 
+            // Dir_Info
+            // 
+            this.Dir_Info.AutoSize = true;
+            this.Dir_Info.Location = new System.Drawing.Point(526, 1208);
+            this.Dir_Info.Name = "Dir_Info";
+            this.Dir_Info.Size = new System.Drawing.Size(186, 25);
+            this.Dir_Info.TabIndex = 16;
+            this.Dir_Info.Text = "File Load Address";
+            // 
+            // linkLabel2
+            // 
+            this.linkLabel2.AutoSize = true;
+            this.linkLabel2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.linkLabel2.LinkBehavior = System.Windows.Forms.LinkBehavior.NeverUnderline;
+            this.linkLabel2.LinkColor = System.Drawing.Color.Green;
+            this.linkLabel2.Location = new System.Drawing.Point(15, 1204);
+            this.linkLabel2.Name = "linkLabel2";
+            this.linkLabel2.Size = new System.Drawing.Size(186, 29);
+            this.linkLabel2.TabIndex = 15;
+            this.linkLabel2.TabStop = true;
+            this.linkLabel2.Text = "Toggle Splat Bit";
+            this.linkLabel2.VisitedLinkColor = System.Drawing.Color.Green;
+            this.linkLabel2.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Dir_Modify_SplatBit);
+            // 
             // Dir_Lock
             // 
             this.Dir_Lock.AutoSize = true;
-            this.Dir_Lock.Location = new System.Drawing.Point(24, 910);
+            this.Dir_Lock.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Dir_Lock.LinkBehavior = System.Windows.Forms.LinkBehavior.NeverUnderline;
+            this.Dir_Lock.LinkColor = System.Drawing.Color.Green;
+            this.Dir_Lock.Location = new System.Drawing.Point(15, 1166);
             this.Dir_Lock.Name = "Dir_Lock";
-            this.Dir_Lock.Size = new System.Drawing.Size(246, 29);
-            this.Dir_Lock.TabIndex = 2;
-            this.Dir_Lock.Text = "Lock Selected File(s)";
-            this.Dir_Lock.UseVisualStyleBackColor = true;
-            this.Dir_Lock.CheckedChanged += new System.EventHandler(this.Dir_Lock_CheckedChanged);
+            this.Dir_Lock.Size = new System.Drawing.Size(182, 29);
+            this.Dir_Lock.TabIndex = 14;
+            this.Dir_Lock.TabStop = true;
+            this.Dir_Lock.Text = "Toggle Lock Bit";
+            this.Dir_Lock.VisitedLinkColor = System.Drawing.Color.Green;
+            this.Dir_Lock.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Dir_Modify_LockBit);
+            // 
+            // Dir_None
+            // 
+            this.Dir_None.AutoSize = true;
+            this.Dir_None.Location = new System.Drawing.Point(526, 1169);
+            this.Dir_None.Name = "Dir_None";
+            this.Dir_None.Size = new System.Drawing.Size(89, 25);
+            this.Dir_None.TabIndex = 13;
+            this.Dir_None.TabStop = true;
+            this.Dir_None.Text = "( None )";
+            this.Dir_None.VisitedLinkColor = System.Drawing.Color.Blue;
+            this.Dir_None.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Dir_None_LinkClicked);
+            // 
+            // Dir_Rev
+            // 
+            this.Dir_Rev.AutoSize = true;
+            this.Dir_Rev.Location = new System.Drawing.Point(630, 1169);
+            this.Dir_Rev.Name = "Dir_Rev";
+            this.Dir_Rev.Size = new System.Drawing.Size(91, 25);
+            this.Dir_Rev.TabIndex = 12;
+            this.Dir_Rev.TabStop = true;
+            this.Dir_Rev.Text = "( Invert )";
+            this.Dir_Rev.VisitedLinkColor = System.Drawing.Color.Blue;
+            this.Dir_Rev.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Dir_Rev_LinkClicked);
+            // 
+            // Dir_All
+            // 
+            this.Dir_All.AutoSize = true;
+            this.Dir_All.Location = new System.Drawing.Point(458, 1169);
+            this.Dir_All.Name = "Dir_All";
+            this.Dir_All.Size = new System.Drawing.Size(62, 25);
+            this.Dir_All.TabIndex = 11;
+            this.Dir_All.TabStop = true;
+            this.Dir_All.Text = "( All )";
+            this.Dir_All.VisitedLinkColor = System.Drawing.Color.Blue;
+            this.Dir_All.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Dir_All_LinkClicked);
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(371, 1169);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(72, 25);
+            this.label16.TabIndex = 10;
+            this.label16.Text = "Select";
+            // 
+            // Dir_Ftype
+            // 
+            this.Dir_Ftype.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Dir_Ftype.FormattingEnabled = true;
+            this.Dir_Ftype.Location = new System.Drawing.Point(264, 1245);
+            this.Dir_Ftype.Name = "Dir_Ftype";
+            this.Dir_Ftype.Size = new System.Drawing.Size(121, 33);
+            this.Dir_Ftype.TabIndex = 5;
+            this.Dir_Ftype.SelectedIndexChanged += new System.EventHandler(this.Dir_Modify_FileType);
+            // 
+            // Dir_ChgType
+            // 
+            this.Dir_ChgType.AutoSize = true;
+            this.Dir_ChgType.Location = new System.Drawing.Point(20, 1249);
+            this.Dir_ChgType.Name = "Dir_ChgType";
+            this.Dir_ChgType.Size = new System.Drawing.Size(214, 29);
+            this.Dir_ChgType.TabIndex = 4;
+            this.Dir_ChgType.Text = "Change File Type";
+            this.Dir_ChgType.UseVisualStyleBackColor = true;
+            this.Dir_ChgType.CheckedChanged += new System.EventHandler(this.Dir_ChgType_CheckedChanged);
             // 
             // Dir_Cancel
             // 
-            this.Dir_Cancel.Location = new System.Drawing.Point(557, 898);
+            this.Dir_Cancel.Location = new System.Drawing.Point(890, 1161);
             this.Dir_Cancel.Name = "Dir_Cancel";
             this.Dir_Cancel.Size = new System.Drawing.Size(98, 41);
             this.Dir_Cancel.TabIndex = 1;
@@ -1635,13 +1714,29 @@
             // 
             // Dir_Apply
             // 
-            this.Dir_Apply.Location = new System.Drawing.Point(673, 898);
+            this.Dir_Apply.Location = new System.Drawing.Point(1006, 1161);
             this.Dir_Apply.Name = "Dir_Apply";
             this.Dir_Apply.Size = new System.Drawing.Size(101, 41);
             this.Dir_Apply.TabIndex = 0;
             this.Dir_Apply.Text = "Apply";
             this.Dir_Apply.UseVisualStyleBackColor = true;
             this.Dir_Apply.Click += new System.EventHandler(this.Dir_Apply_Click);
+            // 
+            // Dir_Edit
+            // 
+            this.Dir_Edit.ActiveLinkColor = System.Drawing.Color.White;
+            this.Dir_Edit.AutoSize = true;
+            this.Dir_Edit.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(69)))), ((int)(((byte)(55)))), ((int)(((byte)(176)))));
+            this.Dir_Edit.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Dir_Edit.LinkColor = System.Drawing.Color.White;
+            this.Dir_Edit.Location = new System.Drawing.Point(928, 7);
+            this.Dir_Edit.Name = "Dir_Edit";
+            this.Dir_Edit.Size = new System.Drawing.Size(157, 29);
+            this.Dir_Edit.TabIndex = 14;
+            this.Dir_Edit.TabStop = true;
+            this.Dir_Edit.Text = "Edit Directory";
+            this.Dir_Edit.VisitedLinkColor = System.Drawing.Color.White;
+            this.Dir_Edit.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.Dir_Edit_Click);
             // 
             // Dir_screen
             // 
@@ -1893,6 +1988,38 @@
             this.sf.Size = new System.Drawing.Size(115, 1002);
             this.sf.TabIndex = 26;
             // 
+            // Import_File
+            // 
+            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
+            this.Import_File.BorderColor = System.Drawing.Color.Black;
+            this.Import_File.Controls.Add(this.Import_Progress_Bar);
+            this.Import_File.Controls.Add(this.label5);
+            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
+            this.Import_File.Location = new System.Drawing.Point(19, 56);
+            this.Import_File.Name = "Import_File";
+            this.Import_File.Size = new System.Drawing.Size(863, 108);
+            this.Import_File.TabIndex = 59;
+            this.Import_File.TabStop = false;
+            this.Import_File.Text = "Parsing Image Data";
+            // 
+            // Import_Progress_Bar
+            // 
+            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
+            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
+            this.Import_Progress_Bar.Size = new System.Drawing.Size(845, 28);
+            this.Import_Progress_Bar.TabIndex = 39;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Location = new System.Drawing.Point(6, 68);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(137, 25);
+            this.label5.TabIndex = 38;
+            this.label5.Text = "Processing...";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
@@ -1909,8 +2036,6 @@
             this.Tabs.ResumeLayout(false);
             this.Main.ResumeLayout(false);
             this.Main.PerformLayout();
-            this.Import_File.ResumeLayout(false);
-            this.Import_File.PerformLayout();
             this.Other_opts.ResumeLayout(false);
             this.Other_opts.PerformLayout();
             this.VBS_info.ResumeLayout(false);
@@ -1957,6 +2082,7 @@
             this.D_type.ResumeLayout(false);
             this.D_type.PerformLayout();
             this.tabPage3.ResumeLayout(false);
+            this.tabPage3.PerformLayout();
             this.groupBox3.ResumeLayout(false);
             this.groupBox3.PerformLayout();
             this.panel1.ResumeLayout(false);
@@ -1964,6 +2090,8 @@
             this.Batch_Box.ResumeLayout(false);
             this.Batch_Box.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).EndInit();
+            this.Import_File.ResumeLayout(false);
+            this.Import_File.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -2103,10 +2231,18 @@
         private System.Windows.Forms.CheckBox RL_Fix;
         private System.Windows.Forms.TabPage tabPage3;
         private System.Windows.Forms.GroupBox groupBox3;
-        private System.Windows.Forms.Button Dir_Edit;
         private System.Windows.Forms.Button Dir_Apply;
         private System.Windows.Forms.Button Dir_Cancel;
-        private System.Windows.Forms.CheckBox Dir_Lock;
+        private System.Windows.Forms.ComboBox Dir_Ftype;
+        private System.Windows.Forms.CheckBox Dir_ChgType;
+        private System.Windows.Forms.Label label16;
+        private System.Windows.Forms.LinkLabel Dir_None;
+        private System.Windows.Forms.LinkLabel Dir_Rev;
+        private System.Windows.Forms.LinkLabel Dir_All;
+        private System.Windows.Forms.LinkLabel Dir_Edit;
+        private System.Windows.Forms.LinkLabel linkLabel2;
+        private System.Windows.Forms.LinkLabel Dir_Lock;
+        private System.Windows.Forms.Label Dir_Info;
+        private System.Windows.Forms.Label Dir_FStart;
     }
 }
-
