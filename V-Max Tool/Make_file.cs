@@ -12,7 +12,8 @@ namespace V_Max_Tool
         void Export_File(int last_track = -1)
         {
             Save_Dialog.FileName = $"{fname}{fnappend}";
-            Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib";
+            //Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib";
+            Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib|NBZ|*.nbz";
             Save_Dialog.Title = "Save File";
             if (Save_Dialog.ShowDialog() == DialogResult.OK)
             {
@@ -24,6 +25,7 @@ namespace V_Max_Tool
                     Make_NIB($@"{Path.GetDirectoryName(fs)}\{Path.GetFileNameWithoutExtension(fs)}.nib");
                     Make_G64($@"{Path.GetDirectoryName(fs)}\{Path.GetFileNameWithoutExtension(fs)}.g64", last_track);
                 }
+                if (Save_Dialog.FilterIndex == 4) Make_NIB(fs, true);
                 if (nib_error || g64_error)
                 {
                     string s = "";
@@ -41,7 +43,7 @@ namespace V_Max_Tool
             }
         }
 
-        void Make_NIB(string fname)
+        void Make_NIB(string fname, bool compress = false)
         {
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
@@ -63,7 +65,12 @@ namespace V_Max_Tool
             }
             try
             {
-                File.WriteAllBytes(fname, buffer.ToArray());
+                if (compress)
+                {
+                    byte[] compressed = LZfast(buffer.ToArray());
+                    File.WriteAllBytes(fname, compressed);
+                }
+                else File.WriteAllBytes(fname, buffer.ToArray());
             }
             catch (Exception ex)
             {

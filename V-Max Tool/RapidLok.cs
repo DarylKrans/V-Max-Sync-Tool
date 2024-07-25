@@ -140,7 +140,7 @@ namespace V_Max_Tool
             if (data[s] == 0x6b) s += 200;
             for (int i = s; i < data.Length; i++)
             {
-                if ((data[i] == 0x6b)) // && !blank.Any(x => x == data[i + 1])) && i + 256 < data.Length)
+                if ((data[i] == 0x6b) && (i + 256) < data.Length) // && !blank.Any(x => x == data[i + 1])) && i + 256 < data.Length)
                 {
                     Buffer.BlockCopy(data, i, key, 0, 256);
                     break;

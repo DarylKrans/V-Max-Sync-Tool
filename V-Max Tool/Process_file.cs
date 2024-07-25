@@ -29,7 +29,7 @@ namespace V_Max_Tool
         private byte[] nib_header = new byte[0];
         private byte[] g64_header = new byte[684];
         private readonly byte[][] p = new byte[10][];
-        private readonly string[] supported = { ".nib", ".g64", ".d64" }; // Supported file extensions list
+        private readonly string[] supported = { ".nib", ".g64", ".d64", ".nbz" }; // Supported file extensions list
         /// vsec = the CBM sector header values & against byte[] sz
         private readonly string[] valid_cbm = { "52-40-05-28", "52-40-05-2C", "52-40-05-48", "52-40-05-4C", "52-40-05-38", "52-40-05-3C", "52-40-05-58", "52-40-05-5C",
             "52-40-05-24", "52-40-05-64", "52-40-05-68", "52-40-05-6C", "52-40-05-34", "52-40-05-74", "52-40-05-78", "52-40-05-54", "52-40-05-A8",
@@ -78,201 +78,6 @@ namespace V_Max_Tool
             }
         }
 
-        //void Process_Batch(string[] batch_list, string path, string basedir)
-        //{
-        //    Stopwatch btime = new Stopwatch();
-        //    btime.Start();
-        //    bool tempAutoAdjust = Auto_Adjust;
-        //
-        //    SetupBatchProcessing();
-        //
-        //    Worker_Alt?.Abort();
-        //    Worker_Alt = new Thread(new ThreadStart(Start_Work));
-        //    Worker_Alt?.Start();
-        //
-        //    void Start_Work()
-        //    {
-        //        LB_File_List = new List<string>();
-        //
-        //        for (int i = 0; i < batch_list.Length; i++)
-        //        {
-        //            loader_fixed = false;
-        //            NDG.L_Rot = false;
-        //
-        //            if (cancel) break;
-        //
-        //            if (File.Exists(batch_list[i]))
-        //            {
-        //                UpdateUIForFileProcessing(i, batch_list.Length, batch_list[i]);
-        //
-        //                string curfile = GetOutputFilePath(batch_list[i], path, basedir);
-        //                fext = Path.GetExtension(batch_list[0]);
-        //                if (fext.ToLower() == supported[0])
-        //                {
-        //                    Batch_NIB(batch_list[i], curfile);
-        //                }
-        //
-        //                UpdateBatchListBox(curfile);
-        //            }
-        //        }
-        //
-        //        FinalizeBatchProcessing(batch_list.Length, btime);
-        //    }
-        //
-        //    void SetupBatchProcessing()
-        //    {
-        //        Invoke(new Action(() =>
-        //        {
-        //            Reset_to_Defaults();
-        //            busy = true;
-        //            Auto_Adjust = true;
-        //            Set_Auto_Opts();
-        //            busy = false;
-        //            Drag_pic.Visible = Adv_ctrl.Enabled = false;
-        //            Batch_Box.Visible = true;
-        //            batch = true;
-        //            Batch_Bar.Value = 0;
-        //            Batch_Bar.Maximum = 10000;
-        //            Batch_Bar.Value = 100;
-        //            Batch_List_Box.Items.Clear();
-        //            Batch_List_Box.Visible = true;
-        //            Disable_Core_Controls(true);
-        //        }));
-        //    }
-        //
-        //    void UpdateUIForFileProcessing(int fileIndex, int totalFiles, string filePath)
-        //    {
-        //        Invoke(new Action(() =>
-        //        {
-        //            linkLabel1.Visible = false;
-        //            label8.Text = $"Processing file {fileIndex + 1} of {totalFiles}";
-        //            label9.Text = Path.GetFileName(filePath);
-        //            Batch_Bar.Maximum = (int)((double)Batch_Bar.Value / (fileIndex + 1) * totalFiles);
-        //            Import_File.Visible = Cores <= 1;
-        //        }));
-        //    }
-        //
-        //    string GetOutputFilePath(string inputFilePath, string basePath, string baseDir)
-        //    {
-        //        return Path.Combine(basePath, Path.GetDirectoryName(inputFilePath).Replace(baseDir, ""), Path.GetFileNameWithoutExtension(inputFilePath) + fnappend + ".g64");
-        //    }
-        //
-        //    void UpdateBatchListBox(string curfile)
-        //    {
-        //        Invoke(new Action(() =>
-        //        {
-        //            var status = "OK!";
-        //            if (error)
-        //            {
-        //                status = File.Exists(curfile) ? "Completed with errors" : "Error, file not saved";
-        //            }
-        //            else if (File.Exists(curfile))
-        //            {
-        //                long sz = new FileInfo(curfile).Length / 1024;
-        //                status = $"(OK!) {sz:N0}kb";
-        //            }
-        //            else
-        //            {
-        //                status = "Error, file not saved";
-        //            }
-        //            error = false;
-        //            Batch_List_Box.Items.Add($"{Path.GetDirectoryName(curfile).Replace(path, "")}\\{Path.GetFileNameWithoutExtension(curfile).Replace($"{fnappend}", "")} ({status})");
-        //            Batch_List_Box.SelectedIndex = Batch_List_Box.Items.Count - 1;
-        //            Batch_List_Box.SelectedIndex = -1;
-        //            LB_File_List.Add(curfile);
-        //        }));
-        //    }
-        //
-        //    void FinalizeBatchProcessing(int totalFiles, Stopwatch batchTime)
-        //    {
-        //        Invoke(new Action(() =>
-        //        {
-        //            batchTime.Stop();
-        //            if (DB_timers.Checked)
-        //            {
-        //                label2.Text = $"Total Batch-Process time {batchTime.Elapsed.TotalSeconds:F2} seconds";
-        //            }
-        //
-        //            ShowBatchCompletionMessage(totalFiles, batchTime);
-        //
-        //            Import_File.Visible = false;
-        //            Import_Progress_Bar.Value = 0;
-        //            Batch_Bar.Value = 0;
-        //            Batch_Box.Visible = false;
-        //            cancel = false;
-        //            busy = true;
-        //            Auto_Adjust = tempAutoAdjust;
-        //            busy = false;
-        //            Set_Auto_Opts();
-        //            Reset_to_Defaults(false);
-        //            Disable_Core_Controls(false);
-        //        }));
-        //
-        //        batch = false;
-        //    }
-        //
-        //    void ShowBatchCompletionMessage(int totalFiles, Stopwatch batchTime)
-        //    {
-        //        using (Message_Center center = new Message_Center(this))
-        //        {
-        //            string title = cancel ? "Canceled!" : "Done!";
-        //            string message = cancel
-        //                ? "Batch processing canceled by user"
-        //                : $"Batch processing completed..\n {totalFiles} files processed in {batchTime.Elapsed.TotalSeconds:F2} seconds\nAverage {(batchTime.Elapsed.TotalMilliseconds / totalFiles):F2}ms per file";
-        //            MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
-        //        }
-        //    }
-        //
-        //    void Batch_NIB(string fn, string output)
-        //    {
-        //        using (FileStream stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-        //        {
-        //            long length = new FileInfo(fn).Length;
-        //            tracks = (int)(length - 256) / 8192;
-        //
-        //            if ((tracks * 8192) + 256 == length)
-        //            {
-        //                nib_header = new byte[256];
-        //                stream.Read(nib_header, 0, 256);
-        //                Set_Arrays(tracks);
-        //
-        //                for (int i = 0; i < tracks; i++)
-        //                {
-        //                    NDS.Track_Data[i] = new byte[8192];
-        //                    stream.Seek(256 + (8192 * i), SeekOrigin.Begin);
-        //                    stream.Read(NDS.Track_Data[i], 0, 8192);
-        //                    Original.OT[i] = new byte[0];
-        //                }
-        //
-        //                var head = Encoding.ASCII.GetString(nib_header, 0, 13);
-        //                if (head == "MNIB-1541-RAW")
-        //                {
-        //                    try
-        //                    {
-        //                        Stopwatch parse = Parse_Nib_Data();
-        //                        if (!error)
-        //                        {
-        //                            Stopwatch proc = Process_Nib_Data(true, false, true);
-        //                            if (debug)
-        //                            {
-        //                                Invoke(new Action(() =>
-        //                                {
-        //                                    if (DB_timers.Checked)
-        //                                    {
-        //                                        label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} ms, Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms";
-        //                                    }
-        //                                }));
-        //                            }
-        //                            Make_G64(output, end_track);
-        //                        }
-        //                    }
-        //                    catch { }
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
-
         void Process_Batch(string[] batch_list, string path, string basedir)
         {
             Stopwatch btime = new Stopwatch();
@@ -305,12 +110,10 @@ namespace V_Max_Tool
                 LB_File_List = new List<string>();
                 for (int i = 0; i < batch_list.Length; i++)
                 {
-                    //testfile = Path.GetFileNameWithoutExtension(batch_list[i]); /// <-- for debugging
                     loader_fixed = false;
                     NDG.L_Rot = false;
                     if (!cancel)
                     {
-
                         if (System.IO.File.Exists(batch_list[i]))
                         {
                             Invoke(new Action(() =>
@@ -321,9 +124,9 @@ namespace V_Max_Tool
                                 Batch_Bar.Maximum = (int)((double)Batch_Bar.Value / (double)(i + 1) * batch_list.Length);
                                 if (Cores > 1) Import_File.Visible = false; else Import_File.Visible = true;
                             }));
-                            string curfile = $@"{path}\{Path.GetDirectoryName(batch_list[i]).Replace(basedir, "")}\{Path.GetFileNameWithoutExtension(batch_list[i])}{fnappend}.g64";
+                            string curfile = $@"{path}\{Path.GetDirectoryName(batch_list[i]).Replace(basedir, "")}\{Path.GetFileNameWithoutExtension(batch_list[i]).Replace("_ReMaster", "")}{fnappend}.g64";
                             fext = Path.GetExtension(batch_list[0]);
-                            if (fext.ToLower() == supported[0]) Batch_NIB(batch_list[i], curfile);
+                            if (fext.ToLower() == supported[0] || fext.ToLower() == supported[3]) Batch_NIB(batch_list[i], curfile);
                             Invoke(new Action(() =>
                             {
                                 var status = "OK!";
@@ -391,9 +194,10 @@ namespace V_Max_Tool
             {
                 FileStream Stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 long length = new System.IO.FileInfo(fn).Length;
-                tracks = (int)(length - 256) / 8192;
-                if ((tracks * 8192) + 256 == length)
+                var ext = Path.GetExtension(fn);
+                if (ext.ToLower() == ".nib")
                 {
+                    tracks = (int)(length - 256) / 8192;
                     nib_header = new byte[256];
                     Stream.Seek(0, SeekOrigin.Begin);
                     Stream.Read(nib_header, 0, 256);
@@ -406,6 +210,27 @@ namespace V_Max_Tool
                         Original.OT[i] = new byte[0];
                     }
                     Stream.Close();
+                }
+                if (ext.ToLower() == ".nbz")
+                {
+                    byte[] compressed = new byte[length];
+                    Stream.Seek(0, SeekOrigin.Begin);
+                    Stream.Read(compressed, 0, (int)length);
+                    byte[] decomp = LZ_Uncompress(compressed);
+                    nib_header = new byte[256];
+                    length = decomp.Length;
+                    tracks = ((int)length - 256) / 8192;
+                    Set_Arrays(tracks);
+                    Buffer.BlockCopy(decomp, 0, nib_header, 0, 256);
+                    for (int i = 0; i < tracks; i++)
+                    {
+                        NDS.Track_Data[i] = new byte[8192];
+                        Buffer.BlockCopy(decomp, 256 + (8192 * i), NDS.Track_Data[i], 0, 8192);
+                        Original.OT[i] = new byte[0];
+                    }
+                }
+                if ((tracks * 8192) + 256 == length)
+                {
                     var head = Encoding.ASCII.GetString(nib_header, 0, 13);
                     if (head == "MNIB-1541-RAW")
                     {

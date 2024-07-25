@@ -101,6 +101,16 @@ namespace V_Max_Tool
                 0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0x70, 0xff,
                 //0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
             };
+        private readonly int[] ErrorCode =
+            { 1, 2, 3, 4, 5, 6, 7, 8 };
+        /// 1 = Sector OK
+        /// 2 = Header not found
+        /// 3 = Sync not found
+        /// 4 = Data not found
+        /// 5 = Bad data checksum 
+        /// 6 = Bad GCR
+        /// 7 = Bad header checksum
+        /// 8 = ID mismatch
 
         void Reset_to_Defaults(bool clear_batch_list = true)
         {
@@ -451,12 +461,27 @@ namespace V_Max_Tool
                 {
                     if (Directory.Exists(item))
                     {
-                        var folderFiles = Get(item).Where(file => !Directory.Exists(file) && CheckFile(file));
+                        var folderFiles = Get(item).Where(file => !Directory.Exists(file) && (Path.GetExtension(file).ToLower() == ".nib" || 
+                        Path.GetExtension(file).ToLower() == ".nbz") && (CheckNib(file) || CheckNbz(file)));
                         files.AddRange(folderFiles.Select(file => $@"{Path.GetDirectoryName(file)}\{Path.GetFileName(file)}"));
                     }
-                    else if (Path.GetExtension(item).ToLower() == ".nib" && CheckFile(item))
+                    else
                     {
-                        files.Add($@"{Path.GetDirectoryName(item)}\{Path.GetFileName(item)}");
+                        var ext = Path.GetExtension(item).ToLower();
+                        if (ext == ".nib")
+                        {
+                            if (CheckNib(item))
+                            {
+                                files.Add($@"{Path.GetDirectoryName(item)}\{Path.GetFileName(item)}");
+                            }
+                        }
+                        if (ext == ".nbz")
+                        {
+                            if (CheckNbz(item))
+                            {
+                                files.Add($@"{Path.GetDirectoryName(item)}\{Path.GetFileName(item)}");
+                            }
+                        }
                     }
                 }
                 catch { }
@@ -467,7 +492,7 @@ namespace V_Max_Tool
             }
             return (files.ToArray(), Directory.GetParent(File_List[0]).ToString());
 
-            bool CheckFile(string file)
+            bool CheckNib(string file)
             {
                 if (File.Exists(file))
                 {
@@ -480,6 +505,32 @@ namespace V_Max_Tool
                             byte[] nhead = new byte[256];
                             stream.Seek(0, SeekOrigin.Begin);
                             stream.Read(nhead, 0, 256);
+                            string head = Encoding.ASCII.GetString(nhead, 0, 13);
+                            return head == "MNIB-1541-RAW";
+                        }
+                    }
+                }
+                return false;
+            }
+
+            bool CheckNbz(string file)
+            {
+                if (File.Exists(file))
+                {
+                    using (FileStream stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        long length = new FileInfo(file).Length;
+                        byte[] compressed = new byte[length];
+                        stream.Seek(0, SeekOrigin.Begin);
+                        stream.Read(compressed, 0, (int)length);
+                        stream.Close();
+                        byte[] decomp = LZ_Uncompress(compressed);
+                        int d_size = decomp.Length;
+                        int ttrks = (d_size - 256) / 8192;
+                        if ((ttrks * 8192) + 256 == d_size)
+                        {
+                            byte[] nhead = new byte[256];
+                            Buffer.BlockCopy(decomp, 0, nhead, 0, 256);
                             string head = Encoding.ASCII.GetString(nhead, 0, 13);
                             return head == "MNIB-1541-RAW";
                         }
@@ -736,26 +787,26 @@ namespace V_Max_Tool
             return b.ToString();
         }
 
-        byte SetBit(byte data, int bitPosition)
-        {
-            return (byte)(data | (1 << bitPosition));
-        }
-
-        byte ClearBit(byte data, int bitPosition)
-        {
-            return (byte)(data & ~(1 << bitPosition));
-        }
+        //byte SetBit(byte data, int bitPosition)
+        //{
+        //    return (byte)(data | (1 << bitPosition));
+        //}
+        //
+        //byte ClearBit(byte data, int bitPosition)
+        //{
+        //    return (byte)(data & ~(1 << bitPosition));
+        //}
 
         byte ToggleBit(byte data, int bitPosition)
         {
             return (byte)(data ^ (1 << bitPosition));
         }
 
-        bool GetBitStatus(byte value, int bitPosition)
-        {
-            byte mask = (byte)(1 << bitPosition);
-            return (value & mask) != 0;
-        }
+        //bool GetBitStatus(byte value, int bitPosition)
+        //{
+        //    byte mask = (byte)(1 << bitPosition);
+        //    return (value & mask) != 0;
+        //}
 
         void Pad_Bits(int position, int count, BitArray bitarray)
         {
@@ -1430,7 +1481,6 @@ namespace V_Max_Tool
             //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
             //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
             //File.WriteAllBytes($@"c:\test\compressed\v2644en.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\644e")), 0x4e));
-
             busy = false;
 
             void Set_Boxes()

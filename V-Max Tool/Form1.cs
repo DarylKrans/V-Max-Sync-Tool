@@ -15,7 +15,7 @@ namespace V_Max_Tool
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
         private bool debug = false; // Shows function timers and other adjustment options
         private readonly bool Replace_RapidLok_Key = false;
-        private readonly string ver = " v0.9.98.2 (pre-release)";
+        private readonly string ver = " v0.9.98.6 (pre-release)";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
@@ -71,7 +71,7 @@ namespace V_Max_Tool
                 using (Message_Center center = new Message_Center(this)) // center message box
                 {
                     string t = "Multiple Files Selected";
-                    string s = "Only .NIB files will be processed\nand exported as .G64 with the\nAuto-Adjust options\n\nStart Batch-Processing?";
+                    string s = "Only .NIB/NBZ files will be processed\nand exported as .G64 with the\nAuto-Adjust options\n\nStart Batch-Processing?";
                     DialogResult uc = MessageBox.Show(s, t, MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
                     if (uc.ToString() == "OK")
                     {
@@ -84,14 +84,15 @@ namespace V_Max_Tool
             {
                 if (System.IO.File.Exists(File_List[0]))
                 {
-                    fname = Path.GetFileNameWithoutExtension(File_List[0]);
+                    //fname = Path.GetFileNameWithoutExtension(File_List[0]);
+                    fname = Path.GetFileNameWithoutExtension(File_List[0]).Replace("_ReMaster", "");
                     fext = Path.GetExtension(File_List[0]);
                 }
                 Process_New_Image(File_List[0]);
             }
         }
 
-        void Process_New_Image(string file)
+        unsafe void Process_New_Image(string file)
         {
             //testfile = Path.GetFileNameWithoutExtension(file); /// <-- for debugging
             Disable_Core_Controls(true);
@@ -209,6 +210,7 @@ namespace V_Max_Tool
                             tracks++;
                         }
                     }
+                    Stream.Close();
                     Track_Info.Items.Clear();
                     Set_ListBox_Items(true, false);
                     Set_Arrays(tracks);
@@ -246,13 +248,44 @@ namespace V_Max_Tool
                     var lab = $"Total Tracks ({tracks}), {l}";
                     Process(true, lab);
                 }
+                if (fext.ToLower() == supported[3])
+                {
+                    Data_Box.Clear();
+                    long length = new System.IO.FileInfo(file).Length;
+                    byte[] compressed = new byte[length];
+                    Stream.Seek(0, SeekOrigin.Begin);
+                    Stream.Read(compressed, 0, (int)length);
+                    Stream.Close();
+                    byte[] decomp = LZ_Uncompress(compressed);
+                    if (decomp != null)
+                    {
+                        tracks = (decomp.Length - 256) / 8192;
+                        if ((tracks * 8192) + 256 == decomp.Length) l = "File Size OK!";
+                        Track_Info.Items.Clear();
+                        Set_ListBox_Items(true, false);
+                        Set_Arrays(tracks);
+                        nib_header = new byte[256];
+                        Buffer.BlockCopy(decomp, 0, nib_header, 0, nib_header.Length);
+                        for (int i = 0; i < tracks; i++)
+                        {
+                            NDS.Track_Data[i] = FastArray.Init(8192, 0x00);
+                            Buffer.BlockCopy(decomp, (i * 8192) + 256, NDS.Track_Data[i], 0, 8192);
+                            Original.OT[i] = new byte[0];
+                        }
+                    }
+                    var head = Encoding.ASCII.GetString(nib_header, 0, 13);
+                    var hm = "Bad Header";
+                    if (head == "MNIB-1541-RAW") hm = "Header Match!";
+                    var lab = $"Total Tracks ({tracks}), {l}, {hm}";
+                    Process(true, lab);
+                }
             }
             catch (Exception ex)
             {
                 using (Message_Center center = new Message_Center(this)) // center message box
                 {
                     string t = "Something went wrong!";
-            
+
                     string s = ex.Message;
                     if (s.ToLower().Contains("source array")) s = "Image is corrupt and cannot be opened";
                     MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -273,7 +306,7 @@ namespace V_Max_Tool
                 label2.Text = string.Empty;
                 error = false;
             }
-            
+
             void Process(bool get, string l2)
             {
                 Batch_List_Box.Visible = false;
@@ -293,6 +326,7 @@ namespace V_Max_Tool
             try
             {
                 parse = Parse_Nib_Data();
+                //Invoke(new Action(()=> Text = parse.Elapsed.TotalMilliseconds.ToString()));
             }
             catch { }
             if (!error)
