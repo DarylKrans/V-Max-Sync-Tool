@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Text;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -27,15 +28,24 @@ namespace V_Max_Tool
         private readonly Gbox inbox = new Gbox();
         private readonly Color C64_screen = Color.FromArgb(69, 55, 176);   //(44, 41, 213);
         private readonly Color c64_text = Color.FromArgb(135, 122, 237);   //(114, 110, 255); 
+        private bool usecpp = true;
+        //public static readonly string tempPath = Path.GetTempPath();
         private string def_bg_text;
+        PrivateFontCollection DirFont = new PrivateFontCollection();
 
-        private readonly byte[] sector_gap_length = {
+        private readonly byte[] sector_gap_length =
+            {
                 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,	/*  1 - 10 */
             	10, 10, 10, 10, 10, 10, 10, 14, 14, 14,	/* 11 - 20 */
             	14, 14, 14, 14, 11, 11, 11, 11, 11, 11,	/* 21 - 30 */
             	8, 8, 8, 8, 8,						/* 31 - 35 */
             	8, 8, 8, 8, 8, 8, 8				/* 36 - 42 (non-standard) */
             };
+
+        private readonly byte[] sector_gap_density =
+        {
+            10, 14, 11, 8
+        };
 
         private readonly byte[] Available_Sectors =
             {
@@ -45,8 +55,6 @@ namespace V_Max_Tool
                 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
 
             };
-
-        //private readonly int[] sectors_by_Density = { 21, 19, 18, 17 };
 
         private readonly byte[] density_map = {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/*  1 - 10 */
@@ -101,16 +109,9 @@ namespace V_Max_Tool
                 0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0x70, 0xff,
                 //0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
             };
-        private readonly int[] ErrorCode =
-            { 1, 2, 3, 4, 5, 6, 7, 8 };
-        /// 1 = Sector OK
-        /// 2 = Header not found
-        /// 3 = Sync not found
-        /// 4 = Data not found
-        /// 5 = Bad data checksum 
-        /// 6 = Bad GCR
-        /// 7 = Bad header checksum
-        /// 8 = ID mismatch
+
+        private readonly string[] ErrorCodes = { "Sector OK", "Header not Found", "Sync not found", "Data not found",
+                                             "Bad data checksum", "Bad GCR", "Bad header checksum", "ID mismatch" };
 
         void Reset_to_Defaults(bool clear_batch_list = true)
         {
@@ -167,7 +168,6 @@ namespace V_Max_Tool
         {
             bool eof = false;
             string fName = "\"";
-
             for (int k = 5; k < 21; k++)
             {
                 if (file[k] != 0xa0)
@@ -216,6 +216,7 @@ namespace V_Max_Tool
             NDS.Track_ID = new int[len];
             NDS.Prot_Method = string.Empty;
             NDS.t18_ID = new byte[0];
+            NDS.Adjust = new bool[len];
             /// NDA is the destination or output array
             NDA.Track_Data = new byte[len][];
             NDA.Sector_Zero = new int[len];
@@ -243,6 +244,52 @@ namespace V_Max_Tool
             DiskDir.Entry = new byte[0][];
             DiskDir.FileName = new string[0];
             Dir_Box.Items.Clear();
+        }
+
+        unsafe byte[] LZcompress(byte[] inputData)
+        {
+            if (inputData == null || inputData.Length == 0)
+                throw new ArgumentException("Input data cannot be null or empty.");
+
+            byte[] outputData = new byte[(int)(inputData.Length * 1.04f) + 1];
+
+            fixed (byte* inPtr = inputData)
+            fixed (byte* outPtr = outputData)
+            {
+                int compressedSize;
+                if (!usecpp) compressedSize = LZ_CompressFast(inPtr, outPtr, (uint)inputData.Length);
+                else compressedSize = NativeMethods.LZ_CompressFast((IntPtr)inPtr, (IntPtr)outPtr, (uint)inputData.Length);
+                Array.Resize(ref outputData, compressedSize);
+            }
+            return outputData;
+        }
+
+        unsafe byte[] LZdecompress(byte[] compressed)
+        {
+            if (compressed == null || compressed.Length == 0)
+                return null;
+            uint size = (uint)compressed.Length;
+            fixed (byte* inPtr = compressed)
+            {
+                int outsize = 0;
+                if (usecpp) outsize = NativeMethods.LZ_GetUncompressedSize((IntPtr)inPtr, size);
+                else outsize = GetDecompressedSize(compressed);
+                if (outsize > 0)
+                {
+                    byte[] outputData = new byte[outsize];
+                    if (usecpp)
+                    {
+                        fixed (byte* outPtr = outputData)
+                        {
+                            NativeMethods.LZ_Uncompress((IntPtr)inPtr, (IntPtr)outPtr, size);
+                        }
+                    }
+                    else outputData = LZ_Uncompress(compressed, outsize);
+                    return outputData;
+
+                }
+                return null;
+            }
         }
 
         void Query_Track_Formats()
@@ -401,6 +448,54 @@ namespace V_Max_Tool
             return output.ToArray();
         }
 
+        (int, int) Longest_Run(byte[] data, byte[] of = null)
+        {
+            int count = 0;
+            int longest = 0;
+            int pos = 0;
+            byte prev = 0x00;
+            if (data != null && data.Length > 0)
+            {
+                for (int i = 0; i < data.Length; i++)
+                {
+                    if (of != null)
+                    {
+                        if (of.Any(x => x == data[i])) count++;
+                        else
+                        {
+                            if (count > longest)
+                            {
+                                longest = count;
+                                pos = i - count;
+                            }
+                            count = 0;
+                        }
+                    }
+                    else
+                    {
+                        if (data[i] == prev) count++;
+                        else
+                        {
+                            prev = data[i];
+                            if (count > longest)
+                            {
+                                longest = count;
+                                pos = i - count;
+                            }
+                            count = 0;
+                        }
+                    }
+                }
+                return (pos, longest);
+            }
+            else return (-1, -1);
+
+            //void Set_Counters(int p, int l, int c)
+            //{
+            //    if (c > l) longest = c;
+            //}
+        }
+
         void Data_Viewer(bool stop = false)
         {
             if (Adv_ctrl.Controls[2] == Adv_ctrl.SelectedTab)
@@ -461,7 +556,7 @@ namespace V_Max_Tool
                 {
                     if (Directory.Exists(item))
                     {
-                        var folderFiles = Get(item).Where(file => !Directory.Exists(file) && (Path.GetExtension(file).ToLower() == ".nib" || 
+                        var folderFiles = Get(item).Where(file => !Directory.Exists(file) && (Path.GetExtension(file).ToLower() == ".nib" ||
                         Path.GetExtension(file).ToLower() == ".nbz") && (CheckNib(file) || CheckNbz(file)));
                         files.AddRange(folderFiles.Select(file => $@"{Path.GetDirectoryName(file)}\{Path.GetFileName(file)}"));
                     }
@@ -485,11 +580,8 @@ namespace V_Max_Tool
                     }
                 }
                 catch { }
-                if (Cores <= 3)
-                {
-                    Invoke(new Action(() => label8.Text = $"Gathering files : {files.Count} of {File_List.Length} are valid NIB files."));
-                }
             }
+            busy = false;
             return (files.ToArray(), Directory.GetParent(File_List[0]).ToString());
 
             bool CheckNib(string file)
@@ -524,15 +616,18 @@ namespace V_Max_Tool
                         stream.Seek(0, SeekOrigin.Begin);
                         stream.Read(compressed, 0, (int)length);
                         stream.Close();
-                        byte[] decomp = LZ_Uncompress(compressed);
-                        int d_size = decomp.Length;
-                        int ttrks = (d_size - 256) / 8192;
-                        if ((ttrks * 8192) + 256 == d_size)
+                        byte[] decomp = LZdecompress(compressed);
+                        if (decomp != null)
                         {
-                            byte[] nhead = new byte[256];
-                            Buffer.BlockCopy(decomp, 0, nhead, 0, 256);
-                            string head = Encoding.ASCII.GetString(nhead, 0, 13);
-                            return head == "MNIB-1541-RAW";
+                            int d_size = decomp.Length;
+                            int ttrks = (d_size - 256) / 8192;
+                            if ((ttrks * 8192) + 256 == d_size)
+                            {
+                                byte[] nhead = new byte[256];
+                                Buffer.BlockCopy(decomp, 0, nhead, 0, 256);
+                                string head = Encoding.ASCII.GetString(nhead, 0, 13);
+                                return head == "MNIB-1541-RAW";
+                            }
                         }
                     }
                 }
@@ -686,6 +781,31 @@ namespace V_Max_Tool
             return data;
         }
 
+        //unsafe byte[] Rotate_Left(byte[] data, int pos)
+        //{
+        //    if (pos > 0 && pos < data.Length)
+        //    {
+        //        int length = data.Length;
+        //        pos %= length; // Ensure pos is within array length
+        //
+        //        // Allocate a temporary buffer for the first 'pos' elements
+        //        byte[] temp = new byte[pos];
+        //
+        //        fixed (byte* dataPtr = data, tempPtr = temp)
+        //        {
+        //            // Copy first 'pos' elements to the temporary buffer
+        //            Buffer.MemoryCopy(dataPtr, tempPtr, pos, pos);
+        //
+        //            // Shift remaining elements to the left
+        //            Buffer.MemoryCopy(dataPtr + pos, dataPtr, length - pos, length - pos);
+        //
+        //            // Copy temporary buffer to the end of the array
+        //            Buffer.MemoryCopy(tempPtr, dataPtr + length - pos, pos, pos);
+        //        }
+        //    }
+        //    return data;
+        //}
+
         byte[] Rotate_Left(byte[] data, int pos)
         {
             if (pos > 0 && pos < data.Length)
@@ -710,6 +830,16 @@ namespace V_Max_Tool
             else return string.Empty;
         }
 
+        int Get_Weak_Bytes(byte[] data)
+        {
+            int weak = 0;
+            for (int i = 0; i < data.Length; i++)
+            {
+                if (ToBinary(Encoding.ASCII.GetString(data, i, 1)).Contains("000")) weak++;
+            }
+            return weak;
+        }
+
         byte[] Remove_Weak_Bits(byte[] data, bool aggressive = false)
         {
             HashSet<byte> blankSet = new HashSet<byte>(blank);
@@ -724,7 +854,7 @@ namespace V_Max_Tool
                         data[i + 2] = 0x00;
                         data[i + 3] = 0x00;
                         data[i + 4] = 0x00;
-                        i += 5;
+                        i += 4;
                     }
                     else data[i] = 0x00; // Zero out the byte
                 }
@@ -868,7 +998,6 @@ namespace V_Max_Tool
             }
             return mostFrequent;
         }
-
 
         bool Check_Version(string find, byte[] sdat, int clen)
         {
@@ -1249,38 +1378,106 @@ namespace V_Max_Tool
                         if (!dontDrawFlat)
                         {
                             flat_large?.Dispose();
-                            flat = new Thread(new ThreadStart(() => Draw_Flat_Tracks(false, timeout)));
+                            flat = new Thread(new ThreadStart(() => Draw_Flat_Tracks(false, (Cores < 3))));
                             flat.Start();
                         }
                         circle?.Dispose();
-                        circ = new Thread(new ThreadStart(() => Draw_Circular_Tracks(timeout)));
+                        circ = new Thread(new ThreadStart(() => Draw_Circular_Tracks((Cores < 3))));
                         circ.Start();
                     }
                     catch { }
                     drawn = true;
                     GC.Collect();
-                    Draw = new Thread(new ThreadStart(() => Progress_Thread_Check(timeout)));
+                    Draw = new Thread(new ThreadStart(() => Progress_Thread_Check((Cores < 3))));
                     Draw.Start();
                     busy = false;
                 }
             }
         }
 
+        bool Load_Dll()
+        {
+            byte[] cpp = Decompress(XOR(Resources.cpp_extf, 0xda));
+
+            // Check if the file exists and needs to be overwritten
+            if (File.Exists(DLL.path))
+            {
+                byte[] verify = File.ReadAllBytes(DLL.path);
+
+                // If the file contents differ, overwrite it
+                if (cpp.Length != verify.Length || !cpp.SequenceEqual(verify))
+                {
+                    OverwriteFile(DLL.path, cpp);
+                }
+            }
+            else
+            {
+                // If the file doesn't exist, create it
+                WriteNewFile(DLL.path, cpp);
+            }
+
+            // Hide the file after writing
+            try
+            {
+                File.SetAttributes(DLL.path, FileAttributes.Hidden);
+            }
+            catch { }
+
+            // Attempt to load and test the DLL
+            int test = 0;
+            try
+            {
+                test = NativeMethods.TestLoaded();
+            }
+            catch { }
+
+            return (test == 6);
+
+            void OverwriteFile(string path, byte[] content)
+            {
+                try
+                {
+                    // Remove hidden attribute if necessary before overwriting
+                    File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.Hidden);
+                }
+                catch { }
+
+                try
+                {
+                    File.WriteAllBytes(path, content);
+                }
+                catch { }
+            }
+
+            void WriteNewFile(string path, byte[] content)
+            {
+                try
+                {
+                    File.WriteAllBytes(path, content);
+                }
+                catch { }
+            }
+        }
+
         void Init()
         {
-            string[] args = Environment.GetCommandLineArgs();
-            if (args.Length > 1 && args[1] == "-debug") debug = true;
-            if (!debug) Tabs.TabPages.Remove(D_Bug);
+            usecpp = Load_Dll();
+            Load_Font();
+            if (usecpp) Text += " (C++ Extensions Enabled)";
+            else
+            {
+                CPP_tog.Enabled = false;
+            }
+
             Batch_List_Box.Visible = false; // set to true for debugging that requires a listbox
             Batch_List_Box.HorizontalScrollbar = true;
-            Debug_Button.Visible = debug;
             Other_opts.Visible = false;
             busy = true;
             /// Directory editing box values
             groupBox3.Controls.Add(Dir_Box);
             Dir_Box.DrawMode = DrawMode.OwnerDrawFixed;
             Dir_Box.CheckOnClick = true;
-            Dir_Box.Font = new Font("C64 Pro Mono", 12);
+            Dir_Box.Font = Dir_screen.Font = new Font(DirFont.Families[0], 12);
             Dir_Box.BackColor = C64_screen;
             Dir_Box.ForeColor = c64_text;
             Dir_Box.Location = new System.Drawing.Point(1, 12);
@@ -1320,6 +1517,7 @@ namespace V_Max_Tool
             panPic.SetBounds(0, 0, Disk_Image.Width, Disk_Image.Height);
             Disk_Image.SizeMode = PictureBoxSizeMode.AutoSize;
             flat_large = new Bitmap(8192, panPic.Height - 16);
+            out_weak.Width = 64;
             Adv_ctrl.SelectedIndexChanged += new System.EventHandler(Adv_Ctrl_SelectedIndexChanged);
             Out_density.DrawItem += new DrawItemEventHandler(Out_Density_Color);
             out_track.DrawItem += new DrawItemEventHandler(Out_Track_Color);
@@ -1367,7 +1565,7 @@ namespace V_Max_Tool
             Lead_ptn.SelectedIndex = 0;
             Lead_ptn.Enabled = VPL_rb.Checked;
             Tabs.Controls.Remove(Vpl_adv);
-            VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = DB_vpl.Visible;
+            VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = CPP_tog.Visible;
             VD0.Value = vpl_density[0];
             VD1.Value = vpl_density[1];
             VD2.Value = vpl_density[2];
@@ -1436,6 +1634,7 @@ namespace V_Max_Tool
             Img_Q.SelectedIndex = 2;
             Width = PreferredSize.Width;
             Flat_Interp.Visible = Flat_View.Checked;
+            Circle_View.Checked = Out_view.Checked = true;
             label4.Visible = Img_Q.Visible = Circle_View.Checked;
             Circle_Render.Visible = Flat_Render.Visible = label3.Visible = false;
             Img_opts.Enabled = Img_style.Enabled = Img_View.Enabled = false;
@@ -1473,19 +1672,26 @@ namespace V_Max_Tool
                 return null;
             });
             Build_BitReverseTable();
-            //File.WriteAllBytes($@"c:\test\compressed\msvcrt.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\msvcrt")), 0x24));
-            //File.WriteAllBytes($@"c:\test\compressed\rlnk.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rlnk")), 0x7b));
-            //File.WriteAllBytes($@"c:\test\compressed\cyan.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cyan")), 0xc1));
-            //File.WriteAllBytes($@"c:\test\compressed\rak1.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rak2")), 0xab));
-            //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
-            //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
-            //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
-            //File.WriteAllBytes($@"c:\test\compressed\v2644en.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\644e")), 0x4e));
+            try
+            {
+                //File.WriteAllBytes($@"c:\test\compressed\cpp_extf.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\DrawArc.dll")), 0xda));
+                //File.WriteAllBytes($@"c:\test\compressed\msvcrt.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\msvcrt")), 0x24));
+                //File.WriteAllBytes($@"c:\test\compressed\rlnk.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rlnk")), 0x7b));
+                //File.WriteAllBytes($@"c:\test\compressed\cyan.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cyan")), 0xc1));
+                //File.WriteAllBytes($@"c:\test\compressed\rak1.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rak2")), 0xab));
+                //File.WriteAllBytes($@"c:\test\compressed\v2cbmla.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\cbm")), 0xcb));
+                //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
+                //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
+                //File.WriteAllBytes($@"c:\test\compressed\v2644en.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\644e")), 0x4e));
+            }
+            catch { }
+            DB_g64.Checked = true;
             busy = false;
 
             void Set_Boxes()
             {
                 outbox.BackColor = Color.Gainsboro;
+                panel1.Controls.Remove(this.out_weak);
                 panel1.Controls.Remove(this.Out_density);
                 panel1.Controls.Remove(this.out_rpm);
                 panel1.Controls.Remove(this.out_track);
@@ -1496,21 +1702,23 @@ namespace V_Max_Tool
                 outbox.Controls.Add(this.out_track);
                 outbox.Controls.Add(this.out_dif);
                 outbox.Controls.Add(this.out_size);
+                outbox.Controls.Add(this.out_weak);
                 var w = 5;
                 out_track.Location = new Point(w, 15); w += out_track.Width - 1;
                 out_rpm.Location = new Point(w, 15); w += out_rpm.Width - 1;
                 out_size.Location = new Point(w, 15); w += out_size.Width - 1;
                 out_dif.Location = new Point(w, 15); w += out_dif.Width - 1;
-                Out_density.Location = new Point(w, 15);
+                Out_density.Location = new Point(w, 15); w += out_dif.Width - 1;
+                out_weak.Location = new Point(w, 15); //w += out_dif.Width - 1;
                 outbox.FlatStyle = FlatStyle.Flat;
                 outbox.ForeColor = Color.Indigo;
                 outbox.Name = "outbox";
                 outbox.Width = outbox.PreferredSize.Width;
                 outbox.Height = outbox.PreferredSize.Height;
-                outbox.Location = new Point(210, 13);
+                outbox.Location = new Point(225, 13);
                 outbox.TabIndex = 52;
                 outbox.TabStop = false;
-                outbox.Text = "Track/ RPM /    Size    /  Diff  / Density";
+                outbox.Text = "Track/ RPM /     Size     / Diff     / Density  / Weak";
                 inbox.BackColor = Color.Gainsboro;
                 panel1.Controls.Remove(this.sd);
                 panel1.Controls.Remove(this.strack);
@@ -1537,6 +1745,19 @@ namespace V_Max_Tool
                 inbox.TabIndex = 55;
                 inbox.TabStop = false;
                 inbox.Text = "Trk / Size / Format / Sectors / Dens";
+            }
+
+            void Load_Font()
+            {
+                byte[] newfont = Resources.C64_Pro_Mono_STYLE;
+
+                unsafe
+                {
+                    fixed (byte* pFontData = newfont)
+                    {
+                        DirFont.AddMemoryFont((System.IntPtr)pFontData, newfont.Length);
+                    }
+                }
             }
 
             void Set_Tool_Tips()
@@ -1594,26 +1815,19 @@ namespace V_Max_Tool
             out_rpm.BeginUpdate();
             out_track.BeginUpdate();
             Out_density.BeginUpdate();
+            out_weak.BeginUpdate();
             if (r)
             {
                 Make_Visible();
-                out_size.Items.Clear();
-                out_dif.Items.Clear();
-                ss.Items.Clear();
-                sf.Items.Clear();
-                sl.Items.Clear();
-                sd.Items.Clear();
-                strack.Items.Clear();
-                out_rpm.Items.Clear();
-                out_track.Items.Clear();
-                Out_density.Items.Clear();
+                Clear_Out_Items();
+                Clear_In_Items();
 
-                out_track.Height = Out_density.Height = out_size.Height = out_dif.Height = out_rpm.Height = out_size.PreferredHeight;
+                out_track.Height = Out_density.Height = out_size.Height = out_dif.Height = out_rpm.Height = out_weak.Height = out_size.PreferredHeight;
                 sl.Height = strack.Height = sl.Height = sd.Height = ss.Height = sf.Height = sl.PreferredHeight; // (items * 12);
             }
             Make_Visible();
             outbox.Visible = inbox.Visible = !r;
-            out_track.Height = Out_density.Height = out_size.Height = out_dif.Height = out_rpm.Height = out_size.PreferredHeight;
+            out_track.Height = Out_density.Height = out_size.Height = out_dif.Height = out_rpm.Height = out_weak.Height = out_size.PreferredHeight;
             sl.Height = strack.Height = sl.Height = sd.Height = ss.Height = sf.Height = sl.PreferredHeight; // (items * 12);
             outbox.Height = outbox.PreferredSize.Height;
             inbox.Height = inbox.PreferredSize.Height;
@@ -1625,6 +1839,7 @@ namespace V_Max_Tool
             sf.EndUpdate();
             out_rpm.EndUpdate();
             out_track.EndUpdate();
+            out_weak.EndUpdate();
             strack.EndUpdate();
             sl.EndUpdate();
             sd.EndUpdate();
@@ -1641,7 +1856,28 @@ namespace V_Max_Tool
                 out_rpm.Visible = !r;
                 out_track.Visible = !r;
                 Out_density.Visible = !r;
+                out_weak.Visible = !r;
             }
         }
+
+        void Clear_Out_Items()
+        {
+            out_track.Items.Clear();
+            out_size.Items.Clear();
+            out_dif.Items.Clear();
+            Out_density.Items.Clear();
+            out_rpm.Items.Clear();
+            out_weak.Items.Clear();
+        }
+
+        void Clear_In_Items()
+        {
+            ss.Items.Clear();
+            sf.Items.Clear();
+            sl.Items.Clear();
+            sd.Items.Clear();
+            strack.Items.Clear();
+        }
+
     }
 }

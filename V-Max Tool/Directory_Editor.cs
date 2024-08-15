@@ -200,7 +200,8 @@ namespace V_Max_Tool
                         int sector = Convert.ToInt32(DiskDir.Sectors[i][1]);
                         track -= 1;
                         if (tracks > 42) track *= 2;
-                        (byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDS.Track_Data[track], sector, true);
+                        //(byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDS.Track_Data[track], sector, true);
+                        (byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDG.Track_Data[track], sector, true);
                         if (nul)
                         {
                             while (entry < 8 && tot < DiskDir.Entries)
@@ -210,17 +211,15 @@ namespace V_Max_Tool
                                 entry++;
                                 tot++;
                             }
-                            NDS.Track_Data[track] = Replace_CBM_Sector(NDS.Track_Data[track], sector, decoded_sector);
+                            //NDS.Track_Data[track] = Replace_CBM_Sector(NDS.Track_Data[track], sector, decoded_sector);
+                            byte[] temp = Replace_CBM_Sector(NDG.Track_Data[track], sector, decoded_sector);
+                            Set_Dest_Arrays(temp, track);
                         }
                     }
                 }
                 groupBox3.Visible = false;
-                out_track.Items.Clear();
-                out_size.Items.Clear();
-                out_dif.Items.Clear();
-                Out_density.Items.Clear();
-                out_rpm.Items.Clear();
-                Process_Nib_Data(true, false, false, true);
+                //Clear_Out_Items();
+                //Process_Nib_Data(true, false, false, true);
                 Default_Dir_Screen();
                 Get_Disk_Directory();
             }
@@ -348,7 +347,8 @@ namespace V_Max_Tool
                 if (tracks > 42) track *= 2;
                 if ((track >= 0 && track < tracks) && NDS.cbm?[track] == 1)
                 {
-                    (byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDS.Track_Data[track], sector, true);
+                    //(byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDS.Track_Data[track], sector, true);
+                    (byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDG.Track_Data[track], sector, true);
                     if (decoded_sector != null)
                     {
                         string hex = $"{Hex_Val(decoded_sector, 3, 1)}" + $"{Hex_Val(decoded_sector, 2, 1)}";

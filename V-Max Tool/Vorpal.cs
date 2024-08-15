@@ -54,11 +54,7 @@ namespace V_Max_Tool
                     }
                 }
             }
-            out_track.Items.Clear();
-            out_size.Items.Clear();
-            out_dif.Items.Clear();
-            Out_density.Items.Clear();
-            out_rpm.Items.Clear();
+            Clear_Out_Items();
             Process_Nib_Data(p, false, false, true); /// false flag instructs the routine NOT to process CBM tracks again
         }
 
@@ -270,75 +266,77 @@ namespace V_Max_Tool
             byte[] tdata = new byte[0];
             BitArray source = new BitArray(Flip_Endian(data));
             BitArray lead_in = new BitArray(leadIn_std.Length);
-
             for (int k = 0; k < source.Length; k++)
             {
                 if (source[k]) snc_cnt++;
                 if (!source[k])
                 {
-                    if (snc_cnt == 8)
+                    if (snc_cnt == 8) // && k > 600)
                     {
-                        if (k - ((com << 3) + 8) > 0)
+                        if (sec_size > 160 << 3 || k > 100 << 3)
                         {
-                            if (!lead_in_Found && (!source[k - 10] && !source[k - 9]))
+                            if (k - ((com << 3) + 8) > 0)
                             {
-                                sz = " * sector 0";
-                                (lead_in_Found, track_lead_in) = Get_LeadIn_Position(k);
-                            }
-                            else sz = string.Empty;
-
-                            byte[] sec_ID = Bit2Byte(source, k - ((com << 3) >> 1), com << 3);
-                            sid = Hex_Val(sec_ID);
-
-                            if (!sec_header.Any(x => x == sid))
-                            {
-                                sec_header.Add(sid);
-                                sec_pos.Add(k >> 3);
-
-                                if (!batch && sec_size >> 3 > 0)
+                                if (!lead_in_Found && (!source[k - 10] && !source[k - 9]))
                                 {
-                                    try { sec_hdr.Add($"pos ({k >> 3}) Header (kinda) {sid.Substring(15, 20)} Size ({sec_size >> 3}){sz}"); }
-                                    catch { }
+                                    sz = " * sector 0";
+                                    (lead_in_Found, track_lead_in) = Get_LeadIn_Position(k);
                                 }
+                                else sz = string.Empty;
 
-                                sec_size = 0;
+                                byte[] sec_ID = Bit2Byte(source, k - ((com << 3) >> 1), com << 3);
+                                sid = Hex_Val(sec_ID);
 
-                                if (!start_found)
+                                if (!sec_header.Any(x => x == sid))
                                 {
-                                    data_start = k;
-                                    start_found = true;
-                                }
+                                    sec_header.Add(sid);
+                                    sec_pos.Add(k >> 3);
 
-                                k += 1180; // Skip over the next (x) bits after finding a sector
-                                sec_size += 1180;
-                            }
-                            else
-                            {
-                                if (!batch)
-                                {
-                                    try
+                                    if (!batch && sec_size >> 3 > 0)
                                     {
-                                        if (!repeat)
-                                        {
-                                            sec_hdr.Add($"* Repeat * pos {k >> 3} {Hex_Val(sec_ID).Substring(15, 20)}");
-                                            repeat = true;
-                                        }
+                                        try { sec_hdr.Add($"pos ({k >> 3}) Header (kinda) {sid.Substring(15, 20)} Size ({sec_size >> 3}){sz}"); }
+                                        catch { }
                                     }
-                                    catch { }
-                                }
 
-                                if (!end_found)
+                                    sec_size = 0;
+
+                                    if (!start_found)
+                                    {
+                                        data_start = k;
+                                        start_found = true;
+                                    }
+
+                                    k += 1180; // Skip over the next (x) bits after finding a sector
+                                    sec_size += 1180;
+                                }
+                                else
                                 {
-                                    data_end = k - sub;
-                                    end_found = true;
+                                    if (!batch)
+                                    {
+                                        try
+                                        {
+                                            if (!repeat)
+                                            {
+                                                sec_hdr.Add($"* Repeat * pos {k >> 3} {Hex_Val(sec_ID).Substring(15, 20)}");
+                                                repeat = true;
+                                            }
+                                        }
+                                        catch { }
+                                    }
+
+                                    if (!end_found)
+                                    {
+                                        data_end = k - sub;
+                                        end_found = true;
+                                    }
                                 }
+                                sectors = sec_header.Count;
+
+                                if (!single_rotation && end_found)
+                                    break;
                             }
-
-                            sectors = sec_header.Count;
-
-                            if (!single_rotation && end_found)
-                                break;
                         }
+                        else sec_size = 0;
                     }
                     snc_cnt = 0;
                 }
@@ -370,7 +368,6 @@ namespace V_Max_Tool
 
                 tdata = Bit2Byte(temp);
             }
-
             return (tdata, data_start, data_end, track_len, track_lead_in, sectors, sec_pos.ToArray(), sec_hdr.ToArray());
 
             (bool, int) Get_LeadIn_Position(int position)

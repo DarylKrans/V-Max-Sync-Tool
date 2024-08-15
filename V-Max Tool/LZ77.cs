@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -11,7 +6,13 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
-        ///**************** These have been converted to c# ***********************
+
+        ///---------------- These have been converted to c# -----------------------
+        /// ****** THIS CODE HAS BEEN ALTERED FROM ITS ORIGINAL FORM!! ************
+        /// ****** the LZ77 routines have been converted from C to work in C# *****
+        ///
+        /// 
+        /// 
         ///* Name:        lz.c
         ///* Author:      Marcus Geelnard
         ///* Description: LZ77 coder/decoder implementation.
@@ -100,7 +101,6 @@ namespace V_Max_Tool
            value of 100000 is quite high. Experiment to see what works best for
            you. */
 
-        //const int LZ_MAX_OFFSET = 8192;
         const int LZ_MAX_OFFSET = 100000;
 
         private static int LZ_ReadVarSize(ref int x, byte[] buf, int startPos)
@@ -128,7 +128,7 @@ namespace V_Max_Tool
         {
             uint y;
             int numBytes, i, b;
-        
+
             /* Determine number of bytes needed to store the number x */
             y = x >> 3;
             for (numBytes = 5; numBytes >= 2; --numBytes)
@@ -136,7 +136,7 @@ namespace V_Max_Tool
                 if ((y & 0xfe000000) != 0) break;
                 y <<= 7;
             }
-        
+
             /* Write all bytes, seven bits in each, with 8th bit set for all */
             /* but the last byte. */
             for (i = numBytes - 1; i >= 0; --i)
@@ -148,7 +148,7 @@ namespace V_Max_Tool
                 }
                 *buf++ = (byte)b;
             }
-        
+
             /* Return number of bytes written */
             return numBytes;
         }
@@ -325,16 +325,10 @@ namespace V_Max_Tool
             byte* ptr1, ptr2;
             uint* work;
 
-            if (insize < 1)
-            {
-                return 0;
-            }
-
+            if (insize < 1) return 0;
             work = (uint*)Marshal.AllocHGlobal((int)(insize + 65536) * sizeof(uint));
-
             lastindex = work;
             jumptable = work + 65536;
-
             for (i = 0; i < 65536; ++i)
             {
                 lastindex[i] = 0xffffffff;
@@ -348,26 +342,14 @@ namespace V_Max_Tool
             }
             jumptable[insize - 1] = 0xffffffff;
 
-            for (i = 0; i < 256; ++i)
-            {
-                histogram[i] = 0;
-            }
+            marker = 0;
+
             for (i = 0; i < insize; ++i)
             {
                 ++histogram[input[i]];
             }
 
-            marker = 0;
-            for (i = 1; i < 256; ++i)
-            {
-                if (histogram[i] < histogram[marker])
-                {
-                    marker = (byte)i;
-                }
-            }
-
             output[0] = marker;
-
             inpos = 0;
             outpos = 1;
             bytesleft = insize;
@@ -387,7 +369,6 @@ namespace V_Max_Tool
                     {
                         offset = inpos - index;
                         maxlength = (bytesleft < offset ? bytesleft : offset);
-
                         length = (uint)LZ_StringCompare(ptr1, ptr2, 2, maxlength);
 
                         if (length > bestlength)
@@ -452,7 +433,47 @@ namespace V_Max_Tool
         ///*  insize  - Number of input bytes.
         ///*************************************************************************/
 
-        byte[] LZ_Uncompress(byte[] input)
+        private static int GetDecompressedSize(byte[] inData)
+        {
+            int insize = inData.Length;
+            byte marker = inData[0];
+            int inpos = 1;
+            int outpos = 0;
+            if (inData == null || inData.Length == 0) return -1;
+            while (inpos < insize)
+            {
+                byte symbol = inData[inpos++];
+                if (symbol == marker)
+                {
+                    if (inData[inpos] == 0)
+                    {
+                        // Single occurrence of the marker byte
+                        outpos++;
+                        inpos++;
+                    }
+                    else
+                    {
+                        // Extract true length and offset
+                        int length = 0;
+                        int offset = 0;
+                        inpos += LZ_ReadVarSize(ref length, inData, inpos);
+                        inpos += LZ_ReadVarSize(ref offset, inData, inpos);
+
+                        // Copy corresponding data from history window
+                        outpos += length;
+                    }
+                }
+                else
+                {
+                    // Plain copy
+                    outpos++;
+                }
+            }
+
+            return outpos;
+        }
+
+        byte[] LZ_Uncompress(byte[] input, int outsize)
         {
             int insize = input.Length;
             byte marker, symbol;
@@ -460,7 +481,7 @@ namespace V_Max_Tool
             int outpos;
             int length = 0;
             int offset = 0;
-            byte[] output = FastArray.Init(700000, 0x00);
+            byte[] output = FastArray.Init(outsize, 0x00);
 
             // Do we have anything to uncompress?
             if (insize < 1)
@@ -474,7 +495,7 @@ namespace V_Max_Tool
 
             // Main decompression loop
             outpos = 0;
-            do
+            while (inpos < insize)
             {
                 symbol = input[inpos++];
                 if (symbol == marker)
@@ -506,48 +527,7 @@ namespace V_Max_Tool
                     output[outpos++] = symbol;
                 }
             }
-            while (inpos < insize);
-            byte[] temp = new byte[outpos];
-            Buffer.BlockCopy(output, 0, temp, 0, outpos);
-            return temp;
-        }
-
-        public static unsafe byte[] LZfast(byte[] inputData)
-        {
-            if (inputData == null || inputData.Length == 0)
-                throw new ArgumentException("Input data cannot be null or empty.");
-
-            byte[] outputData = new byte[inputData.Length * 2];
-
-            fixed (byte* inPtr = inputData)
-            fixed (byte* outPtr = outputData)
-            {
-                int compressedSize = LZ_CompressFast(inPtr, outPtr, (uint)inputData.Length);
-                Array.Resize(ref outputData, compressedSize);
-            }
-
-            return outputData;
-        }
-
-        unsafe byte[] LZslow(byte[] inputData)
-        {
-            if (inputData == null || inputData.Length == 0)
-                throw new ArgumentException("Input data cannot be null or empty.");
-
-            // Allocate memory for input and output
-            byte[] outputData = new byte[inputData.Length * 2]; // Assuming compressed data will not be larger than twice the input size
-
-            fixed (byte* inPtr = inputData)
-            fixed (byte* outPtr = outputData)
-            {
-                // Call the compression function
-                int compressedSize = LZ_Compress(inPtr, outPtr, (uint)inputData.Length);
-
-                // Resize the output buffer to the actual compressed size
-                Array.Resize(ref outputData, compressedSize);
-            }
-
-            return outputData;
+            return output;
         }
     }
 }

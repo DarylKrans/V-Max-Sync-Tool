@@ -32,6 +32,7 @@ namespace V_Max_Tool
         private readonly Brush vpl_brush = new SolidBrush(Color.FromArgb(30, 200, 200));
         private readonly Brush rpl_brush = new SolidBrush(Color.FromArgb(200, 200, 30));
         private readonly Brush key_brush = new SolidBrush(Color.FromArgb(30, 200, 30));
+        private readonly Brush nds_brush = new SolidBrush(Color.FromArgb(120, 102, 153));
         private readonly Brush[] trk_brush = new SolidBrush[2]; // (Color.FromArgb(200, 200, 200));
         private readonly Color Write_face = Color.FromArgb(41, 40, 36);
         private readonly Color Inner_face = Color.FromArgb(50, 49, 44);
@@ -59,11 +60,9 @@ namespace V_Max_Tool
             Font font = new Font("Arial", 11);
             bool halftracks = tracks > 42;
             double ht = halftracks ? 0.5 : 0;
-            //if (tracks > 42) track = (trk / 2);
             int trk = (tracks > 42) ? 2 : 1;
             if (!interpolate)
             {
-                //flat_large = new Bitmap(8192, (42 * 14) - 16);
                 flat_large = new Bitmap(8224, (42 * 14) - 16);
                 Bitmap t = new Bitmap(flat_large.Width, flat_large.Height);
                 int actualTracks = 0, processedTracks = 0;
@@ -152,8 +151,8 @@ namespace V_Max_Tool
 
         private void Draw_Circular_Tracks(bool wait)
         {
+            //Stopwatch sw = new Stopwatch();
             if (wait) Thread.Sleep(1000);
-
             int scale = 0;
             int activeTracks = 0;
             for (int h = 0; h < tracks; h++) if (NDG.Track_Length[h] > min_t_len && NDS.cbm[h] < secF.Length - 1) activeTracks++;
@@ -163,11 +162,11 @@ namespace V_Max_Tool
                 Set_Circular_Draw_Options(false, 0);
             }));
 
-            double sub = 1.25;// * scale;
+            double sub = 1.25;
             int imageSize = scale * 1000;
             int x = imageSize >> 1;
             int y = imageSize >> 1;
-            int radius = (int)(x / 1.0316368638f) + (5 * scale);// - (15 * scale);
+            int radius = (int)(x / 1.0316368638f) + (5 * scale);
             int trackWidth = (int)(3.1f * scale);
             string fileExtension = Src_view.Checked ? ".nib" : ".g64";
             string fileName = $"{fname}{fnappend}{fileExtension}";
@@ -177,12 +176,11 @@ namespace V_Max_Tool
             circle = new FastBitmap(imageSize, imageSize);
 
             int sampleTrack = GetSampleTrack(random);
-            string bgText = ToBinary(Encoding.ASCII.GetString(NDS.Track_Data[sampleTrack], 0, 2000));
+            string bgText = ToBinary(Encoding.ASCII.GetString(NDS.Track_Data[sampleTrack], 0, 1225));
             Draw_Disk(circle, scale, imageSize, fileName, bgText);
-
             int skipFactor = tracks <= 42 ? 2 : 1;
             int progress = 0;
-
+            IntPtr bmpPtr = circle.GetPixelPtr();
             for (int track = 0; track < tracks && radius > 80; track++)
             {
                 if (NDG.Track_Length[track] > min_t_len && NDS.cbm[track] < secF.Length - 1)
@@ -191,7 +189,7 @@ namespace V_Max_Tool
                     progress++;
                     byte[] trackData = Get_Track_Data(track);
                     int dataLength = trackData.Length;
-
+                    int[] colors = new int[dataLength];
                     if (dataLength > min_t_len)
                     {
                         int density = Get_Density(dataLength);
@@ -203,18 +201,20 @@ namespace V_Max_Tool
                             var (color, updatedV2, updatedV5) = Get_Color(trackData[i], NDS.v2info[track], track, i, density, NDS.cbm[track], v2, v5, sb);
                             v2 = updatedV2;
                             v5 = updatedV5;
-                            Draw_Arc(circle, x, y, radius, i, color, track, dataLength, trackWidth, sub);
+                            colors[i] = color.ToArgb();
                         }
+                        if (!usecpp) Draw_Arc(circle, x, y, radius, colors, track, dataLength, trackWidth, sub);
+                        else NativeMethods.Draw_Arc(bmpPtr, imageSize, imageSize, x, y, radius, colors, colors.Length, track, dataLength, trackWidth, sub);
                     }
 
                     if (Circle_View.Checked && Cores <= 3) Update_Image();
                     Invoke(new Action(() => Update_Progress_Bar(progress, activeTracks)));
                 }
-
                 radius -= (trackWidth * skipFactor);
             }
 
             Invoke(new Action(() => Set_Circular_Draw_Options(true, imageSize)));
+            //Invoke(new Action(()=> Text = $"{sw.Elapsed.TotalMilliseconds}"));
         }
 
         private int GetSampleTrack(Random random)
@@ -232,20 +232,23 @@ namespace V_Max_Tool
             return track;
         }
 
-        private void Draw_Arc(FastBitmap bitmap, int centerX, int centerY, int radius, int startAngle, Color color, int track, int len, int trackWidth, double sub)
+        private void Draw_Arc(FastBitmap bitmap, int centerX, int centerY, int radius, int[] color, int track, int len, int trackWidth, double sub)
         {
-            int segments = 22 - track / 4;
-            float tempAngle = len / 359.1f;
-            float angle = (startAngle / tempAngle) * 3.14159265f / 180; // initial angle in radians
-            float angleInc = 3.14159265f / (180 * segments); // angle increment
-
-            for (int k = 1; k < segments; k++, angle += angleInc)
+            for (int startAngle = 0; startAngle < color.Length; startAngle++)
             {
-                float cos = (float)Math.Cos(angle);
-                float sin = (float)Math.Sin(angle);
-                for (int j = 0; j < trackWidth - (int)sub; j++)
+                int segments = 22 - track / 4;
+                float tempAngle = len / 359.1f;
+                float angle = (startAngle / tempAngle) * 3.14159265f / 180; // initial angle in radians
+                float angleInc = 3.14159265f / (180 * segments); // angle increment
+                Color clr = Color.FromArgb(color[startAngle]);
+                for (int k = 1; k < segments; k++, angle += angleInc)
                 {
-                    bitmap.SetPixel((int)(centerX + (radius + j) * cos), (int)(centerY + (radius + j) * sin), color);
+                    float cos = (float)Math.Cos(angle);
+                    float sin = (float)Math.Sin(angle);
+                    for (int j = 0; j < trackWidth - (int)sub; j++)
+                    {
+                        bitmap.SetPixel((int)(centerX + (radius + j) * cos), (int)(centerY + (radius + j) * sin), clr);
+                    }
                 }
             }
         }
@@ -258,33 +261,51 @@ namespace V_Max_Tool
             int sb = 0;
             int skip = tracks > 42 ? 2 : 1;
             float div = (c == 0 || trackFormat == 4) ? 1.0f : 1.7f;
-            bool v2 = false, v5 = false; //, rl = false;
+            bool v2 = false, v5 = false;
+
+            // Cache colors and pens if possible
             Pen pen = new Pen(Color.Empty, 1);
-            // Create graphics object once
+
+            // Precompute commonly used values
+            int segmentYOffset = track * segmentHeight;
+            int xOffset = 32;
+
+            // Use graphics object once
             using (var graphics = Graphics.FromImage(bmp))
             {
                 for (int i = 0; i < trackData.Length; i++)
                 {
                     byte data = trackData[i];
-                    if (trackFormat == 6 && data == 0x7b) sb++; else sb = 0;
+
+                    if (trackFormat == 6 && data == 0x7b) sb++;
+                    else sb = 0;
+
                     bool inDensityRange = i <= density[densityIndex];
                     bool inMargins = i > start && i < end;
 
                     // Use the Get_Color method to determine the color
                     (Color color, bool newV2, bool newV5) = Get_Color(data, v2info, track * skip, i, densityIndex, trackFormat, v2, v5, sb, true);
+
+                    // Apply division modifier outside the loop if possible or cache results
                     pen.Color = ApplyDivisionModifier(color, div);
                     v2 = newV2;
                     v5 = newV5;
 
                     // Draw the line segment
-                    int x1 = i + 32, y1 = track * segmentHeight, x2 = i + 32, y2 = trackHeight + track * segmentHeight;
+                    int x1 = i + xOffset, y1 = segmentYOffset, x2 = i + xOffset, y2 = trackHeight + segmentYOffset;
                     graphics.DrawLine(pen, x1, y1, x2, y2);
                 }
-                Add_Text(bmp, $"{track + 1}", Color.FromArgb(0, 40, 40, 40), trk_brush[c], new Font("Ariel", 11), 0, -5 + (track * 13), 60, 17 * track);
+
+                // Cache Font and Brush objects
+                Font font = new Font("Ariel", 11);
+                Brush brush = trk_brush[c];
+
+                // Use the precomputed values for Add_Text method
+                Add_Text(bmp, $"{track + 1}", Color.FromArgb(0, 40, 40, 40), brush, font, 0, -5 + (track * 13), 60, 17 * track);
             }
+
             return bmp;
         }
-
 
         private (Color, bool, bool) Get_Color(byte d, byte[] v2info, int track, int position, int density, int trackFmt, bool v2, bool v5, int sb, bool flat = false)
         {
@@ -295,7 +316,7 @@ namespace V_Max_Tool
                 int sub = (d == 0) ? 0 : (d == 255) ? 510 : 255;
                 switch (trackFmt)
                 {
-                    case 0: col = Color.FromArgb(dd, dd, dd); break;
+                    case 0: col = col = Color.FromArgb((dd * 100) >> 6, (dd * 85) >> 6, (dd * 127) >> 6); break;
                     case 1: col = Color.FromArgb(d, d / 3, d); break;
                     case 4: col = Color.FromArgb(dd, dd, d); break;
                     case 5: col = Color.FromArgb(0, dd, dd); break;
@@ -455,11 +476,12 @@ namespace V_Max_Tool
             catch { }
         }
 
-        private void Draw_Disk(FastBitmap d, int m, int size, string file_name, string bg_text)
+        private void Draw_Disk(FastBitmap d, int m, int size, string file_name, string bg_text = "")
         {
             using (var g = Graphics.FromImage(d.Bitmap))
             {
-                var fontSmall = new Font("Ariel", 7.4f * m);
+                //var fontSmall = new Font("Ariel", 7.4f * m);
+                var fontSmall = new Font("Ariel", 9.4f * m);
                 var fontLarge = new Font("Arial", (float)(11.6 * m), FontStyle.Regular);
                 var fontVeryLarge = new Font("Arial", (float)(16 * m), FontStyle.Regular);
 
@@ -485,24 +507,32 @@ namespace V_Max_Tool
 
                 DrawCurvedText(g, file_name, new Point((int)(500 * m), (int)(500 * m)), 128.34f * m, 0f, fontLarge, whiteBrush, false);
                 DrawCurvedText(g, "\u2192 noitatoR", new Point((int)(513 * m), (int)(503 * m)), 181.67f * m, 1.45f, fontVeryLarge, yellowBrush, true);
-
+                int clm = -16;
                 if (vm_reverse)
                 {
-                    Add_Text(d.Bitmap, "CBM", Color.FromArgb(0, 40, 40, 40), cbm_brush, new Font("Ariel", 11 * m), 1 * m, 1 * m, 60 * m, 17 * m);
+                    Add_Text(d.Bitmap, "CBM", Color.FromArgb(0, 40, 40, 40), cbm_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 60 * m, 17 * m);
                     if (NDS.cbm.Any(s => s == 2 || s == 3))
                     {
-                        Add_Text(d.Bitmap, "Loader", Color.FromArgb(0, 40, 40, 40), ldr_brush, new Font("Ariel", 11 * m), 1 * m, 18 * m, 60 * m, 17 * m);
-                        Add_Text(d.Bitmap, "V-Max!", Color.FromArgb(0, 40, 40, 40), vmx_brush, new Font("Ariel", 11 * m), 1 * m, 35 * m, 60 * m, 17 * m);
+                        //Add_Text(d.Bitmap, "Loader", Color.FromArgb(0, 40, 40, 40), ldr_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 60 * m, 17 * m);
+                        Add_Text(d.Bitmap, "V-Max!", Color.FromArgb(0, 40, 40, 40), vmx_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 60 * m, 17 * m);
+                    }
+                    if (NDS.cbm.Any(s => s == 4))
+                    {
+                        Add_Text(d.Bitmap, "Loader", Color.FromArgb(0, 40, 40, 40), ldr_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 60 * m, 17 * m);
                     }
                     if (NDS.cbm.Any(s => s == 5))
                     {
-                        Add_Text(d.Bitmap, "Vorpal", Color.FromArgb(0, 40, 40, 40), vpl_brush, new Font("Ariel", 11 * m), 1 * m, 18 * m, 60 * m, 17 * m);
+                        Add_Text(d.Bitmap, "Vorpal", Color.FromArgb(0, 40, 40, 40), vpl_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 60 * m, 17 * m);
                     }
                     if (NDS.cbm.Any(s => s == 6) || NDS.cbm.Any(s => s == 10))
                     {
                         string result = (NDS.cbm.Any(s => s == 6)) ? "Rapidlok" : "MicroProse";
-                        Add_Text(d.Bitmap, result, Color.FromArgb(0, 40, 40, 40), rpl_brush, new Font("Ariel", 11 * m), 1 * m, 18 * m, 80 * m, 17 * m);
-                        if (NDS.cbm.Any(s => s == 6)) Add_Text(d.Bitmap, "Key", Color.FromArgb(0, 40, 40, 40), key_brush, new Font("Ariel", 11 * m), 1 * m, 35 * m, 80 * m, 17 * m);
+                        Add_Text(d.Bitmap, result, Color.FromArgb(0, 40, 40, 40), rpl_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 80 * m, 17 * m);
+                        if (NDS.cbm.Any(s => s == 6)) Add_Text(d.Bitmap, "Key", Color.FromArgb(0, 40, 40, 40), key_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 80 * m, 17 * m);
+                    }
+                    if (NDS.cbm.Any(s => s == 0))
+                    {
+                        Add_Text(d.Bitmap, "Non-DOS", Color.FromArgb(0, 40, 40, 40), nds_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 80 * m, 17 * m);
                     }
                 }
             }

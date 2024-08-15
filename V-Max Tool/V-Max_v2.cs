@@ -62,11 +62,7 @@ namespace V_Max_Tool
                 busy = true;
                 f_load.Checked = V2_Auto_Adj.Checked;
                 busy = e;
-                out_track.Items.Clear();
-                out_size.Items.Clear();
-                out_dif.Items.Clear();
-                Out_density.Items.Clear();
-                out_rpm.Items.Clear();
+                Clear_Out_Items();
                 Process_Nib_Data(c, false, p, true); /// false flag instructs the routine NOT to process CBM tracks again
             }
         }

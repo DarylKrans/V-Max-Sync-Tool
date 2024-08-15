@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -144,30 +145,29 @@ namespace V_Max_Tool
 
         byte[] JvB(byte[] data)
         {
-            bool nul = false;
-            int end = 0, pos, start = 0;
             byte[] temp = FastArray.Init(density[3], 0x00);
-            BitArray src = new BitArray(Flip_Endian(data));
-            (nul, pos) = Find_Sector(src, 0);
-            if (nul)
+            int run = 0;
+            int longest = 0;
+            int pos = 0;
+            for (int i = 0; i < data.Length; i++)
             {
-                end = pos;
-                if (data[pos] != 0xff)
+                if (!blank.Any((x) => x == data[i])) run++;
+                else
                 {
-                    start = 5;
-                    for (int i = 0; i < 5; i++) temp[i] = 0xff;
+                    if (run > longest)
+                    {
+                        longest = run;
+                        pos = i - run;
+                    }
+                    run = 0;
                 }
-                while (end < data.Length)
-                {
-                    if (blank.Any(x => x == data[end])) break;
-                    end++;
-                }
-                Buffer.BlockCopy(data, pos, temp, start, end - pos);
             }
+            Buffer.BlockCopy(data, pos, temp, 0, longest);
             return temp;
         }
 
-        bool Check_Cyan_Loader(bool patch = false)
+        //bool Check_Cyan_Loader(bool patch = false)
+        (bool, int) Check_Cyan_Loader(bool patch = false)
         {
             bool cyan = false;
             int c_cyn = 8;
@@ -175,40 +175,45 @@ namespace V_Max_Tool
             int c_v1 = 78;
             int w_trk = 76;
             bool cpt = false;
-            if (tracks < 43) { c_cyn = 4; c_gcr = 31; c_v1 = 39; w_trk = 38; }
-            if (NDS.cbm[c_cyn] == 1) cyan = Find_Cyan_Sector(NDS.Track_Data[c_cyn]);
-            if (cyan && !patch)
+            try
             {
-                NDS.Prot_Method = "Protection: Cyan Loader";
-                if (NDS.cbm[c_v1] != 1) (NDS.Track_Data[c_gcr], cpt) = Cyan_t32_GCR_Fix(NDS.Track_Data[c_gcr]);
-                if (NDS.cbm[w_trk] == 1 && NDS.Track_ID[w_trk] == 40)
+                if (tracks < 43) { c_cyn = 4; c_gcr = 31; c_v1 = 39; w_trk = 38; }
+                if (NDS.cbm[c_cyn] == 1) cyan = Find_Cyan_Sector(NDS.Track_Data[c_cyn]);
+                if (cyan && !patch)
                 {
-                    NDS.cbm[c_v1] = 1;
-                    NDS.Track_Data[c_v1] = NDS.Track_Data[w_trk];
-                    NDS.Track_ID[c_v1] = NDS.Track_ID[w_trk];
-                    NDS.Track_Length[c_v1] = NDS.Track_Length[w_trk];
-                    NDS.Track_Data[w_trk] = FastArray.Init(8192, 0x00);
-                    NDS.Track_ID[w_trk] = 0;
-                    NDS.cbm[w_trk] = 0;
-                    NDS.Track_Length[w_trk] = 0;
-                }
-                else if ((((NDS.cbm[c_v1] == 1 && NDS.Track_ID[c_v1] != 40) || NDS.cbm[c_v1] != 1) && !cpt) || (NDS.cbm[c_v1] == 1 && NDS.sectors[c_v1] < 16))
-                {
-                    if (!batch)
+                    NDS.Prot_Method = "Protection: Cyan Loader";
+                    if (NDS.cbm[c_v1] != 1) (NDS.Track_Data[c_gcr], cpt) = Cyan_t32_GCR_Fix(NDS.Track_Data[c_gcr]);
+                    if (NDS.cbm[w_trk] == 1 && NDS.Track_ID[w_trk] == 40)
                     {
-                        using (Message_Center center = new Message_Center(this))
-                        {
-                            string t = "Cyan Loader detected!";
-                            string s = "Cyan Loader detected!\n\nProtected track is missing or corrupt\n\nWould you like to patch out the protection check?";
-                            DialogResult result = MessageBox.Show(s, t, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                            if (result == DialogResult.Yes) Remove_Protection();
-                        }
+                        NDS.cbm[c_v1] = 1;
+                        NDS.Track_Data[c_v1] = NDS.Track_Data[w_trk];
+                        NDS.Track_ID[c_v1] = NDS.Track_ID[w_trk];
+                        NDS.Track_Length[c_v1] = NDS.Track_Length[w_trk];
+                        NDS.Track_Data[w_trk] = FastArray.Init(8192, 0x00);
+                        NDS.Track_ID[w_trk] = 0;
+                        NDS.cbm[w_trk] = 0;
+                        NDS.Track_Length[w_trk] = 0;
                     }
-                    if (batch) Remove_Protection();
+                    else if ((((NDS.cbm[c_v1] == 1 && NDS.Track_ID[c_v1] != 40) || NDS.cbm[c_v1] != 1) && !cpt) || (NDS.cbm[c_v1] == 1 && NDS.sectors[c_v1] < 16))
+                    {
+                        if (!batch)
+                        {
+                            using (Message_Center center = new Message_Center(this))
+                            {
+                                string t = "Cyan Loader detected!";
+                                string s = "Cyan Loader detected!\n\nProtected track is missing or corrupt\n\nWould you like to patch out the protection check?";
+                                DialogResult result = MessageBox.Show(s, t, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                                if (result == DialogResult.Yes) Remove_Protection();
+                            }
+                        }
+                        if (batch) Remove_Protection();
+                    }
                 }
+                if (cyan && patch) Remove_Protection();
+                if (NDS.cbm[c_v1] == 1) c_gcr = -1;
             }
-            if (cyan && patch) Remove_Protection();
-            return cyan;
+            catch { }
+            return (cyan, c_gcr);
 
             void Remove_Protection()
             {
@@ -234,23 +239,6 @@ namespace V_Max_Tool
                 return false;
             }
 
-            (byte[], bool) Cyan_t32_GCR_Fix(byte[] data)
-            {
-                bool exists = false;
-                int pos = 0;
-                BitArray s = new BitArray(Flip_Endian(data));
-                (exists, pos) = Find_Sector(s, 1);
-                if (exists)
-                {
-                    byte[] new_sec = Encode_CBM_GCR(Create_Empty_Sector());
-                    byte[] padding = FastArray.Init(5, 0x55);
-                    new_sec[new_sec.Length - 1] = 0x00;
-                    new_sec[new_sec.Length - 2] = 0x00;
-                    data = Replace_CBM_Sector(data, 1, new_sec, padding);
-                }
-                return (data, exists);
-            }
-
             byte[] Cyan_Loader_Patch(byte[] data) /// <- removes track 32 bad GCR check (cracks the proteciton)
             {
                 byte[] cmp;
@@ -269,6 +257,52 @@ namespace V_Max_Tool
                 }
                 return data;
             }
+        }
+
+        (byte[], bool) Cyan_t32_GCR_Fix(byte[] data)
+        {
+            bool exists = false;
+            int pos = 0;
+            BitArray s = new BitArray(Flip_Endian(data));
+            (exists, pos) = Find_Sector(s, 1, 0, true);
+            if (exists)
+            {
+                ////Invoke(new Action(()=> Text = $"{Hex_Val(Bit2Byte(s, pos, 80))}"));
+                int snc = 0;
+                for (int i = pos; i < s.Count; i++)
+                {
+                    if (s[i]) snc++;
+                    else
+                    {
+                        if (snc > 24)
+                        {
+                            pos = i + (325 * 8);
+                            bool brk = false;
+                            while (!brk)
+                            {
+                                byte[] f = Bit2Byte(s, pos, 8);
+                                if (f[0] == 0xff) brk = true;
+                                else
+                                {
+                                    s[pos] = false;
+                                    pos++;
+                                }
+                            }
+                            break;
+                        }
+                        snc = 0;
+                    }
+                }
+                data = Bit2Byte(s);
+                /// Old method -------------------------------------------------- ///
+                //byte[] new_sec = Encode_CBM_GCR(Create_Empty_Sector());
+                //byte[] padding = FastArray.Init(8, 0x00);
+                //new_sec[new_sec.Length - 1] = 0x00;
+                //new_sec[new_sec.Length - 2] = 0x00;
+                //data = Replace_CBM_Sector(data, 1, new_sec, padding);
+                /// ------------------------------------------------------------- ///
+            }
+            return (data, exists);
         }
 
         byte[] Securispeed(byte[] data)
@@ -384,6 +418,141 @@ namespace V_Max_Tool
                 }
                 if (snc > 108 && snc < 123) return 116;
                 return 128;
+            }
+        }
+
+        byte[] Custom_Format(byte[] data)
+        {
+            byte[] skip = new byte[] { 0x55, 0xaa };
+            HashSet<byte> BlankSet = new HashSet<byte>(blank);
+            HashSet<byte> Padding = new HashSet<byte>(skip);
+            int nb = 0;
+            int pad = 0;
+            int dataLength = data.Length;
+
+            for (int i = 0; i < dataLength; i++)
+            {
+                if (!BlankSet.Contains(data[i])) nb++;
+                if (data[i] == 0x55 || data[i] == 0xaa) pad++;
+            }
+            if (pad > density[0] - 100) return new byte[0];
+
+            if (nb > 6200)
+            {
+                const int clen = 64;
+                int d_end = dataLength;
+                byte[] compare = new byte[clen];
+                Buffer.BlockCopy(data, dataLength - clen, compare, 0, clen);
+
+                for (int i = 0; i < dataLength - clen; i++)
+                {
+                    if (Match(data, compare, i, clen))
+                    {
+                        int newLength = d_end - (i + clen);
+                        if (newLength > 6000)
+                        {
+                            byte[] temp = new byte[newLength];
+                            Buffer.BlockCopy(data, i + clen, temp, 0, newLength);
+
+                            int snc = 0;
+                            for (int j = 0; j < newLength; j++)
+                            {
+                                if (temp[j] == 0xff) snc++;
+                                else
+                                {
+                                    if (snc > 3)
+                                    {
+                                        temp = Rotate_Left(temp, j - snc);
+                                        break;
+                                    }
+                                    snc = 0;
+                                }
+                            }
+                            return temp;
+                        }
+                        else
+                        {
+                            byte[] temp = new byte[density[3]];
+                            int start = (8192 - density[3]) / 2;
+                            Buffer.BlockCopy(data, start, temp, 0, density[3]);
+
+                            byte g = 0;
+                            int run = 0;
+                            for (int j = 0; j < temp.Length; j++)
+                            {
+                                if (temp[j] == g) run++;
+                                else
+                                {
+                                    g = temp[j];
+                                    if (run > 300)
+                                    {
+                                        temp[j] = 0x00;
+                                        break;
+                                    }
+                                    run = 0;
+                                }
+                            }
+                            if (Check_Valid_Data(temp, true) < 500) return new byte[0];
+                            return temp;
+                        }
+                    }
+                }
+            }
+
+            if (nb > 500)
+            {
+                //int bd = 0;
+                int workLength = data.Length;
+                int snc = 0;
+                int spos = 0;
+                for (int i = 0; i < workLength; i++)
+                {
+                    if (data[i] == 0xff) snc++;
+                    else
+                    {
+                        if (snc > 4)
+                        {
+                            spos = i - snc;
+                            break;
+                        }
+                        snc = 0;
+                    }
+                }
+                if (spos > 0) data = Rotate_Left(data, spos);
+
+                int actual_data = (Check_Valid_Data(data, true));
+                byte[] temp = new byte[Check_Valid_Data(data, false, true) < 1000 ? density[2] : density[3]];
+                Buffer.BlockCopy(data, 0, temp, 0, temp.Length);
+                if (actual_data > 500) temp = Remove_Weak_Bits(temp, true);
+                return temp;
+            }
+            return data;
+
+            bool Match(byte[] source, byte[] compare, int startIndex, int length)
+            {
+                for (int j = 0; j < length; j++)
+                {
+                    if (source[startIndex + j] != compare[j]) return false;
+                }
+                return true;
+            }
+
+            int Check_Valid_Data(byte[] array, bool include_Padding = false, bool only_blank = false)
+            {
+                int ad = 0;
+                int bd = 0;
+                for (int j = 0; j < array.Length; j++)
+                {
+                    if (BlankSet.Contains(array[j])) bd++;
+                    else ad++;
+                    if (include_Padding)
+                    {
+                        if (Padding.Contains(array[j])) bd++;
+                        else ad++;
+                    }
+                }
+                if (only_blank) return bd;
+                return ad;
             }
         }
     }

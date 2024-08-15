@@ -38,9 +38,6 @@
             this.V2_Auto_Adj = new System.Windows.Forms.CheckBox();
             this.Tabs = new System.Windows.Forms.TabControl();
             this.Main = new System.Windows.Forms.TabPage();
-            this.Import_File = new V_Max_Tool.Gbox();
-            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
-            this.label5 = new System.Windows.Forms.Label();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.Other_opts = new System.Windows.Forms.Panel();
             this.Adj_cbm = new System.Windows.Forms.CheckBox();
@@ -85,17 +82,17 @@
             this.D_Bug = new System.Windows.Forms.TabPage();
             this.DB_core_override = new System.Windows.Forms.CheckBox();
             this.DB_cores = new System.Windows.Forms.NumericUpDown();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.CBD_box = new System.Windows.Forms.GroupBox();
             this.BD_id = new System.Windows.Forms.TextBox();
             this.label12 = new System.Windows.Forms.Label();
             this.BD_name = new System.Windows.Forms.TextBox();
             this.label11 = new System.Windows.Forms.Label();
             this.label10 = new System.Windows.Forms.Label();
             this.BD_tracks = new System.Windows.Forms.NumericUpDown();
-            this.Debug_Button = new System.Windows.Forms.Button();
+            this.Create_Blank = new System.Windows.Forms.Button();
             this.DB_force = new System.Windows.Forms.CheckBox();
             this.DB_g64 = new System.Windows.Forms.CheckBox();
-            this.DB_vpl = new System.Windows.Forms.CheckBox();
+            this.CPP_tog = new System.Windows.Forms.CheckBox();
             this.DB_timers = new System.Windows.Forms.CheckBox();
             this.Adv_ctrl = new System.Windows.Forms.TabControl();
             this.tabPage2 = new System.Windows.Forms.TabPage();
@@ -157,13 +154,14 @@
             this.Dir_screen = new System.Windows.Forms.RichTextBox();
             this.Save_Dialog = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.Batch_List_Box = new System.Windows.Forms.ListBox();
             this.Batch_Box = new System.Windows.Forms.GroupBox();
             this.label9 = new System.Windows.Forms.Label();
             this.B_cancel = new System.Windows.Forms.Button();
             this.Batch_Bar = new System.Windows.Forms.ProgressBar();
             this.label8 = new System.Windows.Forms.Label();
+            this.Batch_List_Box = new System.Windows.Forms.ListBox();
             this.Drag_pic = new System.Windows.Forms.PictureBox();
+            this.out_weak = new System.Windows.Forms.ListBox();
             this.Out_density = new System.Windows.Forms.ListBox();
             this.out_rpm = new System.Windows.Forms.ListBox();
             this.sd = new System.Windows.Forms.ListBox();
@@ -176,10 +174,12 @@
             this.sl = new System.Windows.Forms.ListBox();
             this.ss = new System.Windows.Forms.ListBox();
             this.sf = new System.Windows.Forms.ListBox();
+            this.Import_File = new V_Max_Tool.Gbox();
+            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
+            this.label5 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.V2_hlen)).BeginInit();
             this.Tabs.SuspendLayout();
             this.Main.SuspendLayout();
-            this.Import_File.SuspendLayout();
             this.Other_opts.SuspendLayout();
             this.VBS_info.SuspendLayout();
             this.Reg_info.SuspendLayout();
@@ -194,7 +194,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.Lead_In)).BeginInit();
             this.D_Bug.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.DB_cores)).BeginInit();
-            this.groupBox2.SuspendLayout();
+            this.CBD_box.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.BD_tracks)).BeginInit();
             this.Adv_ctrl.SuspendLayout();
             this.tabPage2.SuspendLayout();
@@ -214,6 +214,7 @@
             this.panel1.SuspendLayout();
             this.Batch_Box.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).BeginInit();
+            this.Import_File.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -319,7 +320,7 @@
             this.Tabs.Location = new System.Drawing.Point(12, 10);
             this.Tabs.Name = "Tabs";
             this.Tabs.SelectedIndex = 0;
-            this.Tabs.Size = new System.Drawing.Size(918, 226);
+            this.Tabs.Size = new System.Drawing.Size(1040, 226);
             this.Tabs.TabIndex = 35;
             // 
             // Main
@@ -337,46 +338,14 @@
             this.Main.Location = new System.Drawing.Point(4, 37);
             this.Main.Name = "Main";
             this.Main.Padding = new System.Windows.Forms.Padding(3);
-            this.Main.Size = new System.Drawing.Size(910, 185);
+            this.Main.Size = new System.Drawing.Size(1032, 185);
             this.Main.TabIndex = 0;
             this.Main.Text = "File Info";
-            // 
-            // Import_File
-            // 
-            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
-            this.Import_File.BorderColor = System.Drawing.Color.Black;
-            this.Import_File.Controls.Add(this.Import_Progress_Bar);
-            this.Import_File.Controls.Add(this.label5);
-            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(19, 56);
-            this.Import_File.Name = "Import_File";
-            this.Import_File.Size = new System.Drawing.Size(863, 108);
-            this.Import_File.TabIndex = 59;
-            this.Import_File.TabStop = false;
-            this.Import_File.Text = "Parsing Image Data";
-            // 
-            // Import_Progress_Bar
-            // 
-            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
-            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
-            this.Import_Progress_Bar.Size = new System.Drawing.Size(845, 28);
-            this.Import_Progress_Bar.TabIndex = 39;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(6, 68);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(137, 25);
-            this.label5.TabIndex = 38;
-            this.label5.Text = "Processing...";
             // 
             // linkLabel1
             // 
             this.linkLabel1.AutoSize = true;
-            this.linkLabel1.Location = new System.Drawing.Point(304, 3);
+            this.linkLabel1.Location = new System.Drawing.Point(451, 3);
             this.linkLabel1.Name = "linkLabel1";
             this.linkLabel1.Size = new System.Drawing.Size(231, 25);
             this.linkLabel1.TabIndex = 61;
@@ -387,7 +356,7 @@
             // 
             this.Other_opts.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.Other_opts.Controls.Add(this.Adj_cbm);
-            this.Other_opts.Location = new System.Drawing.Point(617, 61);
+            this.Other_opts.Location = new System.Drawing.Point(746, 61);
             this.Other_opts.Name = "Other_opts";
             this.Other_opts.Size = new System.Drawing.Size(261, 97);
             this.Other_opts.TabIndex = 60;
@@ -412,7 +381,7 @@
             this.VBS_info.Controls.Add(this.f_load);
             this.VBS_info.Location = new System.Drawing.Point(320, 61);
             this.VBS_info.Name = "VBS_info";
-            this.VBS_info.Size = new System.Drawing.Size(291, 97);
+            this.VBS_info.Size = new System.Drawing.Size(420, 97);
             this.VBS_info.TabIndex = 22;
             // 
             // RL_Fix
@@ -485,7 +454,7 @@
             // Save_Disk
             // 
             this.Save_Disk.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.Save_Disk.Location = new System.Drawing.Point(796, 6);
+            this.Save_Disk.Location = new System.Drawing.Point(917, 6);
             this.Save_Disk.Name = "Save_Disk";
             this.Save_Disk.Size = new System.Drawing.Size(104, 43);
             this.Save_Disk.TabIndex = 59;
@@ -511,7 +480,7 @@
             this.Adv_V2_Opts.Location = new System.Drawing.Point(4, 37);
             this.Adv_V2_Opts.Name = "Adv_V2_Opts";
             this.Adv_V2_Opts.Padding = new System.Windows.Forms.Padding(3);
-            this.Adv_V2_Opts.Size = new System.Drawing.Size(910, 185);
+            this.Adv_V2_Opts.Size = new System.Drawing.Size(1032, 185);
             this.Adv_V2_Opts.TabIndex = 1;
             this.Adv_V2_Opts.Text = "V-Max v2 Advanced";
             // 
@@ -519,7 +488,7 @@
             // 
             this.label13.AutoSize = true;
             this.label13.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.125F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label13.Location = new System.Drawing.Point(433, 136);
+            this.label13.Location = new System.Drawing.Point(554, 136);
             this.label13.Name = "label13";
             this.label13.Size = new System.Drawing.Size(406, 24);
             this.label13.TabIndex = 64;
@@ -528,7 +497,7 @@
             // V2_swap_headers
             // 
             this.V2_swap_headers.AutoSize = true;
-            this.V2_swap_headers.Location = new System.Drawing.Point(451, 96);
+            this.V2_swap_headers.Location = new System.Drawing.Point(572, 96);
             this.V2_swap_headers.Name = "V2_swap_headers";
             this.V2_swap_headers.Size = new System.Drawing.Size(184, 29);
             this.V2_swap_headers.TabIndex = 63;
@@ -540,7 +509,7 @@
             // 
             this.V2_swap.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.V2_swap.FormattingEnabled = true;
-            this.V2_swap.Location = new System.Drawing.Point(659, 92);
+            this.V2_swap.Location = new System.Drawing.Point(780, 92);
             this.V2_swap.Name = "V2_swap";
             this.V2_swap.Size = new System.Drawing.Size(227, 33);
             this.V2_swap.TabIndex = 62;
@@ -549,7 +518,7 @@
             // V2_export
             // 
             this.V2_export.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.V2_export.Location = new System.Drawing.Point(796, 7);
+            this.V2_export.Location = new System.Drawing.Point(917, 7);
             this.V2_export.Name = "V2_export";
             this.V2_export.Size = new System.Drawing.Size(104, 43);
             this.V2_export.TabIndex = 60;
@@ -600,14 +569,14 @@
             this.Adv_V3_Opts.Location = new System.Drawing.Point(4, 37);
             this.Adv_V3_Opts.Name = "Adv_V3_Opts";
             this.Adv_V3_Opts.Padding = new System.Windows.Forms.Padding(3);
-            this.Adv_V3_Opts.Size = new System.Drawing.Size(910, 185);
+            this.Adv_V3_Opts.Size = new System.Drawing.Size(1032, 185);
             this.Adv_V3_Opts.TabIndex = 2;
             this.Adv_V3_Opts.Text = "V-Max v3 Advanced";
             // 
             // V3_Export
             // 
             this.V3_Export.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.V3_Export.Location = new System.Drawing.Point(796, 7);
+            this.V3_Export.Location = new System.Drawing.Point(917, 7);
             this.V3_Export.Name = "V3_Export";
             this.V3_Export.Size = new System.Drawing.Size(104, 43);
             this.V3_Export.TabIndex = 60;
@@ -699,14 +668,14 @@
             this.Vpl_adv.Location = new System.Drawing.Point(4, 37);
             this.Vpl_adv.Name = "Vpl_adv";
             this.Vpl_adv.Padding = new System.Windows.Forms.Padding(3);
-            this.Vpl_adv.Size = new System.Drawing.Size(910, 185);
+            this.Vpl_adv.Size = new System.Drawing.Size(1032, 185);
             this.Vpl_adv.TabIndex = 3;
             this.Vpl_adv.Text = "Vorpal Advanced";
             // 
             // VPL_presync
             // 
             this.VPL_presync.AutoSize = true;
-            this.VPL_presync.Location = new System.Drawing.Point(399, 9);
+            this.VPL_presync.Location = new System.Drawing.Point(520, 9);
             this.VPL_presync.Name = "VPL_presync";
             this.VPL_presync.Size = new System.Drawing.Size(331, 29);
             this.VPL_presync.TabIndex = 73;
@@ -716,7 +685,7 @@
             // 
             // VD3
             // 
-            this.VD3.Location = new System.Drawing.Point(777, 125);
+            this.VD3.Location = new System.Drawing.Point(898, 127);
             this.VD3.Maximum = new decimal(new int[] {
             6350,
             0,
@@ -739,7 +708,7 @@
             // 
             // VD2
             // 
-            this.VD2.Location = new System.Drawing.Point(651, 125);
+            this.VD2.Location = new System.Drawing.Point(772, 127);
             this.VD2.Maximum = new decimal(new int[] {
             6700,
             0,
@@ -762,7 +731,7 @@
             // 
             // VD1
             // 
-            this.VD1.Location = new System.Drawing.Point(525, 125);
+            this.VD1.Location = new System.Drawing.Point(646, 127);
             this.VD1.Maximum = new decimal(new int[] {
             7200,
             0,
@@ -785,7 +754,7 @@
             // 
             // VD0
             // 
-            this.VD0.Location = new System.Drawing.Point(399, 125);
+            this.VD0.Location = new System.Drawing.Point(520, 127);
             this.VD0.Maximum = new decimal(new int[] {
             7900,
             0,
@@ -810,7 +779,7 @@
             // 
             this.Lead_ptn.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.Lead_ptn.FormattingEnabled = true;
-            this.Lead_ptn.Location = new System.Drawing.Point(675, 77);
+            this.Lead_ptn.Location = new System.Drawing.Point(796, 79);
             this.Lead_ptn.Name = "Lead_ptn";
             this.Lead_ptn.Size = new System.Drawing.Size(194, 33);
             this.Lead_ptn.TabIndex = 68;
@@ -819,7 +788,7 @@
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(475, 81);
+            this.label7.Location = new System.Drawing.Point(596, 83);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(199, 25);
             this.label7.TabIndex = 67;
@@ -895,7 +864,7 @@
             // VP_Export
             // 
             this.VP_Export.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.VP_Export.Location = new System.Drawing.Point(797, 7);
+            this.VP_Export.Location = new System.Drawing.Point(918, 9);
             this.VP_Export.Name = "VP_Export";
             this.VP_Export.Size = new System.Drawing.Size(104, 43);
             this.VP_Export.TabIndex = 61;
@@ -907,17 +876,17 @@
             // 
             this.D_Bug.Controls.Add(this.DB_core_override);
             this.D_Bug.Controls.Add(this.DB_cores);
-            this.D_Bug.Controls.Add(this.groupBox2);
+            this.D_Bug.Controls.Add(this.CBD_box);
             this.D_Bug.Controls.Add(this.DB_force);
             this.D_Bug.Controls.Add(this.DB_g64);
-            this.D_Bug.Controls.Add(this.DB_vpl);
+            this.D_Bug.Controls.Add(this.CPP_tog);
             this.D_Bug.Controls.Add(this.DB_timers);
             this.D_Bug.Location = new System.Drawing.Point(4, 37);
             this.D_Bug.Name = "D_Bug";
             this.D_Bug.Padding = new System.Windows.Forms.Padding(3);
-            this.D_Bug.Size = new System.Drawing.Size(910, 185);
+            this.D_Bug.Size = new System.Drawing.Size(1032, 185);
             this.D_Bug.TabIndex = 4;
-            this.D_Bug.Text = "Debugging";
+            this.D_Bug.Text = "Options";
             this.D_Bug.UseVisualStyleBackColor = true;
             // 
             // DB_core_override
@@ -954,21 +923,21 @@
             0});
             this.DB_cores.ValueChanged += new System.EventHandler(this.DB_cores_ValueChanged);
             // 
-            // groupBox2
+            // CBD_box
             // 
-            this.groupBox2.Controls.Add(this.BD_id);
-            this.groupBox2.Controls.Add(this.label12);
-            this.groupBox2.Controls.Add(this.BD_name);
-            this.groupBox2.Controls.Add(this.label11);
-            this.groupBox2.Controls.Add(this.label10);
-            this.groupBox2.Controls.Add(this.BD_tracks);
-            this.groupBox2.Controls.Add(this.Debug_Button);
-            this.groupBox2.Location = new System.Drawing.Point(629, 6);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(272, 167);
-            this.groupBox2.TabIndex = 40;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Create Blank Disk";
+            this.CBD_box.Controls.Add(this.BD_id);
+            this.CBD_box.Controls.Add(this.label12);
+            this.CBD_box.Controls.Add(this.BD_name);
+            this.CBD_box.Controls.Add(this.label11);
+            this.CBD_box.Controls.Add(this.label10);
+            this.CBD_box.Controls.Add(this.BD_tracks);
+            this.CBD_box.Controls.Add(this.Create_Blank);
+            this.CBD_box.Location = new System.Drawing.Point(754, 6);
+            this.CBD_box.Name = "CBD_box";
+            this.CBD_box.Size = new System.Drawing.Size(272, 167);
+            this.CBD_box.TabIndex = 40;
+            this.CBD_box.TabStop = false;
+            this.CBD_box.Text = "Create Blank Disk";
             // 
             // BD_id
             // 
@@ -1037,15 +1006,15 @@
             0,
             0});
             // 
-            // Debug_Button
+            // Create_Blank
             // 
-            this.Debug_Button.Location = new System.Drawing.Point(148, 104);
-            this.Debug_Button.Name = "Debug_Button";
-            this.Debug_Button.Size = new System.Drawing.Size(110, 40);
-            this.Debug_Button.TabIndex = 39;
-            this.Debug_Button.Text = "Create";
-            this.Debug_Button.UseVisualStyleBackColor = true;
-            this.Debug_Button.Click += new System.EventHandler(this.Debug_Button_Click);
+            this.Create_Blank.Location = new System.Drawing.Point(148, 104);
+            this.Create_Blank.Name = "Create_Blank";
+            this.Create_Blank.Size = new System.Drawing.Size(110, 40);
+            this.Create_Blank.TabIndex = 39;
+            this.Create_Blank.Text = "Create";
+            this.Create_Blank.UseVisualStyleBackColor = true;
+            this.Create_Blank.Click += new System.EventHandler(this.Debug_Button_Click);
             // 
             // DB_force
             // 
@@ -1067,16 +1036,16 @@
             this.DB_g64.Text = "Pad empty track-space in G64 output tracks";
             this.DB_g64.UseVisualStyleBackColor = true;
             // 
-            // DB_vpl
+            // CPP_tog
             // 
-            this.DB_vpl.AutoSize = true;
-            this.DB_vpl.Location = new System.Drawing.Point(15, 54);
-            this.DB_vpl.Name = "DB_vpl";
-            this.DB_vpl.Size = new System.Drawing.Size(562, 29);
-            this.DB_vpl.TabIndex = 1;
-            this.DB_vpl.Text = "Allow custom track-size adjustments in Vorpal Options";
-            this.DB_vpl.UseVisualStyleBackColor = true;
-            this.DB_vpl.CheckedChanged += new System.EventHandler(this.DB_vpl_CheckedChanged);
+            this.CPP_tog.AutoSize = true;
+            this.CPP_tog.Location = new System.Drawing.Point(15, 54);
+            this.CPP_tog.Name = "CPP_tog";
+            this.CPP_tog.Size = new System.Drawing.Size(565, 29);
+            this.CPP_tog.TabIndex = 1;
+            this.CPP_tog.Text = "Disable C++ Extensions. *Use if experiencing crashing";
+            this.CPP_tog.UseVisualStyleBackColor = true;
+            this.CPP_tog.CheckedChanged += new System.EventHandler(this.DB_vpl_CheckedChanged);
             // 
             // DB_timers
             // 
@@ -1095,7 +1064,7 @@
             this.Adv_ctrl.Controls.Add(this.tabPage1);
             this.Adv_ctrl.Controls.Add(this.Data_View);
             this.Adv_ctrl.Controls.Add(this.tabPage3);
-            this.Adv_ctrl.Location = new System.Drawing.Point(930, 10);
+            this.Adv_ctrl.Location = new System.Drawing.Point(1054, 10);
             this.Adv_ctrl.Name = "Adv_ctrl";
             this.Adv_ctrl.SelectedIndex = 0;
             this.Adv_ctrl.Size = new System.Drawing.Size(1153, 1348);
@@ -1613,9 +1582,9 @@
             this.groupBox3.Controls.Add(this.Dir_ChgType);
             this.groupBox3.Controls.Add(this.Dir_Cancel);
             this.groupBox3.Controls.Add(this.Dir_Apply);
-            this.groupBox3.Location = new System.Drawing.Point(6, 3);
+            this.groupBox3.Location = new System.Drawing.Point(3, 0);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(1136, 1289);
+            this.groupBox3.Size = new System.Drawing.Size(1136, 1301);
             this.groupBox3.TabIndex = 40;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Directory Editor";
@@ -1774,7 +1743,7 @@
             // 
             this.Dir_screen.CausesValidation = false;
             this.Dir_screen.Cursor = System.Windows.Forms.Cursors.Default;
-            this.Dir_screen.Font = new System.Drawing.Font("C64 Pro Mono", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Dir_screen.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Dir_screen.Location = new System.Drawing.Point(3, 0);
             this.Dir_screen.Name = "Dir_screen";
             this.Dir_screen.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
@@ -1789,6 +1758,7 @@
             this.panel1.Controls.Add(this.Batch_Box);
             this.panel1.Controls.Add(this.Batch_List_Box);
             this.panel1.Controls.Add(this.Drag_pic);
+            this.panel1.Controls.Add(this.out_weak);
             this.panel1.Controls.Add(this.Out_density);
             this.panel1.Controls.Add(this.out_rpm);
             this.panel1.Controls.Add(this.sd);
@@ -1803,19 +1773,8 @@
             this.panel1.Controls.Add(this.sf);
             this.panel1.Location = new System.Drawing.Point(21, 226);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(900, 1123);
+            this.panel1.Size = new System.Drawing.Size(1023, 1123);
             this.panel1.TabIndex = 37;
-            // 
-            // Batch_List_Box
-            // 
-            this.Batch_List_Box.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Batch_List_Box.FormattingEnabled = true;
-            this.Batch_List_Box.ItemHeight = 29;
-            this.Batch_List_Box.Location = new System.Drawing.Point(8, 150);
-            this.Batch_List_Box.Name = "Batch_List_Box";
-            this.Batch_List_Box.Size = new System.Drawing.Size(886, 961);
-            this.Batch_List_Box.TabIndex = 38;
-            this.Batch_List_Box.DoubleClick += new System.EventHandler(this.ListBox1_DoubleClick);
             // 
             // Batch_Box
             // 
@@ -1826,7 +1785,7 @@
             this.Batch_Box.Controls.Add(this.label8);
             this.Batch_Box.Location = new System.Drawing.Point(3, 3);
             this.Batch_Box.Name = "Batch_Box";
-            this.Batch_Box.Size = new System.Drawing.Size(892, 149);
+            this.Batch_Box.Size = new System.Drawing.Size(1019, 149);
             this.Batch_Box.TabIndex = 59;
             this.Batch_Box.TabStop = false;
             this.Batch_Box.Text = "Batch Processing";
@@ -1842,7 +1801,7 @@
             // 
             // B_cancel
             // 
-            this.B_cancel.Location = new System.Drawing.Point(698, 22);
+            this.B_cancel.Location = new System.Drawing.Point(896, 12);
             this.B_cancel.Name = "B_cancel";
             this.B_cancel.Size = new System.Drawing.Size(117, 41);
             this.B_cancel.TabIndex = 2;
@@ -1854,7 +1813,7 @@
             // 
             this.Batch_Bar.Location = new System.Drawing.Point(22, 102);
             this.Batch_Bar.Name = "Batch_Bar";
-            this.Batch_Bar.Size = new System.Drawing.Size(856, 27);
+            this.Batch_Bar.Size = new System.Drawing.Size(977, 27);
             this.Batch_Bar.TabIndex = 1;
             // 
             // label8
@@ -1866,17 +1825,40 @@
             this.label8.TabIndex = 0;
             this.label8.Text = "label8";
             // 
+            // Batch_List_Box
+            // 
+            this.Batch_List_Box.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Batch_List_Box.FormattingEnabled = true;
+            this.Batch_List_Box.ItemHeight = 29;
+            this.Batch_List_Box.Location = new System.Drawing.Point(8, 150);
+            this.Batch_List_Box.Name = "Batch_List_Box";
+            this.Batch_List_Box.Size = new System.Drawing.Size(1013, 961);
+            this.Batch_List_Box.TabIndex = 38;
+            this.Batch_List_Box.DoubleClick += new System.EventHandler(this.ListBox1_DoubleClick);
+            // 
             // Drag_pic
             // 
             this.Drag_pic.BackColor = System.Drawing.Color.Transparent;
             this.Drag_pic.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("Drag_pic.BackgroundImage")));
             this.Drag_pic.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this.Drag_pic.InitialImage = null;
-            this.Drag_pic.Location = new System.Drawing.Point(18, 28);
+            this.Drag_pic.Location = new System.Drawing.Point(10, 15);
             this.Drag_pic.Name = "Drag_pic";
-            this.Drag_pic.Size = new System.Drawing.Size(863, 1009);
+            this.Drag_pic.Size = new System.Drawing.Size(983, 1107);
             this.Drag_pic.TabIndex = 58;
             this.Drag_pic.TabStop = false;
+            // 
+            // out_weak
+            // 
+            this.out_weak.BackColor = System.Drawing.Color.Lavender;
+            this.out_weak.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.out_weak.FormattingEnabled = true;
+            this.out_weak.ItemHeight = 25;
+            this.out_weak.Location = new System.Drawing.Point(860, 28);
+            this.out_weak.Name = "out_weak";
+            this.out_weak.SelectionMode = System.Windows.Forms.SelectionMode.None;
+            this.out_weak.Size = new System.Drawing.Size(111, 1002);
+            this.out_weak.TabIndex = 55;
             // 
             // Out_density
             // 
@@ -2020,11 +2002,43 @@
             this.sf.Size = new System.Drawing.Size(115, 1002);
             this.sf.TabIndex = 26;
             // 
+            // Import_File
+            // 
+            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
+            this.Import_File.BorderColor = System.Drawing.Color.Black;
+            this.Import_File.Controls.Add(this.Import_Progress_Bar);
+            this.Import_File.Controls.Add(this.label5);
+            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
+            this.Import_File.Location = new System.Drawing.Point(16, 55);
+            this.Import_File.Name = "Import_File";
+            this.Import_File.Size = new System.Drawing.Size(1005, 108);
+            this.Import_File.TabIndex = 59;
+            this.Import_File.TabStop = false;
+            this.Import_File.Text = "Parsing Image Data";
+            // 
+            // Import_Progress_Bar
+            // 
+            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
+            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
+            this.Import_Progress_Bar.Size = new System.Drawing.Size(993, 28);
+            this.Import_Progress_Bar.TabIndex = 39;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Location = new System.Drawing.Point(6, 68);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(137, 25);
+            this.label5.TabIndex = 38;
+            this.label5.Text = "Processing...";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(2109, 1386);
+            this.ClientSize = new System.Drawing.Size(2299, 1386);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.Adv_ctrl);
             this.Controls.Add(this.Tabs);
@@ -2036,8 +2050,6 @@
             this.Tabs.ResumeLayout(false);
             this.Main.ResumeLayout(false);
             this.Main.PerformLayout();
-            this.Import_File.ResumeLayout(false);
-            this.Import_File.PerformLayout();
             this.Other_opts.ResumeLayout(false);
             this.Other_opts.PerformLayout();
             this.VBS_info.ResumeLayout(false);
@@ -2059,8 +2071,8 @@
             this.D_Bug.ResumeLayout(false);
             this.D_Bug.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.DB_cores)).EndInit();
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox2.PerformLayout();
+            this.CBD_box.ResumeLayout(false);
+            this.CBD_box.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.BD_tracks)).EndInit();
             this.Adv_ctrl.ResumeLayout(false);
             this.tabPage2.ResumeLayout(false);
@@ -2092,6 +2104,8 @@
             this.Batch_Box.ResumeLayout(false);
             this.Batch_Box.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).EndInit();
+            this.Import_File.ResumeLayout(false);
+            this.Import_File.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -2211,12 +2225,12 @@
         private System.Windows.Forms.ProgressBar Batch_Bar;
         private System.Windows.Forms.ListBox Batch_List_Box;
         private System.Windows.Forms.TabPage D_Bug;
-        private System.Windows.Forms.CheckBox DB_vpl;
+        private System.Windows.Forms.CheckBox CPP_tog;
         private System.Windows.Forms.CheckBox DB_timers;
         private System.Windows.Forms.CheckBox DB_g64;
         private System.Windows.Forms.CheckBox DB_force;
-        private System.Windows.Forms.Button Debug_Button;
-        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.Button Create_Blank;
+        private System.Windows.Forms.GroupBox CBD_box;
         private System.Windows.Forms.TextBox BD_name;
         private System.Windows.Forms.Label label11;
         private System.Windows.Forms.Label label10;
@@ -2244,5 +2258,6 @@
         private System.Windows.Forms.LinkLabel Dir_Lock;
         private System.Windows.Forms.Label Dir_Info;
         private System.Windows.Forms.Label Dir_FStart;
+        private System.Windows.Forms.ListBox out_weak;
     }
 }

@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,6 +10,11 @@ using System.Windows.Forms.VisualStyles;
 
 namespace V_Max_Tool
 {
+    public static class DLL
+    {
+        //public static string path = Path.GetTempPath();
+        public static readonly string path = $@"{Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location)}\cpp_extf.dll".Replace(@"\\", @"\");
+    }
     public static class NDS  // Global variables for Nib file source data
     {
         public static byte[][] Track_Data = new byte[0][];
@@ -20,7 +24,6 @@ namespace V_Max_Tool
         public static int[] D_End = new int[0];
         public static int[] cbm = new int[0];
         public static int[] sectors = new int[0];
-        //public static int[][] sector_pos = new int[0][];
         public static int[] Header_Len = new int[0];
         public static int[][] cbm_sector = new int[0][];
         public static byte[][] v2info = new byte[0][];
@@ -30,6 +33,7 @@ namespace V_Max_Tool
         public static byte[] t18_ID = new byte[0];
         public static int[] Gap_Sector = new int[0];
         public static int[] Track_ID = new int[0];
+        public static bool[] Adjust = new bool[0];
         public static string Prot_Method = string.Empty;
     }
 
@@ -77,60 +81,18 @@ namespace V_Max_Tool
         public Color Color;
     };
 
-    public class TSA<T>
+    public class NativeMethods
     {
-        private readonly T[] array;
-        private readonly object lockObject = new object();
-
-        public TSA(int size)
-        {
-            array = new T[size];
-        }
-
-        public T this[int index]
-        {
-            get
-            {
-                lock (lockObject)
-                {
-                    return array[index];
-                }
-            }
-            set
-            {
-                lock (lockObject)
-                {
-                    array[index] = value;
-                }
-            }
-        }
-
-        public int Length
-        {
-            get
-            {
-                lock (lockObject)
-                {
-                    return array.Length;
-                }
-            }
-        }
-
-        public void CopyTo(T[] destinationArray, int destinationIndex)
-        {
-            lock (lockObject)
-            {
-                array.CopyTo(destinationArray, destinationIndex);
-            }
-        }
-
-        public T[] ToArray()
-        {
-            lock (lockObject)
-            {
-                return (T[])array.Clone();
-            }
-        }
+        [DllImport("cpp_extf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void Draw_Arc(IntPtr bitmap, int width, int height, int centerX, int centerY, int radius, int[] color, int colorLength, int track, int len, int trackWidth, double sub);
+        [DllImport("cpp_extf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int LZ_CompressFast(IntPtr input, IntPtr output, uint size);
+        [DllImport("cpp_extf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int LZ_Uncompress(IntPtr input, IntPtr output, uint size);
+        [DllImport("cpp_extf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int LZ_GetUncompressedSize(IntPtr input, uint size);
+        [DllImport("cpp_extf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int TestLoaded();
     }
 
     public class CustomCheckedListBox : CheckedListBox
@@ -404,6 +366,11 @@ namespace V_Max_Tool
             Bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppPArgb, BitsHandle.AddrOfPinnedObject());
         }
 
+        public IntPtr GetPixelPtr()
+        {
+            return BitsHandle.AddrOfPinnedObject();
+        }
+
         public void SetPixel(int x, int y, Color color)
         {
             int index = x + (y * Width);
@@ -473,7 +440,4 @@ namespace V_Max_Tool
             return temp;
         }
     }
-
-    
-    
 }

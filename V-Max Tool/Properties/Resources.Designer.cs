@@ -63,6 +63,26 @@ namespace ReMaster_Utility.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] C64_Pro_Mono_STYLE {
+            get {
+                object obj = ResourceManager.GetObject("C64_Pro_Mono_STYLE", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] cpp_extf {
+            get {
+                object obj = ResourceManager.GetObject("cpp_extf", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] cyan {
             get {
                 object obj = ResourceManager.GetObject("cyan", resourceCulture);

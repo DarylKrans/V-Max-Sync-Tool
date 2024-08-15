@@ -12,8 +12,8 @@ namespace V_Max_Tool
         void Export_File(int last_track = -1)
         {
             Save_Dialog.FileName = $"{fname}{fnappend}";
-            //Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib";
-            Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib|NBZ|*.nbz";
+            //Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib|NBZ|*.nbz";
+            Save_Dialog.Filter = "G64|*.g64|NIB|*.nib|Both|*.g64;*.nib|NBZ|*.nbz|Compressed G64 [only supported by ReMaster]|*.z64";
             Save_Dialog.Title = "Save File";
             if (Save_Dialog.ShowDialog() == DialogResult.OK)
             {
@@ -26,6 +26,7 @@ namespace V_Max_Tool
                     Make_G64($@"{Path.GetDirectoryName(fs)}\{Path.GetFileNameWithoutExtension(fs)}.g64", last_track);
                 }
                 if (Save_Dialog.FilterIndex == 4) Make_NIB(fs, true);
+                if (Save_Dialog.FilterIndex == 5) Make_G64(fs, last_track, true);
                 if (nib_error || g64_error)
                 {
                     string s = "";
@@ -65,11 +66,7 @@ namespace V_Max_Tool
             }
             try
             {
-                if (compress)
-                {
-                    byte[] compressed = LZfast(buffer.ToArray());
-                    File.WriteAllBytes(fname, compressed);
-                }
+                if (compress) File.WriteAllBytes(fname, LZcompress(buffer.ToArray()));
                 else File.WriteAllBytes(fname, buffer.ToArray());
             }
             catch (Exception ex)
@@ -81,7 +78,7 @@ namespace V_Max_Tool
             write.Close();
         }
 
-        void Make_G64(string fname, int l_trk)
+        void Make_G64(string fname, int l_trk, bool compress = false)
         {
             if (l_trk < 0) l_trk = tracks;
             if (!Directory.Exists(Path.GetDirectoryName(fname))) Directory.CreateDirectory(Path.GetDirectoryName(fname));
@@ -93,7 +90,8 @@ namespace V_Max_Tool
             byte[] head = Encoding.ASCII.GetBytes("GCR-1541");
             byte z = 0;
             List<int> len = new List<int>(0);
-            for (int i = 0; i < tracks; i++) if (NDS.cbm[i] > 0 && NDS.cbm[i] < secF.Length - 1) len.Add(NDG.Track_Length[i]);
+            //for (int i = 0; i < tracks; i++) if (NDS.cbm[i] > 0 && NDS.cbm[i] < secF.Length - 1) len.Add(NDG.Track_Length[i]);
+            for (int i = 0; i < tracks; i++) if (NDS.cbm[i] >= 0 && NDS.cbm[i] < secF.Length - 1) len.Add(NDG.Track_Length[i]);
             short m = Convert.ToInt16(len.Max());
             if (m < 7928) m = 7928;
             write.Write(head);
@@ -111,7 +109,8 @@ namespace V_Max_Tool
             write.Write(watermark);
             for (int i = 0; i < l_trk; i++)
             {
-                if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] > 0 && NDS.cbm[i] < secF.Length - 1)
+                //if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] > 0 && NDS.cbm[i] < secF.Length - 1)
+                if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] >= 0 && NDS.cbm[i] < secF.Length - 1)
                 {
                     write.Write((short)NDG.Track_Length[i]);
                     if (DB_g64.Checked)
@@ -131,7 +130,8 @@ namespace V_Max_Tool
             }
             try
             {
-                File.WriteAllBytes(fname, buffer.ToArray());
+                if (compress) File.WriteAllBytes(fname, LZcompress(buffer.ToArray()));
+                else File.WriteAllBytes(fname, buffer.ToArray());
             }
             catch (Exception ex)
             {

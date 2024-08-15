@@ -30,7 +30,7 @@
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -41,7 +41,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -74,10 +74,10 @@
     <Compile Include="CBM.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="LZ77.cs">
+    <Compile Include="Directory_Editor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Directory_Editor.cs">
+    <Compile Include="LZ77.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Misc_Protections.cs">
@@ -131,6 +131,8 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="Properties\C64_Pro_Mono-STYLE.ttf" />
+    <None Include="Properties\cpp_extf.bin" />
     <None Include="Properties\cyan.bin" />
     <None Include="Properties\msvcrt.bin" />
     <None Include="Properties\rak1.bin" />
@@ -154,6 +156,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Properties\DrawArc.dll" />
     <Content Include="tool.ico" />
   </ItemGroup>
   <ItemGroup>

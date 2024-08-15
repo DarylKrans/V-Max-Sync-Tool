@@ -16,23 +16,23 @@ namespace V_Max_Tool
         private readonly byte[,][] rl6_t18s6 = new byte[1, 2][];
         private readonly byte[,][] rl2_t18s9 = new byte[2, 2][];
         private readonly byte[,][] rl1_t18s9 = new byte[2, 2][];
-        private byte[] rl_nkey = new byte[54];
-        private int[] rl_7b = new int[35];
+        private readonly byte[] rl_nkey = new byte[54];
+        private readonly int[] rl_7b = new int[35];
 
 
         void RL_Remove_Protection()
         {
-            string rem;
             byte[] f = new byte[0];
             if (NDS.cbm.Any(x => x == 7) && RL_Fix.Checked)
             {
                 int track = 17;
                 if (tracks > 43) track = 34;
-                (NDS.Track_Data[track], rem) = Patch_RapidLok(NDS.Track_Data[track]);
+                (byte[] temp, string rem) = Patch_RapidLok(NDG.Track_Data[track], 0);
+                Set_Dest_Arrays(temp, track);
             }
         }
 
-        (byte[], string) Patch_RapidLok(byte[] data)
+        (byte[], string) Patch_RapidLok(byte[] data, int start)
         {
             string status = " [!]";
             string fixedStatus = " (Fixed)";
@@ -77,13 +77,13 @@ namespace V_Max_Tool
                 {
                     (sector, cksm) = Decode_CBM_Sector(data, 6, true, source, pos);
                     PatchSector(rl6_t18s6);
-                    data = Replace_CBM_Sector(data, 6, sector);
+                    data = Replace_CBM_Sector(data, 6, sector, null, start);
                 }
             }
 
             bool TryPatchSector(int sectorIndex, bool[] flags, bool decode, byte[,][] patterns, Action patchAction)
             {
-                (bool exist, int pos) = Find_Sector(source, sectorIndex);
+                (bool exist, int pos) = Find_Sector(source, sectorIndex, start);
                 if (!exist) return false;
 
                 (sector, cksm) = Decode_CBM_Sector(data, sectorIndex, decode, source, pos);
@@ -220,6 +220,7 @@ namespace V_Max_Tool
             }
             catch { }
             if (build) Rebuild_RapidLok_Track();
+            //File.WriteAllBytes($@"c:\test\track{track}", adata);
             a_headers.Add($"track length {adata.Length} start {d_start / 8} end {d_end / 8} pos {pos} {start_found} {end_found} dif {diff}");
             return (adata, d_start, d_end, d_end - d_start, sectors, rl_7b_len, a_headers.ToArray());
 

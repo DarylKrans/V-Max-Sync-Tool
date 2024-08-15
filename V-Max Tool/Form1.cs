@@ -13,16 +13,14 @@ namespace V_Max_Tool
     public partial class Form1 : Form
     {
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
-        private bool debug = false; // Shows function timers and other adjustment options
         private readonly bool Replace_RapidLok_Key = false;
-        private readonly string ver = " v0.9.98.6 (pre-release)";
+        private readonly string ver = " v1.0.0.1";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
         private readonly byte loader_padding = 0x55;
         private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        //private readonly int[] vpl_density = { 7800, 6950, 6580, 6250 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private bool error = false;
         private bool cancel = false;
         private bool busy = false;
@@ -31,7 +29,6 @@ namespace V_Max_Tool
         private bool batch = false;
         private string nib_err_msg;
         private string g64_err_msg;
-        //private string testfile = string.Empty;
         private byte[] rak1 = new byte[0];
         private byte[] cldr_id = new byte[0];
         private byte[] v2ldrcbm = new byte[0];
@@ -46,6 +43,7 @@ namespace V_Max_Tool
         private readonly ToolTip tips = new System.Windows.Forms.ToolTip();
         private List<string> LB_File_List = new List<string>();
         private Semaphore Task_Limit = new Semaphore(3, 3);
+        //private const int EIGHT_KB = 8192;
         Thread Worker_Main;
         Thread Worker_Alt;
         Thread[] Job;
@@ -84,133 +82,134 @@ namespace V_Max_Tool
             {
                 if (System.IO.File.Exists(File_List[0]))
                 {
-                    //fname = Path.GetFileNameWithoutExtension(File_List[0]);
                     fname = Path.GetFileNameWithoutExtension(File_List[0]).Replace("_ReMaster", "");
                     fext = Path.GetExtension(File_List[0]);
+                    Process_New_Image(File_List[0]);
                 }
-                Process_New_Image(File_List[0]);
             }
         }
 
         unsafe void Process_New_Image(string file)
         {
-            //testfile = Path.GetFileNameWithoutExtension(file); /// <-- for debugging
             Disable_Core_Controls(true);
             string l = "Not ok";
             try
             {
-                nib_header = new byte[0];
                 g64_header = new byte[684];
-                FileStream Stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                byte[] source = File.ReadAllBytes(file);
+                int length = source.Length;
                 if (fext.ToLower() == supported[0])
                 {
                     Data_Box.Clear();
-                    long length = new System.IO.FileInfo(file).Length;
-                    tracks = (int)(length - 256) / 8192;
-                    if ((tracks * 8192) + 256 == length) l = "File Size OK!";
+                    tracks = (int)(length - 256) >> 13;
+                    if ((tracks << 13) + 256 == length) l = "File Size OK!";
                     Track_Info.Items.Clear();
                     Set_ListBox_Items(true, false);
-                    nib_header = new byte[256];
-                    Stream.Seek(0, SeekOrigin.Begin);
-                    Stream.Read(nib_header, 0, 256);
+                    Buffer.BlockCopy(source, 0, nib_header, 0, 256);
                     Set_Arrays(tracks);
                     for (int i = 0; i < tracks; i++)
                     {
-                        NDS.Track_Data[i] = new byte[8192];
-                        Stream.Seek(256 + (8192 * i), SeekOrigin.Begin);
-                        Stream.Read(NDS.Track_Data[i], 0, 8192);
+                        NDS.Track_Data[i] = new byte[MAX_TRACK_SIZE];
+                        Buffer.BlockCopy(source, 256 + (MAX_TRACK_SIZE * i), NDS.Track_Data[i], 0, MAX_TRACK_SIZE);
                         Original.OT[i] = new byte[0];
                     }
-                    Stream.Close();
                     var head = Encoding.ASCII.GetString(nib_header, 0, 13);
                     var hm = "Bad Header";
                     if (head == "MNIB-1541-RAW") hm = "Header Match!";
                     var lab = $"Total Tracks ({tracks}), {l}, {hm}";
                     Process(true, lab);
                 }
-                if (fext.ToLower() == supported[1])
+                if (fext.ToLower() == supported[1] || fext.ToLower() == supported[4])
                 {
                     Data_Box.Clear();
                     Track_Info.Items.Clear();
                     Set_ListBox_Items(true, false);
-                    Stream.Seek(0, SeekOrigin.Begin);
-                    Stream.Read(g64_header, 0, 684);
-                    var head = Encoding.ASCII.GetString(g64_header, 0, 8);
-                    tracks = Convert.ToInt32(g64_header[9]);
-                    Set_Arrays(tracks);
-                    int tr_size = BitConverter.ToInt16(g64_header, 10);
-                    var hm = "Bad Header";
-                    if (head == "GCR-1541")
+                    byte[] decomp;
+                    if (fext.ToLower() == supported[4])
                     {
-                        hm = "Header Match!";
-                        byte[] temp = new byte[2];
-                        for (int i = 0; i < tracks; i++)
-                        {
-                            Original.OT[i] = new byte[0];
-                            int pos = BitConverter.ToInt32(g64_header, 12 + (i * 4));
-                            if (pos != 0)
-                            {
-                                Stream.Seek(pos, SeekOrigin.Begin);
-                                Stream.Read(temp, 0, 2);
-                                short ts = BitConverter.ToInt16(temp, 0);
-                                NDS.Track_Data[i] = new byte[8192];
-                                byte[] tdata = new byte[ts];
-                                Stream.Seek(pos + 2, SeekOrigin.Begin);
-                                Stream.Read(tdata, 0, ts);
-                                NDG.s_len[i] = tdata.Length;
-                                Buffer.BlockCopy(tdata, 0, NDS.Track_Data[i], 0, ts);
-                                Buffer.BlockCopy(tdata, 0, NDS.Track_Data[i], ts, 8192 - ts);
-                            }
-                            else
-                            {
-                                NDS.Track_Data[i] = new byte[8192];
-                                for (int j = 0; j < NDS.Track_Data[i].Length; j++)
-                                {
-                                    NDS.Track_Data[i][j] = 0;
-                                }
-                            }
-                        }
-                        Stream.Close();
-                        var lab = $"Total Tracks {tracks}, G64 Track Size {tr_size:N0} bytes";
-                        Process(false, lab);
+                        decomp = LZdecompress(source);
                     }
                     else
                     {
-                        label1.Text = $"{hm}";
-                        label2.Text = "";
+                        decomp = new byte[length];
+                        Buffer.BlockCopy(source, 0, decomp, 0, length);
                     }
-                    if (hm == "Bad Header")
+
+                    if (decomp.Length > 0)
                     {
-                        using (Message_Center center = new Message_Center(this)) // center message box
+                        Buffer.BlockCopy(decomp, 0, g64_header, 0, 684);
+                        var head = Encoding.ASCII.GetString(g64_header, 0, 8);
+                        tracks = Convert.ToInt32(g64_header[9]);
+                        Set_Arrays(tracks);
+                        int tr_size = BitConverter.ToInt16(g64_header, 10);
+                        var hm = "Bad Header";
+                        if (head == "GCR-1541")
                         {
-                            string t = "Bad Header!";
-                            string s = "Image is corrupt and cannot be opened";
-                            MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            error = true;
+                            hm = "Header Match!";
+                            byte[] temp = new byte[2];
+                            for (int i = 0; i < tracks; i++)
+                            {
+                                Original.OT[i] = new byte[0];
+                                NDS.Track_Data[i] = FastArray.Init(MAX_TRACK_SIZE, 0x00);
+                                int pos = BitConverter.ToInt32(g64_header, 12 + (i * 4));
+                                if (pos != 0)
+                                {
+                                    try
+                                    {
+                                        Buffer.BlockCopy(decomp, pos, temp, 0, 2);
+                                        short ts = BitConverter.ToInt16(temp, 0);
+                                        byte[] tdata = new byte[ts];
+                                        Buffer.BlockCopy(decomp, pos + 2, tdata, 0, ts);
+                                        NDG.s_len[i] = tdata.Length;
+                                        Buffer.BlockCopy(tdata, 0, NDS.Track_Data[i], 0, ts);
+                                        Buffer.BlockCopy(tdata, 0, NDS.Track_Data[i], ts, MAX_TRACK_SIZE - ts);
+                                    }
+                                    catch { }
+                                }
+                            }
+                            var lab = $"Total Tracks {tracks}, G64 Track Size {tr_size:N0} bytes";
+                            Process(false, lab);
+                        }
+                        else
+                        {
+                            label1.Text = $"{hm}";
+                            label2.Text = "";
+                        }
+                        if (hm == "Bad Header")
+                        {
+                            using (Message_Center center = new Message_Center(this)) // center message box
+                            {
+                                string t = "Bad Header!";
+                                string s = "Image is corrupt and cannot be opened";
+                                MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                error = true;
+                            }
                         }
                     }
+
                 }
                 if (fext.ToLower() == supported[2])
                 {
                     Data_Box.Clear();
-                    long length = new System.IO.FileInfo(file).Length;
-                    int sectors = (int)length / 256;
+                    int sectors = length >> 8;
                     byte[][] secdata = new byte[sectors][];
                     int trk_counter = 0;
                     tracks = 0;
                     for (int i = 0; i < sectors; i++)
                     {
-                        secdata[i] = new byte[256];
-                        Stream.Seek(0 + (i * 256), SeekOrigin.Begin);
-                        Stream.Read(secdata[i], 0, 256);
-                        trk_counter++;
-                        if (trk_counter == Available_Sectors[tracks])
+                        try
                         {
-                            trk_counter = 0;
-                            tracks++;
+                            secdata[i] = new byte[256];
+                            Buffer.BlockCopy(source, i << 8, secdata[i], 0, 256);
+                            trk_counter++;
+                            if (trk_counter == Available_Sectors[tracks])
+                            {
+                                trk_counter = 0;
+                                tracks++;
+                            }
                         }
+                        catch { }
                     }
-                    Stream.Close();
                     Track_Info.Items.Clear();
                     Set_ListBox_Items(true, false);
                     Set_Arrays(tracks);
@@ -225,7 +224,7 @@ namespace V_Max_Tool
                         BinaryWriter write = new BinaryWriter(buffer);
                         int tsec = Available_Sectors[i];
                         int len = density[density_map[i]];
-                        NDS.Track_Data[i] = FastArray.Init(8192, 0x00);
+                        NDS.Track_Data[i] = FastArray.Init(MAX_TRACK_SIZE, 0x00);
                         for (int j = 0; j < tsec; j++)
                         {
                             byte[] gap = FastArray.Init(sector_gap_length[i], 0x55);
@@ -243,24 +242,20 @@ namespace V_Max_Tool
                         if (dif > 0) write.Write(FastArray.Init(dif, 0x55));
                         byte[] temp = buffer.ToArray();
                         Buffer.BlockCopy(temp, 0, NDS.Track_Data[i], 0, temp.Length);
-                        Buffer.BlockCopy(temp, 0, NDS.Track_Data[i], temp.Length, 8192 - temp.Length);
+                        Buffer.BlockCopy(temp, 0, NDS.Track_Data[i], temp.Length, MAX_TRACK_SIZE - temp.Length);
                     }
                     var lab = $"Total Tracks ({tracks}), {l}";
+                    //Invoke(new Action(() => Text = $"sectors {sectors} tracks {tracks} {secdata.Length}"));
                     Process(true, lab);
                 }
                 if (fext.ToLower() == supported[3])
                 {
                     Data_Box.Clear();
-                    long length = new System.IO.FileInfo(file).Length;
-                    byte[] compressed = new byte[length];
-                    Stream.Seek(0, SeekOrigin.Begin);
-                    Stream.Read(compressed, 0, (int)length);
-                    Stream.Close();
-                    byte[] decomp = LZ_Uncompress(compressed);
+                    byte[] decomp = LZdecompress(source);
                     if (decomp != null)
                     {
-                        tracks = (decomp.Length - 256) / 8192;
-                        if ((tracks * 8192) + 256 == decomp.Length) l = "File Size OK!";
+                        tracks = (decomp.Length - 256) >> 13;
+                        if ((tracks << 13) + 256 == decomp.Length) l = "File Size OK!";
                         Track_Info.Items.Clear();
                         Set_ListBox_Items(true, false);
                         Set_Arrays(tracks);
@@ -268,8 +263,8 @@ namespace V_Max_Tool
                         Buffer.BlockCopy(decomp, 0, nib_header, 0, nib_header.Length);
                         for (int i = 0; i < tracks; i++)
                         {
-                            NDS.Track_Data[i] = FastArray.Init(8192, 0x00);
-                            Buffer.BlockCopy(decomp, (i * 8192) + 256, NDS.Track_Data[i], 0, 8192);
+                            NDS.Track_Data[i] = FastArray.Init(MAX_TRACK_SIZE, 0x00);
+                            Buffer.BlockCopy(decomp, (i << 13) + 256, NDS.Track_Data[i], 0, MAX_TRACK_SIZE);
                             Original.OT[i] = new byte[0];
                         }
                     }
@@ -280,6 +275,7 @@ namespace V_Max_Tool
                     Process(true, lab);
                 }
             }
+
             catch (Exception ex)
             {
                 using (Message_Center center = new Message_Center(this)) // center message box
@@ -326,7 +322,6 @@ namespace V_Max_Tool
             try
             {
                 parse = Parse_Nib_Data();
-                //Invoke(new Action(()=> Text = parse.Elapsed.TotalMilliseconds.ToString()));
             }
             catch { }
             if (!error)
@@ -635,7 +630,7 @@ namespace V_Max_Tool
                             NDG.Track_Data[t] = new byte[Original.OT[t].Length];
                             Buffer.BlockCopy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
                             Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
-                            Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, 8192 - Original.OT[t].Length);
+                            Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, MAX_TRACK_SIZE - Original.OT[t].Length);
                         }
                         NDG.Track_Length[t] = NDG.Track_Data[t].Length;
                         NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
@@ -654,7 +649,13 @@ namespace V_Max_Tool
 
         private void DB_vpl_CheckedChanged(object sender, EventArgs e)
         {
-            VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = DB_vpl.Checked;
+            //VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = DB_vpl.Checked;
+            usecpp = !CPP_tog.Checked;
+            this.Text = $"Re-Master {ver}";
+            if (!CPP_tog.Checked)
+            {
+                Text += " (C++ Extensions Enabled)";
+            }
         }
 
         private void Debug_Button_Click(object sender, EventArgs e)
@@ -730,15 +731,13 @@ namespace V_Max_Tool
             if (!busy && RL_Fix.Checked)
             {
                 if (NDS.cbm.Any(x => x == 6)) RL_Remove_Protection();
-                else Check_Cyan_Loader(true);
-                out_track.Items.Clear();
-                out_size.Items.Clear();
-                out_dif.Items.Clear();
-                Out_density.Items.Clear();
-                out_rpm.Items.Clear();
-                Process_Nib_Data(true, false, false, true);
+                else
+                {
+                    Check_Cyan_Loader(true);
+                    Clear_Out_Items();
+                    Process_Nib_Data(true, false, false, true);
+                }
             }
         }
     }
 }
-
