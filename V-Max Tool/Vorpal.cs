@@ -58,11 +58,34 @@ namespace V_Max_Tool
             Process_Nib_Data(p, false, false, true); /// false flag instructs the routine NOT to process CBM tracks again
         }
 
-        byte[] Rebuild_Vorpal(byte[] data, int trk = -1, int leadptn = 0)
+        int Get_VPL_Sectors(BitArray source)
         {
-            int last_sector = 164; /// # of bytes to read when last sector found
-            if (trk == -1) trk -= 0;
-            byte[] temp = new byte[0];
+            int snc_cnt = 0;
+            int sectors = 0;
+            List<int> secpos = new List<int>();
+            int skip = 160 << 3; /// Sets the # of bits to skip when a sector sync is found
+            for (int k = 0; k < source.Length; k++)
+            {
+                if (source[k]) snc_cnt++;
+                if (!source[k])
+                {
+                    if (snc_cnt == 8)
+                    {
+                        secpos.Add(k + 7);
+                        if (k + skip < source.Count) k += skip;
+                        else break;
+                        sectors++;
+                    }
+                    snc_cnt = 0;
+                }
+            }
+            return sectors;
+        }
+
+        byte[] Rebuild_Vorpal(byte[] data, int trk, int leadptn = 0)
+        {
+            int last_sector = 1312; /// # of bytes to read when last sector found
+            byte[] output = new byte[0];
             int offset;
             int d = 0;
             int snc_cnt = 0;
@@ -74,28 +97,22 @@ namespace V_Max_Tool
             BitArray source = new BitArray(Flip_Endian(data));
             BitArray comp = new BitArray(Flip_Endian(vpl_s0));
             BitArray cmp = new BitArray(vpl_s0.Length * 8);
-            int sectors = Get_VPL_Sectors();
+            int sectors = Get_VPL_Sectors(source);
             byte[] ssp = { 0x33 };
             byte[] lead_in = new byte[0];
-            byte lead_out = 0xb5;
-            byte stop = 0xbd;
+            byte endbyte = leadptn == 1 ? (byte)0x55 : (leadptn == 2 ? (byte)0xAA : (byte)0xb5);
             if (leadptn == 0) lead_in = new byte[] { 0xd5, 0x35, 0x4d, 0x53, 0x54 };
             if (leadptn == 1)
             {
                 lead_in = FastArray.Init(5, 0x55);
-                lead_out = 0x55;
-                stop = 0x55;
             }
             if (leadptn == 2)
             {
                 lead_in = FastArray.Init(5, 0xaa);
-                lead_out = 0xaa;
-                stop = 0xaa;
-
             }
-            temp = new byte[tlen];
-            if (!VPL_only_sectors.Checked) Write_Lead(100, 400);
-            BitArray otmp = new BitArray(Flip_Endian(temp));
+            output = new byte[tlen];
+            if (!VPL_only_sectors.Checked) Write_Lead(100);
+            BitArray output_bits = new BitArray(Flip_Endian(output));
             for (int k = 0; k < source.Length - comp.Count; k++)
             {
                 for (int j = 0; j < cmp.Count; j++) cmp[j] = source[k + j];
@@ -111,27 +128,29 @@ namespace V_Max_Tool
                         cur_sec++;
                         if (cur_sec == sectors)
                         {
-                            tend = k + 7 + (last_sector << 3);
+                            tend = k + 7 + (last_sector);
                             break;
                         }
                     }
                     snc_cnt = 0;
                 }
             }
-            offset = (((otmp.Length - (tend - tstart)) >> 1) >> 3) << 3;
-            var len = (tend - tstart) / 8;
+            offset = (((output_bits.Length - (tend - tstart)) >> 1) >> 3) << 3;
+            var len = (tend - tstart) >> 3;
             if (VPL_lead.Checked) offset = Convert.ToInt32(Lead_In.Value) << 3;
             if (VPL_only_sectors.Checked)
             {
                 offset = 0;
-                temp = new byte[len + 1];
-                otmp = new BitArray(Flip_Endian(temp));
+                output = new byte[len + 1];
+                output_bits = new BitArray(Flip_Endian(output));
+            }
+            if ((VPL_auto_adj.Checked || VPL_rb.Checked) && !(VPL_only_sectors.Checked || VPL_lead.Checked))
+            {
+                offset = ((((vpl_density[d] << 3) - (tend - tstart)) >> 1) >> 3) << 3;
+                offset = (offset > 60 << 3) ? 60 << 3 : (offset < 15 << 3) ? 15 << 3 : offset;
             }
             if (VPL_auto_adj.Checked)
             {
-                offset = ((((vpl_density[d] << 3) - (tend - tstart)) >> 1) >> 3) << 3;
-                if (offset > 60 << 3) offset = 60 << 3;
-                if (offset < 15 << 3) offset = 15 << 3;
                 var r = offset >> 3;
                 var e = len + (r << 1);
                 if (e < vpl_density[d])
@@ -139,75 +158,86 @@ namespace V_Max_Tool
                     if (vpl_density[d] - e > 125) len = vpl_density[d] - 70;
                     else len = vpl_density[d] - ((r << 1) + 1);
                 }
-                temp = new byte[vpl_density[d]];
-                Write_Lead(offset + 5, vpl_density[d] - ((tend - tstart) >> 3) - (offset >> 3));
+                output = new byte[vpl_density[d]];
+                Write_Lead(offset + 5);
                 if (VPL_presync.Checked) Add_Pre_Sync();
-                otmp = new BitArray(Flip_Endian(temp));
+                output_bits = new BitArray(Flip_Endian(output));
                 int os = 0;
                 int ts = 0;
-                if (!otmp[offset - 1] && !otmp[offset - 2]) ts += 2;
+                if (!output_bits[offset - 1] && !output_bits[offset - 2]) ts += 2;
                 offset += os; tstart += ts;
             }
             try
             {
-                for (int i = 0; i < tend - tstart; i++) otmp[offset + i] = source[tstart + i];
+                for (int i = 0; i < tend - tstart; i++) output_bits[offset + i] = source[tstart + i];
             }
             catch { }
-            temp = Bit2Byte(otmp);
+            int total_size = offset + (tend - tstart);
+            if (!VPL_only_sectors.Checked)
+            {
+                int leadout_len = (((output.Length << 3) - total_size) >> 3);
+                byte[] leadout = FastArray.Init(leadout_len, endbyte);
+                if (leadptn == 0) leadout[leadout.Length - 1] = 0xbd;
+                BitArray leadout_bits = new BitArray(Flip_Endian(leadout));
+                for (int i = 0; i < leadout_bits.Length; i++)
+                {
+                    output_bits[total_size + i] = leadout_bits[i];
+                }
+            }
+            output = Bit2Byte(output_bits);
             Check_Sync();
-            return temp;
+            return output;
 
-            void Write_Lead(int li, int lo)
+            void Write_Lead(int li)
             {
                 try
                 {
-                    for (int i = temp.Length - lo; i < temp.Length; i++) temp[i] = lead_out;
-                    for (int i = 0; i < li; i++) Buffer.BlockCopy(lead_in, 0, temp, 0 + (i * lead_in.Length), lead_in.Length);
-                    temp[temp.Length - 1] = stop;
+                    for (int i = 0; i < li; i++) Buffer.BlockCopy(lead_in, 0, output, 0 + (i * lead_in.Length), lead_in.Length);
                 }
                 catch { }
             }
 
-            int Get_VPL_Sectors()
-            {
-                snc_cnt = 0;
-                sectors = 0;
-                List<int> secpos = new List<int>();
-                int skip = 160 << 3; /// Sets the # of bits to skip when a sector sync is found
-                for (int k = 0; k < source.Length; k++)
-                {
-                    if (source[k]) snc_cnt++;
-                    if (!source[k])
-                    {
-                        if (snc_cnt == 8)
-                        {
-                            secpos.Add(k + 7);
-                            if (k + skip < source.Count) k += skip;
-                            else break;
-                            sectors++;
-                        }
-                        snc_cnt = 0;
-                    }
-                }
-                return sectors;
-            }
+            //int Get_VPL_Sectors()
+            //{
+            //    snc_cnt = 0;
+            //    sectors = 0;
+            //    List<int> secpos = new List<int>();
+            //    int skip = 160 << 3; /// Sets the # of bits to skip when a sector sync is found
+            //    for (int k = 0; k < source.Length; k++)
+            //    {
+            //        if (source[k]) snc_cnt++;
+            //        if (!source[k])
+            //        {
+            //            if (snc_cnt == 8)
+            //            {
+            //                secpos.Add(k + 7);
+            //                if (k + skip < source.Count) k += skip;
+            //                else break;
+            //                sectors++;
+            //            }
+            //            snc_cnt = 0;
+            //        }
+            //    }
+            //    return sectors;
+            //}
+
             void Check_Sync()
             {
                 if (leadptn > 0)
                 {
-                    temp[(offset >> 3) - 4] = 0xff;
-                    temp[(offset >> 3) - 3] = 0xff;
-                    temp[(offset >> 3) - 2] = 0x55;
-                    temp[(offset >> 3) - 1] = 0x55;
+                    output[(offset >> 3) - 4] = 0xff;
+                    output[(offset >> 3) - 3] = 0xff;
+                    output[(offset >> 3) - 2] = 0x55;
+                    output[(offset >> 3) - 1] = 0x55;
                 }
             }
 
             void Add_Pre_Sync()
             {
-                temp[0] = 0xff;
-                temp[1] = 0xff;
-                temp[2] = 0x55;
-                temp[3] = 0x55;
+                output[0] = 0xff;
+                output[1] = 0xff;
+                output[2] = 0x55;
+                output[3] = 0x55;
             }
         }
 
@@ -294,7 +324,7 @@ namespace V_Max_Tool
 
                                     if (!batch && sec_size >> 3 > 0)
                                     {
-                                        try { sec_hdr.Add($"pos ({k >> 3}) Header (kinda) {sid.Substring(15, 20)} Size ({sec_size >> 3}){sz}"); }
+                                        try { sec_hdr.Add($"pos ({k >> 3}) Header (kinda) {sid.Substring(15, 20)} Size ({sec_size >> 3}) ({sec_size}) {sz}"); }
                                         catch { }
                                     }
 
@@ -342,7 +372,7 @@ namespace V_Max_Tool
                 }
                 sec_size++;
             }
-
+            if (start_found && !end_found) data_end = data.Length << 3;
             track_len = (data_end - data_start) + 1;
 
             if (single_rotation)
@@ -356,14 +386,18 @@ namespace V_Max_Tool
 
                 for (int i = 0; i < track_len; i++)
                 {
-                    temp[i] = source[pos];
-                    pos++;
-
-                    if (pos > data_end)
+                    try
                     {
-                        spl = i;
-                        pos = data_start;
+                        temp[i] = source[pos];
+                        pos++;
+
+                        if (pos > data_end)
+                        {
+                            spl = i;
+                            pos = data_start;
+                        }
                     }
+                    catch { }
                 }
 
                 tdata = Bit2Byte(temp);
@@ -472,6 +506,26 @@ namespace V_Max_Tool
                 pos++;
             }
             return false;
+        }
+
+        void Density_Reset()
+        {
+            VPL_density_reset.Visible = false;
+            RunBusy(() =>
+            {
+                for (int i = 0; i < vpl_density.Length; i++)
+                {
+                    vpl_density[i] = vpl_defaults[i];
+                    switch (i)
+                    {
+                        case 0: VD0.Value = vpl_density[i]; break;
+                        case 1: VD1.Value = vpl_density[i]; break;
+                        case 2: VD2.Value = vpl_density[i]; break;
+                        case 3: VD3.Value = vpl_density[i]; break;
+                    }
+                }
+            });
+            Vorpal_Rebuild();
         }
     }
 }

@@ -77,6 +77,9 @@
     <Compile Include="Directory_Editor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Initialize.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="LZ77.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -156,7 +159,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Properties\DrawArc.dll" />
     <Content Include="tool.ico" />
   </ItemGroup>
   <ItemGroup>

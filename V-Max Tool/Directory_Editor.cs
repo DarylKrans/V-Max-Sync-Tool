@@ -20,21 +20,6 @@ namespace V_Max_Tool
         private readonly byte[] Reverse_Endian_Table = new byte[256];
         private readonly CustomCheckedListBox Dir_Box = new CustomCheckedListBox();
 
-
-        void Default_Dir_Screen()
-        {
-            Dir_screen.Clear();
-            Dir_screen.Text = dir_def;
-            Dir_screen.Select(2, 23);
-            Dir_screen.SelectionBackColor = c64_text;
-            Dir_screen.SelectionColor = C64_screen;
-            DiskDir.Entries = 0;
-            DiskDir.Sectors = new byte[0][];
-            DiskDir.Entry = new byte[0][];
-            DiskDir.FileName = new string[0];
-            Dir_Box.Items.Clear();
-        }
-
         void Update_Dir_Items()
         {
             f_temp = new string[DiskDir.Entries];
@@ -200,9 +185,8 @@ namespace V_Max_Tool
                         int sector = Convert.ToInt32(DiskDir.Sectors[i][1]);
                         track -= 1;
                         if (tracks > 42) track *= 2;
-                        //(byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDS.Track_Data[track], sector, true);
-                        (byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDG.Track_Data[track], sector, true);
-                        if (nul)
+                        (byte[] decoded_sector, bool valid) = Decode_CBM_Sector(NDG.Track_Data[track], sector, true);
+                        if (valid)
                         {
                             while (entry < 8 && tot < DiskDir.Entries)
                             {
@@ -211,7 +195,6 @@ namespace V_Max_Tool
                                 entry++;
                                 tot++;
                             }
-                            //NDS.Track_Data[track] = Replace_CBM_Sector(NDS.Track_Data[track], sector, decoded_sector);
                             byte[] temp = Replace_CBM_Sector(NDG.Track_Data[track], sector, decoded_sector);
                             Set_Dest_Arrays(temp, track);
                         }
@@ -347,8 +330,8 @@ namespace V_Max_Tool
                 if (tracks > 42) track *= 2;
                 if ((track >= 0 && track < tracks) && NDS.cbm?[track] == 1)
                 {
-                    //(byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDS.Track_Data[track], sector, true);
-                    (byte[] decoded_sector, bool nul) = Decode_CBM_Sector(NDG.Track_Data[track], sector, true);
+                    //(byte[] decoded_sector, bool valid) = Decode_CBM_Sector(NDS.Track_Data[track], sector, true);
+                    (byte[] decoded_sector, _) = Decode_CBM_Sector(NDG.Track_Data[track], sector, true);
                     if (decoded_sector != null)
                     {
                         string hex = $"{Hex_Val(decoded_sector, 3, 1)}" + $"{Hex_Val(decoded_sector, 2, 1)}";

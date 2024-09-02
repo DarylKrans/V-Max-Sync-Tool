@@ -219,7 +219,6 @@ namespace V_Max_Tool
             }
         }
 
-
         byte[] Fix_Loader(byte[] data)
         {
             byte[] tdata = data;
@@ -260,6 +259,46 @@ namespace V_Max_Tool
                     tdata[pos + 2] = 0xff;
                 }
             }
+        }
+
+        byte[] Lengthen_Loader(byte[] data, int Density)
+        {
+            if (data.Length > 0)
+            {
+                byte[] temp = new byte[density[Density]];
+                int current = 0;
+                int longest = 0;
+                int pos = 0;
+                byte fill = 0x00;
+                byte cur = 0x00;
+                int a = temp.Length - data.Length;
+                for (int i = 0; i < data.Length; i++)
+                {
+                    if (data[i] == cur) current++;
+                    else
+                    {
+                        cur = data[i];
+                        if (current > longest)
+                        {
+                            pos = i - 1;
+                            longest = current;
+                            fill = data[i - 1];
+                        }
+                        current = 0;
+                    }
+                }
+                Buffer.BlockCopy(data, 0, temp, 0, pos);
+                for (int i = pos; i < pos + a; i++) temp[i] = fill;
+                Buffer.BlockCopy(data, pos, temp, pos + a, data.Length - pos);
+                return temp;
+            }
+            else return data;
+        }
+
+        void Shrink_Loader(int trk)
+        {
+            byte[] temp = Shrink_Track(NDG.Track_Data[trk], 1);
+            Set_Dest_Arrays(temp, trk);
         }
     }
 }

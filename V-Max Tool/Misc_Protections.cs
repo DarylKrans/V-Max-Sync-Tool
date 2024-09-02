@@ -104,12 +104,12 @@ namespace V_Max_Tool
             BitArray source = new BitArray(Flip_Endian(data));
             byte[] temp = new byte[0];
             bool f = false;
-            int pos = 0;
+            int pos;
             if (!fix && sector == -1)
             {
                 for (sector = 2; sector < 19; sector++)
                 {
-                    (f, pos) = Find_Sector(source, sector);
+                    (f, pos, _, _) = Find_Sector(source, sector);
                     if (f)
                     {
                         rw = 0;
@@ -166,7 +166,6 @@ namespace V_Max_Tool
             return temp;
         }
 
-        //bool Check_Cyan_Loader(bool patch = false)
         (bool, int) Check_Cyan_Loader(bool patch = false)
         {
             bool cyan = false;
@@ -238,69 +237,32 @@ namespace V_Max_Tool
                 }
                 return false;
             }
+        }
 
-            byte[] Cyan_Loader_Patch(byte[] data) /// <- removes track 32 bad GCR check (cracks the proteciton)
+        byte[] Cyan_Loader_Patch(byte[] data) /// <- removes track 32 bad GCR check (cracks the proteciton)
+        {
+            byte[] cmp;
+            (cmp, _) = Decode_CBM_Sector(data, 5, true);
+            int match = 0;
+            for (int i = 0; i < cmp.Length; i++) if (cmp[i] == cldr_id[i]) match++;
+            if (match > 240)
             {
-                byte[] cmp;
-                bool pass;
-                (cmp, pass) = Decode_CBM_Sector(data, 5, true);
-                if (pass || !pass)
-                {
-                    int match = 0;
-                    for (int i = 0; i < cmp.Length; i++) if (cmp[i] == cldr_id[i]) match++;
-                    if (match > 240)
-                    {
-                        if (cmp[45] == 0x2f) cmp[45] = 0xa2;
-                        if (cmp[53] == 0x18) cmp[53] = 0x0f;
-                        data = Replace_CBM_Sector(data, 5, cmp);
-                    }
-                }
-                return data;
+                if (cmp[45] == 0x2f) cmp[45] = 0xa2;
+                if (cmp[53] == 0x18) cmp[53] = 0x0f;
+                data = Replace_CBM_Sector(data, 5, cmp);
             }
+            return data;
         }
 
         (byte[], bool) Cyan_t32_GCR_Fix(byte[] data)
         {
-            bool exists = false;
-            int pos = 0;
             BitArray s = new BitArray(Flip_Endian(data));
-            (exists, pos) = Find_Sector(s, 1, 0, true);
+            (bool exists, _, _, _) = Find_Sector(s, 1, 0, true);
             if (exists)
             {
-                ////Invoke(new Action(()=> Text = $"{Hex_Val(Bit2Byte(s, pos, 80))}"));
-                int snc = 0;
-                for (int i = pos; i < s.Count; i++)
-                {
-                    if (s[i]) snc++;
-                    else
-                    {
-                        if (snc > 24)
-                        {
-                            pos = i + (325 * 8);
-                            bool brk = false;
-                            while (!brk)
-                            {
-                                byte[] f = Bit2Byte(s, pos, 8);
-                                if (f[0] == 0xff) brk = true;
-                                else
-                                {
-                                    s[pos] = false;
-                                    pos++;
-                                }
-                            }
-                            break;
-                        }
-                        snc = 0;
-                    }
-                }
-                data = Bit2Byte(s);
-                /// Old method -------------------------------------------------- ///
-                //byte[] new_sec = Encode_CBM_GCR(Create_Empty_Sector());
-                //byte[] padding = FastArray.Init(8, 0x00);
-                //new_sec[new_sec.Length - 1] = 0x00;
-                //new_sec[new_sec.Length - 2] = 0x00;
-                //data = Replace_CBM_Sector(data, 1, new_sec, padding);
-                /// ------------------------------------------------------------- ///
+                (byte[] new_sec, _) = Decode_CBM_Sector(data, 1, false, s);
+                byte[] padding = FastArray.Init(4, 0x00);
+                data = Replace_CBM_Sector(data, 1, new_sec, padding);
             }
             return (data, exists);
         }
@@ -361,7 +323,7 @@ namespace V_Max_Tool
             int pos = 0;
             int start;
             int end = 0;
-            int sync = 0;
+            int sync;
             byte[] s2 = new byte[ramb.Length];
             byte[] temp = new byte[0];
             int v = 0;
@@ -475,23 +437,7 @@ namespace V_Max_Tool
                             byte[] temp = new byte[density[3]];
                             int start = (8192 - density[3]) / 2;
                             Buffer.BlockCopy(data, start, temp, 0, density[3]);
-
-                            byte g = 0;
-                            int run = 0;
-                            for (int j = 0; j < temp.Length; j++)
-                            {
-                                if (temp[j] == g) run++;
-                                else
-                                {
-                                    g = temp[j];
-                                    if (run > 300)
-                                    {
-                                        temp[j] = 0x00;
-                                        break;
-                                    }
-                                    run = 0;
-                                }
-                            }
+                            temp = Add_Weak_Bit(temp);
                             if (Check_Valid_Data(temp, true) < 500) return new byte[0];
                             return temp;
                         }
@@ -501,7 +447,6 @@ namespace V_Max_Tool
 
             if (nb > 500)
             {
-                //int bd = 0;
                 int workLength = data.Length;
                 int snc = 0;
                 int spos = 0;
@@ -524,6 +469,7 @@ namespace V_Max_Tool
                 byte[] temp = new byte[Check_Valid_Data(data, false, true) < 1000 ? density[2] : density[3]];
                 Buffer.BlockCopy(data, 0, temp, 0, temp.Length);
                 if (actual_data > 500) temp = Remove_Weak_Bits(temp, true);
+                temp = Add_Weak_Bit(temp);
                 return temp;
             }
             return data;
@@ -553,6 +499,31 @@ namespace V_Max_Tool
                 }
                 if (only_blank) return bd;
                 return ad;
+            }
+
+            byte[] Add_Weak_Bit(byte[] input)
+            {
+                int run = 0;
+                byte g = 0x00;
+                for (int j = 0; j < input.Length; j++)
+                {
+                    if (input[j] == g) run++;
+                    else
+                    {
+                        g = input[j];
+                        if (run > 300)
+                        {
+                            input[j] = 0x00;
+                            if (j + 1 < input.Length) input[j + 1] = 0x00;
+                            byte[] output = new byte[density[3]];
+                            int start = (input.Length - density[3]) / 2;
+                            Buffer.BlockCopy(input, start, output, 0, density[3]);
+                            return output;
+                        }
+                        run = 0;
+                    }
+                }
+                return input;
             }
         }
     }

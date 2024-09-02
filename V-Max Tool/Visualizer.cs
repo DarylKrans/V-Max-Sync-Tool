@@ -18,6 +18,7 @@ namespace V_Max_Tool
         private bool Dragging = false;
         private bool vm_reverse = false;
         private bool drawn = false;
+        private bool CV_cpp = true;
         private int xPos;
         private int yPos;
         private readonly string[] Img_Quality = { "Very Low", "Low", "Normal", "High", "Ultra", "Atomic", "Insanity!" };
@@ -203,8 +204,15 @@ namespace V_Max_Tool
                             v5 = updatedV5;
                             colors[i] = color.ToArgb();
                         }
-                        if (!usecpp) Draw_Arc(circle, x, y, radius, colors, track, dataLength, trackWidth, sub);
-                        else NativeMethods.Draw_Arc(bmpPtr, imageSize, imageSize, x, y, radius, colors, colors.Length, track, dataLength, trackWidth, sub);
+                        if (usecpp && CV_cpp)
+                        {
+                            try
+                            {
+                                NativeMethods.Draw_Arc(bmpPtr, imageSize, imageSize, x, y, radius, colors, colors.Length, track, dataLength, trackWidth, sub);
+                            }
+                            catch { CV_cpp = false; }
+                        }
+                        if (!CV_cpp || !usecpp) Draw_Arc(circle, x, y, radius, colors, track, dataLength, trackWidth, sub);
                     }
 
                     if (Circle_View.Checked && Cores <= 3) Update_Image();
@@ -214,7 +222,6 @@ namespace V_Max_Tool
             }
 
             Invoke(new Action(() => Set_Circular_Draw_Options(true, imageSize)));
-            //Invoke(new Action(()=> Text = $"{sw.Elapsed.TotalMilliseconds}"));
         }
 
         private int GetSampleTrack(Random random)
@@ -367,6 +374,11 @@ namespace V_Max_Tool
                 if (d == 0x7b && sb > 3) col = Color.FromArgb(128, 130, 188);
             }
 
+            if ((trackFmt == 1 || trackFmt == 10) && Show_sec.Checked)
+            {
+                if (d == 0xff) col = Color.FromArgb(d, d, 0);
+            }
+
             return (col, v2, v5);
         }
 
@@ -481,10 +493,9 @@ namespace V_Max_Tool
             using (var g = Graphics.FromImage(d.Bitmap))
             {
                 //var fontSmall = new Font("Ariel", 7.4f * m);
-                var fontSmall = new Font("Ariel", 9.4f * m);
-                var fontLarge = new Font("Arial", (float)(11.6 * m), FontStyle.Regular);
-                var fontVeryLarge = new Font("Arial", (float)(16 * m), FontStyle.Regular);
-
+                var fontSmall = new Font("Ariel", 9.4f * m); // <- binary bits (background)
+                var fontLarge = new Font("Arial", (float)(13.4 * m), FontStyle.Regular); // <- file name (black ring)
+                var fontLarger = new Font("Arial", (float)(18 * m), FontStyle.Italic); // <- rotataion indicator
                 var txBrush = new SolidBrush(Color.FromArgb(20, 155, 155, 155));
                 var writeBrush = new SolidBrush(Write_face);
                 var innerBrush = new SolidBrush(Inner_face);
@@ -506,14 +517,13 @@ namespace V_Max_Tool
                 DrawEllipse(g, holeBrush, blackPen, 672.5f * m, 487.5f * m, 20 * m, 20 * m);
 
                 DrawCurvedText(g, file_name, new Point((int)(500 * m), (int)(500 * m)), 128.34f * m, 0f, fontLarge, whiteBrush, false);
-                DrawCurvedText(g, "\u2192 noitatoR", new Point((int)(513 * m), (int)(503 * m)), 181.67f * m, 1.45f, fontVeryLarge, yellowBrush, true);
+                DrawCurvedText(g, "\u2192 noitatoR", new Point((int)(500 * m), (int)(500 * m)), 200.65f * m, 2.55f, fontLarger, yellowBrush, true);
                 int clm = -16;
                 if (vm_reverse)
                 {
                     Add_Text(d.Bitmap, "CBM", Color.FromArgb(0, 40, 40, 40), cbm_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 60 * m, 17 * m);
                     if (NDS.cbm.Any(s => s == 2 || s == 3))
                     {
-                        //Add_Text(d.Bitmap, "Loader", Color.FromArgb(0, 40, 40, 40), ldr_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 60 * m, 17 * m);
                         Add_Text(d.Bitmap, "V-Max!", Color.FromArgb(0, 40, 40, 40), vmx_brush, new Font("Ariel", 11 * m), 1 * m, (clm += 17) * m, 60 * m, 17 * m);
                     }
                     if (NDS.cbm.Any(s => s == 4))

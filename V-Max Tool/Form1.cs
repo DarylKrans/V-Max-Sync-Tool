@@ -1,26 +1,30 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolBar;
 
 
 namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
+        //private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- original values used by ReMaster for faster writing RPM
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
-        private readonly bool Replace_RapidLok_Key = false;
-        private readonly string ver = " v1.0.0.1";
+        private readonly string ver = " v1.0.2.0";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
         private readonly byte loader_padding = 0x55;
-        private readonly int[] density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        private readonly int[] CBM_Standard_Density = { 7692, 7142, 6666, 6250 }; // <- density zone capacity accoriding to CBM specifications
+        private readonly int[] ReMaster_Adjusted_Density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
+        private readonly int[] vpl_density = { 7800, 6950, 6585, 6255 }; // <- Vorpal densities used to be more accurate to original disk-reads
+        private readonly int[] vpl_defaults = { 7800, 6950, 6585, 6255 };
+        private readonly int[] density = new int[4];
         private bool error = false;
         private bool cancel = false;
         private bool busy = false;
@@ -38,22 +42,15 @@ namespace V_Max_Tool
         private readonly int min_t_len = 6000;
         private int end_track = -1;
         private int fat_trk = -1;
-        private int Cores;
-        private int Default_Cores;
-        private readonly ToolTip tips = new System.Windows.Forms.ToolTip();
-        private List<string> LB_File_List = new List<string>();
-        private Semaphore Task_Limit = new Semaphore(3, 3);
-        //private const int EIGHT_KB = 8192;
-        Thread Worker_Main;
-        Thread Worker_Alt;
-        Thread[] Job;
+        System.Windows.Forms.Panel lastHoveredButton = null;
 
         public Form1()
         {
             InitializeComponent();
             this.Text = $"Re-Master {ver}";
-            Init();
+            RunBusy(Init);
             Set_ListBox_Items(true, true);
+
         }
 
         private void Drag_Drop(object sender, DragEventArgs e)
@@ -89,30 +86,34 @@ namespace V_Max_Tool
             }
         }
 
-        unsafe void Process_New_Image(string file)
+        void Process_New_Image(string file)
         {
             Disable_Core_Controls(true);
+            Blk_pan.Enabled = false;
             string l = "Not ok";
             try
             {
                 g64_header = new byte[684];
-                byte[] source = File.ReadAllBytes(file);
-                int length = source.Length;
+                FileStream Stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                long length = new System.IO.FileInfo(file).Length;
                 if (fext.ToLower() == supported[0])
                 {
                     Data_Box.Clear();
-                    tracks = (int)(length - 256) >> 13;
-                    if ((tracks << 13) + 256 == length) l = "File Size OK!";
+                    tracks = (int)(length - 256) / 8192;
+                    if ((tracks * 8192) + 256 == length) l = "File Size OK!";
                     Track_Info.Items.Clear();
                     Set_ListBox_Items(true, false);
-                    Buffer.BlockCopy(source, 0, nib_header, 0, 256);
+                    Stream.Seek(0, SeekOrigin.Begin);
+                    Stream.Read(nib_header, 0, 256);
                     Set_Arrays(tracks);
                     for (int i = 0; i < tracks; i++)
                     {
                         NDS.Track_Data[i] = new byte[MAX_TRACK_SIZE];
-                        Buffer.BlockCopy(source, 256 + (MAX_TRACK_SIZE * i), NDS.Track_Data[i], 0, MAX_TRACK_SIZE);
+                        Stream.Seek(256 + (MAX_TRACK_SIZE * i), SeekOrigin.Begin);
+                        Stream.Read(NDS.Track_Data[i], 0, 8192);
                         Original.OT[i] = new byte[0];
                     }
+                    Stream.Close();
                     var head = Encoding.ASCII.GetString(nib_header, 0, 13);
                     var hm = "Bad Header";
                     if (head == "MNIB-1541-RAW") hm = "Header Match!";
@@ -124,16 +125,20 @@ namespace V_Max_Tool
                     Data_Box.Clear();
                     Track_Info.Items.Clear();
                     Set_ListBox_Items(true, false);
+                    Stream.Seek(0, SeekOrigin.Begin);
                     byte[] decomp;
                     if (fext.ToLower() == supported[4])
                     {
-                        decomp = LZdecompress(source);
+                        byte[] compressed = new byte[length];
+                        Stream.Read(compressed, 0, (int)length);
+                        decomp = LZdecompress(compressed);
                     }
                     else
                     {
                         decomp = new byte[length];
-                        Buffer.BlockCopy(source, 0, decomp, 0, length);
+                        Stream.Read(decomp, 0, (int)length);
                     }
+                    Stream.Close();
 
                     if (decomp.Length > 0)
                     {
@@ -191,50 +196,77 @@ namespace V_Max_Tool
                 if (fext.ToLower() == supported[2])
                 {
                     Data_Box.Clear();
-                    int sectors = length >> 8;
+                    bool errorcodes = (int)length % 257 == 0;
+                    int sectors = sectors = (int)length / (errorcodes ? 257 : 256);
+                    byte[] codes = new byte[sectors];
                     byte[][] secdata = new byte[sectors][];
                     int trk_counter = 0;
                     tracks = 0;
-                    for (int i = 0; i < sectors; i++)
+                    for (int i = 0; i <= sectors; i++)
                     {
                         try
                         {
-                            secdata[i] = new byte[256];
-                            Buffer.BlockCopy(source, i << 8, secdata[i], 0, 256);
-                            trk_counter++;
-                            if (trk_counter == Available_Sectors[tracks])
+                            if (i < sectors)
                             {
-                                trk_counter = 0;
-                                tracks++;
+                                secdata[i] = new byte[256];
+                                Stream.Seek(0 + (i * 256), SeekOrigin.Begin);
+                                Stream.Read(secdata[i], 0, 256);
+
+                                trk_counter++;
+                                if (trk_counter == Available_Sectors[tracks])
+                                {
+                                    trk_counter = 0;
+                                    tracks++;
+                                }
+                            }
+                            if (i == sectors && errorcodes)
+                            {
+                                Stream.Seek(0 + (i << 8), SeekOrigin.Begin);
+                                Stream.Read(codes, 0, codes.Length);
                             }
                         }
                         catch { }
                     }
+                    Stream.Close();
+
                     Track_Info.Items.Clear();
                     Set_ListBox_Items(true, false);
                     Set_Arrays(tracks);
                     byte[] ID = FastArray.Init(4, 0x0f);
+                    byte[] ID_MisMatch = FastArray.Init(4, 0x0f);
                     ID[1] = secdata[357][163];
                     ID[0] = secdata[357][162];
+                    for (int i = 0; i < 8; i++)
+                    {
+                        ID_MisMatch[0] = ToggleBit((byte)ID[0], i);
+                        ID_MisMatch[1] = ToggleBit((byte)ID[1], i);
+                    }
                     int psec = 0;
                     byte[] sync = FastArray.Init(5, 0xff);
+                    byte[] nosync = FastArray.Init(5, cbm_gap);
+                    byte[] noheader = FastArray.Init(10, cbm_gap);
+                    byte[] nodata = FastArray.Init(325, cbm_gap);
                     for (int i = 0; i < tracks; i++)
                     {
                         MemoryStream buffer = new MemoryStream();
                         BinaryWriter write = new BinaryWriter(buffer);
+                        NDS.Track_Data[i] = FastArray.Init(MAX_TRACK_SIZE, 0x00);
                         int tsec = Available_Sectors[i];
                         int len = density[density_map[i]];
-                        NDS.Track_Data[i] = FastArray.Init(MAX_TRACK_SIZE, 0x00);
+                        byte[] gap = SetSectorGap(sector_gap_length[i]);
                         for (int j = 0; j < tsec; j++)
                         {
-                            byte[] gap = FastArray.Init(sector_gap_length[i], 0x55);
-                            byte[] sec_header = Build_BlockHeader(i + 1, j, ID);
-                            byte[] sec_data = Build_Sector(secdata[psec]);
-                            write.Write(sync);
-                            write.Write(sec_header);
+                            bool isHeaderMissing = codes[psec] == 2;
+                            bool isDataMissing = codes[psec] == 4;
+                            bool badDataChecksum = codes[psec] == 5;
+                            bool badHeaderChecksum = codes[psec] == 7;
+                            bool idMismatch = codes[psec] == 8;
+
+                            write.Write(isHeaderMissing ? nosync : sync);
+                            write.Write(isHeaderMissing ? noheader : Build_BlockHeader(i + 1, j, idMismatch ? ID_MisMatch : ID, badHeaderChecksum));
                             write.Write(gap);
-                            write.Write(sync);
-                            write.Write(sec_data);
+                            write.Write(isDataMissing ? nosync : sync);
+                            write.Write(isDataMissing ? nodata : Build_Sector(secdata[psec], badDataChecksum));
                             write.Write(gap);
                             psec++;
                         }
@@ -245,13 +277,16 @@ namespace V_Max_Tool
                         Buffer.BlockCopy(temp, 0, NDS.Track_Data[i], temp.Length, MAX_TRACK_SIZE - temp.Length);
                     }
                     var lab = $"Total Tracks ({tracks}), {l}";
-                    //Invoke(new Action(() => Text = $"sectors {sectors} tracks {tracks} {secdata.Length}"));
                     Process(true, lab);
                 }
                 if (fext.ToLower() == supported[3])
                 {
                     Data_Box.Clear();
-                    byte[] decomp = LZdecompress(source);
+                    byte[] compressed = new byte[length];
+                    Stream.Seek(0, SeekOrigin.Begin);
+                    Stream.Read(compressed, 0, (int)length);
+                    Stream.Close();
+                    byte[] decomp = LZdecompress(compressed);
                     if (decomp != null)
                     {
                         tracks = (decomp.Length - 256) >> 13;
@@ -334,6 +369,7 @@ namespace V_Max_Tool
                         if (DB_timers.Checked) Invoke(new Action(() => label2.Text = $"Parse time : {parse.Elapsed.TotalMilliseconds} ms, Process time : {proc.Elapsed.TotalMilliseconds} ms, Total {parse.Elapsed.TotalMilliseconds + proc.Elapsed.TotalMilliseconds} ms"));
                         Set_ListBox_Items(false, false);
                         Get_Disk_Directory();
+                        Set_BlockMap();
                         linkLabel1.Visible = false;
                         Save_Disk.Visible = true;
                         Source.Visible = Output.Visible = true;
@@ -341,6 +377,7 @@ namespace V_Max_Tool
                         M_render.Enabled = true;
                         Import_File.Visible = false;
                         Adv_ctrl.Enabled = true;
+                        Blk_pan.Enabled = true;
                         Disable_Core_Controls(false);
                     }
                     catch (Exception ex)
@@ -390,10 +427,11 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                busy = true;
-                V2_hlen.Enabled = V2_Custom.Checked;
-                if (V2_Custom.Checked) V2_Auto_Adj.Checked = false;
-                busy = false;
+                RunBusy(() =>
+                {
+                    V2_hlen.Enabled = V2_Custom.Checked;
+                    if (V2_Custom.Checked) V2_Auto_Adj.Checked = false;
+                });
                 V2_Adv_Opts();
             }
         }
@@ -402,10 +440,16 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                busy = true;
-                if (V2_Auto_Adj.Checked) V2_Custom.Checked = V2_hlen.Enabled = V2_Add_Sync.Checked = false;
-                if (!V2_Auto_Adj.Checked) { v2aa = false; }
-                busy = false;
+                RunBusy(() =>
+                {
+                    //if (V2_Auto_Adj.Checked) V2_Custom.Checked = V2_hlen.Enabled = V2_Add_Sync.Checked = false;
+                    if (V2_Auto_Adj.Checked)
+                    {
+                        V2_Custom.Checked = V2_hlen.Enabled = false;
+                        V2_Add_Sync.Checked = true;
+                    }
+                    if (!V2_Auto_Adj.Checked) { v2aa = V2_Add_Sync.Checked = false; }
+                });
                 V2_Adv_Opts();
             }
         }
@@ -414,10 +458,11 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                busy = true;
-                if (V3_Auto_Adj.Checked) V3_Custom.Checked = V3_hlen.Enabled = false;
-                if (!V3_Auto_Adj.Checked) { v3aa = false; }
-                busy = false;
+                RunBusy(() =>
+                {
+                    if (V3_Auto_Adj.Checked) V3_Custom.Checked = V3_hlen.Enabled = false;
+                    if (!V3_Auto_Adj.Checked) { v3aa = false; }
+                });
                 V3_Auto_Adjust();
             }
         }
@@ -426,35 +471,29 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                busy = true;
-                if (V3_Custom.Checked)
+                RunBusy(() =>
                 {
-                    V3_Auto_Adj.Checked = false;
-                    V3_hlen.Enabled = true;
-                }
-                else V3_hlen.Enabled = false;
-                busy = false;
+                    if (V3_Custom.Checked)
+                    {
+                        V3_Auto_Adj.Checked = false;
+                        V3_hlen.Enabled = true;
+                    }
+                    else V3_hlen.Enabled = false;
+                });
                 V3_Auto_Adjust();
             }
         }
 
         private void Adj_cbm_CheckedChanged(object sender, EventArgs e)
         {
-            if (!busy)
-            {
-                busy = true;
-                V3_Auto_Adjust();
-                busy = false;
-            }
+            if (!busy) RunBusy(V3_Auto_Adjust);
         }
 
         private void V2_Add_Sync_CheckedChanged(object sender, EventArgs e)
         {
             if (!busy)
             {
-                busy = true;
-                if (V2_Add_Sync.Checked) V2_Auto_Adj.Checked = false;
-                busy = false;
+                //if (V2_Add_Sync.Checked) RunBusy(() => V2_Auto_Adj.Checked = false);
                 V2_Adv_Opts();
             }
         }
@@ -485,15 +524,16 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                busy = true;
-                Lead_In.Enabled = VPL_lead.Checked;
-                if (VPL_lead.Checked)
+                RunBusy(() =>
                 {
-                    VPL_rb.Checked = true;
-                    VPL_only_sectors.Checked = VPL_auto_adj.Checked = false;
-                    VPL_presync.Enabled = VPL_auto_adj.Checked;
-                }
-                busy = false;
+                    Lead_In.Enabled = VPL_lead.Checked;
+                    if (VPL_lead.Checked)
+                    {
+                        VPL_rb.Checked = Lead_ptn.Enabled = true;
+                        VPL_only_sectors.Checked = VPL_auto_adj.Checked = false;
+                        VPL_presync.Enabled = VPL_auto_adj.Checked;
+                    }
+                });
                 Vorpal_Rebuild();
             }
         }
@@ -502,13 +542,14 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                busy = true;
-                if (!VPL_rb.Checked) { VPL_lead.Checked = Lead_In.Enabled = VPL_only_sectors.Checked = VPL_auto_adj.Checked = Adj_cbm.Checked = false; }
-                VPL_presync.Enabled = VPL_auto_adj.Checked;
-                Lead_ptn.Enabled = VPL_rb.Checked;
-                if (VPL_rb.Checked) VPL_auto_adj.Checked = false;
-                VPL_presync.Enabled = VPL_auto_adj.Checked;
-                busy = false;
+                RunBusy(() =>
+                {
+                    if (!VPL_rb.Checked) VPL_lead.Checked = Lead_In.Enabled = VPL_only_sectors.Checked = VPL_auto_adj.Checked = Adj_cbm.Checked = false;
+                    VPL_presync.Enabled = VPL_auto_adj.Checked;
+                    Lead_ptn.Enabled = VPL_rb.Checked;
+                    if (VPL_rb.Checked) VPL_auto_adj.Checked = false;
+                    VPL_presync.Enabled = VPL_auto_adj.Checked;
+                });
                 Vorpal_Rebuild();
             }
         }
@@ -525,13 +566,14 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                busy = true;
-                if (VPL_only_sectors.Checked)
+                RunBusy(() =>
                 {
-                    Lead_In.Enabled = VPL_lead.Checked = VPL_auto_adj.Checked = false;
-                    VPL_rb.Checked = true;
-                }
-                busy = false;
+                    if (VPL_only_sectors.Checked)
+                    {
+                        Lead_In.Enabled = VPL_lead.Checked = VPL_auto_adj.Checked = false;
+                        VPL_rb.Checked = true;
+                    }
+                });
                 Vorpal_Rebuild();
             }
         }
@@ -540,10 +582,11 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                busy = true;
-                Lead_In.Enabled = VPL_lead.Checked = VPL_only_sectors.Checked = VPL_rb.Checked = false;
-                VPL_presync.Enabled = VPL_auto_adj.Checked;
-                busy = false;
+                RunBusy(() =>
+                {
+                    Lead_In.Enabled = VPL_lead.Checked = VPL_only_sectors.Checked = VPL_rb.Checked = false;
+                    VPL_presync.Enabled = VPL_auto_adj.Checked;
+                });
                 Vorpal_Rebuild();
             }
         }
@@ -598,6 +641,10 @@ namespace V_Max_Tool
                 vpl_density[1] = Convert.ToInt32(VD1.Value);
                 vpl_density[2] = Convert.ToInt32(VD2.Value);
                 vpl_density[3] = Convert.ToInt32(VD3.Value);
+                for (int i = 0; i < vpl_density.Length; i++)
+                {
+                    if (vpl_density[i] != vpl_defaults[i]) { VPL_density_reset.Visible = true; break; }
+                }
                 Vorpal_Rebuild();
             }
         }
@@ -649,18 +696,13 @@ namespace V_Max_Tool
 
         private void DB_vpl_CheckedChanged(object sender, EventArgs e)
         {
-            //VD0.Visible = VD1.Visible = VD2.Visible = VD3.Visible = DB_vpl.Checked;
             usecpp = !CPP_tog.Checked;
             this.Text = $"Re-Master {ver}";
-            if (!CPP_tog.Checked)
-            {
-                Text += " (C++ Extensions Enabled)";
-            }
         }
 
         private void Debug_Button_Click(object sender, EventArgs e)
         {
-            Create_Blank_Disk();
+            RunBusy(Create_Blank_Disk);
         }
 
         private void V2_Swap_Headers_CheckedChanged(object sender, EventArgs e)
@@ -672,13 +714,9 @@ namespace V_Max_Tool
         {
             if (!busy)
             {
-                busy = true;
-                V2_Auto_Adj.Checked = true;
-                V2_Custom.Checked = V2_Add_Sync.Checked = false;
-                if (V2_swap.SelectedIndex == 0) { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x4e; }
-                if (V2_swap.SelectedIndex == 1) { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x46; }
-                if (V2_swap.SelectedIndex == 2) { NDG.newheader[0] = 0x4e; NDG.newheader[1] = 0x64; }
-                busy = false;
+                RunBusy(() => V2_Auto_Adj.Checked = true);
+                RunBusy(() => V2_Custom.Checked = V2_Add_Sync.Checked = false);
+                GetNewHeaders();
                 V2_Adv_Opts();
             }
         }
@@ -728,15 +766,77 @@ namespace V_Max_Tool
 
         private void RL_Fix_CheckedChanged(object sender, EventArgs e)
         {
+            RL_success.Visible = RL_Fix.Checked;
             if (!busy && RL_Fix.Checked)
             {
-                if (NDS.cbm.Any(x => x == 6)) RL_Remove_Protection();
-                else
-                {
-                    Check_Cyan_Loader(true);
-                    Clear_Out_Items();
-                    Process_Nib_Data(true, false, false, true);
-                }
+                if (NDS.cbm.Any(x => x == 6)) RL_success.Text = RL_Remove_Protection();
+            }
+        }
+
+        private void SaveDataBox_TextOutput(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            string Style;
+            if (DV_gcr.Checked) Style = "(GCR"; else Style = "(GCR-Decoded";
+            if (VS_hex.Checked) Style += "_HEX)";
+            if (VS_bin.Checked) Style += "_Binary)";
+            if (VS_dat.Checked) Style += "_Data)";
+
+            Save_Dialog.Filter = "Text File|*.txt";
+            Save_Dialog.Title = "Save Image File";
+            Save_Dialog.FileName = $"{fname}{Style}{fext.ToLower().Replace('.', '(')})";
+            Save_Dialog.ShowDialog();
+            string fs = Save_Dialog.FileName;
+            if (fs != "" || fs != null) File.WriteAllText(fs, Data_Box.Text);
+        }
+
+        private void RL_ChangeKey_CheckedChanged(object sender, EventArgs e)
+        {
+            if (RL_ChangeKey.Checked) Replace_RapidLok_Key = true; else Replace_RapidLok_Key = false;
+            Clear_Out_Items();
+            Process_Nib_Data(true, false, false, true);
+        }
+
+        private void VPL_mod_CheckedChanged(object sender, EventArgs e)
+        {
+            VD0.Enabled = VD1.Enabled = VD2.Enabled = VD3.Enabled = VPL_mod.Checked;
+            if (!VPL_mod.Checked)
+            {
+                Density_Reset();
+            }
+        }
+
+        private void VPL_density_reset_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Density_Reset();
+        }
+
+        private void RM_cyan_CheckedChanged(object sender, EventArgs e)
+        {
+            int tk = tracks > 42 ? 8 : 4;
+            if (NDG.Track_Data?[tk] != null && RM_cyan.Checked)
+            {
+                byte[] temp = Cyan_Loader_Patch(NDG.Track_Data[tk]);
+                Set_Dest_Arrays(temp, tk);
+            }
+        }
+
+        private void Density_Range_CheckedChanged(object sender, EventArgs e)
+        {
+            SwapDensities(tracks > 0 && !NDS.cbm.Any(x => x == 5));
+        }
+
+        void Panel_MouseEnter(object sender, EventArgs e)
+        {
+            lastHoveredButton = sender as System.Windows.Forms.Panel;
+            tips.Show(tips.GetToolTip(lastHoveredButton), lastHoveredButton, lastHoveredButton.Width, lastHoveredButton.Height);
+        }
+
+        void Button_MouseLeave(object sender, EventArgs e)
+        {
+            if (lastHoveredButton == sender)
+            {
+                tips.Hide(lastHoveredButton);
+                lastHoveredButton = null;
             }
         }
     }

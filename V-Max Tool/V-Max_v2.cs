@@ -8,13 +8,34 @@ namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
+        /*
+        v2_info[0] = v2 header start byte
+        v2_info[1] = v2 header end byte
+        v2_info[2] = header length
+        v2_info[3] = v2 version
+        v2_info[4] = 0 (syncless track) 1 (track has sync)
+        v2_info[5] = gap located before this sector
+        */
         private readonly byte[] vm2_pos_sync = { 0x57, 0x5b, 0x5f, 0x7f, 0xff };
-        private readonly byte[] v2_sync_marker = { 0x5b, 0xff }; /// 0x5b, 0xff (known working)
+        //private readonly byte[] v2_sync_marker = { 0x5b, 0xff }; /// 0x5b, 0xff (known working)
+        private readonly byte[] v2_sync_marker = { 0x7f, 0xff, 0xff }; /// 0x5b, 0xff (known working)
         private readonly string[][] vm2_ver = new string[2][];
         private readonly string[] v_check = { "A5-A3", "A9-A3", "AD-AB", "AD-A7" };
         private readonly byte[] VM2_Valid = { 0xa5, 0xa4, 0xa9, 0xaC, 0xad, 0xb4, 0xbc };
         private readonly byte[] vv2n = { 0x64, 0xa5, 0xa5, 0xa5 };
         private readonly byte[] vv2p = { 0x4e, 0xa5, 0xa5, 0xa5 };
+
+        void GetNewHeaders()
+        {
+
+            NDG.newheader = new byte[2];
+            switch (V2_swap.SelectedIndex)
+            {
+                case 0: { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x4e; } break;
+                case 1: { NDG.newheader[0] = 0x64; NDG.newheader[1] = 0x46; } break;
+                case 2: { NDG.newheader[0] = 0x4e; NDG.newheader[1] = 0x64; } break;
+            }
+        }
 
         void V2_Adv_Opts()
         {
@@ -59,35 +80,44 @@ namespace V_Max_Tool
             if (i >= V2_hlen.Minimum && i <= V2_hlen.Maximum)
             {
                 bool e = busy;
-                busy = true;
-                f_load.Checked = V2_Auto_Adj.Checked;
+                RunBusy(() => f_load.Checked = V2_Auto_Adj.Checked);
                 busy = e;
                 Clear_Out_Items();
                 Process_Nib_Data(c, false, p, true); /// false flag instructs the routine NOT to process CBM tracks again
             }
         }
 
-        (byte[], int, int, int) Rebuild_V2(byte[] data, int sectors, byte[] t_info, int trk, byte[] nh)
+        (byte[], int, int, int) Rebuild_V2(byte[] data, int sectors, byte[] t_info, int trk, byte[] new_header, bool use_new_Headers = false)
         {
             /// t_info[0] = start byte, t_info[1] = end byte, t_info[2] = header length, t_info[3] = v-max version (for sector headers)
             bool error = false;
             byte end_byte;
             int error_sec = 0;
             int trk_len = 0;
-            int gap_len;
             int pos = 0;
             int Sector_len = 320;
-            byte gab_byte = 0x55;
+            byte gap_byte = 0x55;
             int trk_density = density[Get_Density(data.Length)];
-            byte[] start_byte = new byte[1];
-            byte se_byte = 0x7f;
-            byte[][] hdr_dat = new byte[23][];
             byte[][] sec_dat = new byte[23][];
             byte[][] header = new byte[23][];
-            byte[] t_gap = new byte[0];
-            int[] sector_pos = new int[23];
-            start_byte[0] = t_info[0];
+            byte[] t_gap = new byte[] { 0x7f };
+            int track_num = tracks > 42 ? (trk / 2) + 1 : trk + 1;
+            if (track_num % 2 == 1 && !NDS.t18_ID.All(x => x == 0))
+            {
+                t_gap = ArrayConcat(v2_sync_marker, new byte[] { 0xff, 0xff }, Build_BlockHeader(track_num, 255, NDS.t18_ID));
+            }
+            byte start_byte = t_info[0];
+            for (int i = 0; i < data.Length; i++)
+            {
+                if (data[i] == start_byte && data[i + 1] == 0xa5 && data[i + 2] == 0xa5)
+                {
+                    if (i >= 1) data = Rotate_Left(data, i - 1);
+                    break;
+                }
+            }
             end_byte = t_info[1];
+            byte header1 = use_new_Headers ? new_header[0] : start_byte;
+            byte header2 = use_new_Headers ? new_header[1] : end_byte;
             int g_sec = Convert.ToInt32(t_info[5]);
             int vs = Convert.ToInt32(t_info[3]);
             int gap_pos = 0;
@@ -99,39 +129,31 @@ namespace V_Max_Tool
                 gap_pos = 0;
                 var d = pos;
                 if (d + 320 > data.Length) d = 0;
-                (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][i]}", data);
-                //(found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][i]}", data, 3, d);
+                //(found, pos) = Find_Data($"{Hex_Val(new byte[] { start_byte })}-{vm2_ver[vs][i]}", data);
+                (found, pos) = Find_Data(ArrayConcat(new byte[] { start_byte }, Hex2Byte(vm2_ver[vs][i])), data);
                 while (data[pos] != end_byte && (pos < data.Length - 1)) pos++;
                 pos += 320;
                 while (pos < data.Length)
                 {
                     try
                     {
-                        if (data[pos] == start_byte[0] && VM2_Valid.Any(s => s == data[pos + 1])) break;
+                        if (data[pos] == start_byte && VM2_Valid.Any(s => s == data[pos + 1])) break;
                         pos++;
                         if (pos > 5 && data[pos] != 0xf7) gap_pos++;
                     }
                     catch { }
                     if (gap_pos > 5) { gap_found = true; break; }
                 }
-                if (gap_found)
-                {
-                    if (data[pos - 5] == 0x52)
-                    {
-                        t_gap = new byte[11];
-                        Buffer.BlockCopy(data, pos - 5, t_gap, 1, 10);
-                        t_gap[0] = 0xff;
-                    }
-                    if (i == vm2_ver[vs].Length - 1) gap_pos = 0; else gap_pos += pos;
-                    break;
-                }
+                if (gap_found) break;
             }
-            if (gap_pos > 0) data = Rotate_Left(data, gap_pos);
-            int slen;
+            int slen = v2_sync_marker.Length;
+            bool syncless = t_info[4] == 0x00;
+            bool addSync = V2_Add_Sync.Checked;
+            int totalSync = syncless && !addSync ? slen : slen * sectors;
             var sec = 1000;
             for (int i = 0; i < data.Length; i++)
             {
-                while (data[i] != start_byte[0]) i++;
+                while (data[i] != start_byte) i++;
                 compare = Hex_Val(data, i + 1, 2);
                 if (vm2_ver[vs].Any(s => s == compare))
                 {
@@ -143,15 +165,13 @@ namespace V_Max_Tool
             int ls_pos = 0;
             for (int i = 0; i < sectors; i++)
             {
-                slen = v2_sync_marker.Length;
                 header[sec] = new byte[2];
                 sec_dat[sec] = new byte[Sector_len];
                 try
                 {
-                    (found, pos) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][sec]}", data, ls_pos);
+                    (found, pos) = Find_Data(ArrayConcat(new byte[] { start_byte }, Hex2Byte(vm2_ver[vs][sec])), data, ls_pos);
                     /// ---------- remove this if errors occur --------------------
-                    ls_pos = pos + 320;
-                    if (ls_pos >= data.Length - 320) ls_pos = 0;
+                    ls_pos = (ls_pos + 320 >= data.Length - 320) ? 0 : pos + 320;
                     /// -----------------------------------------------------------
                 }
                 catch { }
@@ -163,17 +183,17 @@ namespace V_Max_Tool
                 }
                 catch
                 {
-                    for (int r = 0; r < sec_dat[sec].Length; r++) sec_dat[sec][r] = 0xf7;
+                    for (int r = 0; r < sec_dat[sec].Length; r++) sec_dat[sec][r] = 0x00;
                     error = true;
                     error_sec = sec;
                 }
-                trk_len += (sec_dat[sec].Length + (slen + 1));
+                trk_len += sec_dat[sec].Length;
                 sec++;
                 if (sec == sectors) sec = 0;
             }
+            trk_len += totalSync;
             int left = trk_density - trk_len - 15;
-            int hlen = ((left / sectors) / 2) * 2;
-            gap_len = trk_density - ((hlen * sectors) + trk_len) - t_gap.Length;
+            int hlen = left / sectors / 2 - 1;
             var buffer = new MemoryStream();
             var write = new BinaryWriter(buffer);
             var st_sec = 0;
@@ -181,29 +201,19 @@ namespace V_Max_Tool
             {
                 if (sec_dat[st_sec].Length > 0)
                 {
-                    write.Write(v2_sync_marker);
+                    if ((i == 0 && syncless && !addSync) || !syncless || addSync) write.Write(v2_sync_marker);
                     write.Write(Build_Header(header[st_sec], hlen));
-                    write.Write(sec_dat[st_sec]);
-                    write.Write((byte)se_byte);
-                    st_sec++; if (st_sec == sectors) st_sec = 0;
+                    write.Write(sec_dat[st_sec++]);
+                    st_sec = st_sec == sectors ? 0 : st_sec;
                 }
             }
             if (t_gap.Length > 0) write.Write(t_gap);
-            for (int j = 0; j < gap_len; j++) write.Write((byte)gab_byte);
+            int remain = (trk_density - (int)buffer.Position);
+            if (remain > 0) write.Write(FastArray.Init(remain, gap_byte));
             if (error && !batch)
             {
-                var tk = 0;
-                if (tracks > 42) tk = (trk / 2) + 1; else tk = trk + 1;
+                var tk = track_num;
                 error = false;
-                //Invoke(new Action(() =>
-                //{
-                //    using (Message_Center centeringService = new Message_Center(this)) /// center message box
-                //    {
-                //        string m = $"Possible corrupt data on track {tk} sector {error_sec}";
-                //        string t = "Error processing image!";
-                //        MessageBox.Show(m, t, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                //    }
-                //}));
             }
             return (buffer.ToArray(), 0, (int)buffer.Length, sectors);
 
@@ -211,9 +221,9 @@ namespace V_Max_Tool
             {
                 var buff = new MemoryStream();
                 var wrt = new BinaryWriter(buff);
-                if (!V2_swap_headers.Checked) wrt.Write(start_byte); else wrt.Write(nh[0]);
-                for (int i = 0; i < (len - 2) / 2; i++) wrt.Write(ID);
-                if (!V2_swap_headers.Checked) wrt.Write((byte)end_byte); else wrt.Write(nh[1]);
+                wrt.Write((byte)header1);
+                for (int i = 0; i < len; i++) wrt.Write(ID);
+                wrt.Write((byte)header2);
                 buff.Close();
                 wrt.Close();
                 return buff.ToArray();
@@ -445,7 +455,6 @@ namespace V_Max_Tool
                                 {
                                     buffer.Seek(buffer.Length, SeekOrigin.Begin);
                                     buffer.Read(chk, 0, 1);
-                                    if (chk[0] != 0x7f) write.Write((byte)0x7f);
                                     write.Write(v2_sync_marker); /// <- Here's where we add the sync (unless its a syncless track)
                                 }
                                 write.Write(Build_Header(start_byte, end_byte, compare, ((header_length) / 2) * 2)); /// building new header and writing to buffer
@@ -461,7 +470,7 @@ namespace V_Max_Tool
                     s_pos++;
                 }
                 bool found = false;
-                (found, sec_zero) = Find_Data($"{Hex_Val(start_byte)}-{vm2_ver[vs][0]}", data, 3);
+                (found, sec_zero) = Find_Data(ArrayConcat(start_byte, Hex2Byte(vm2_ver[vs][0])), data, 3);
                 return buffer.ToArray(); /// <- Return new array with sync markers adjusted
 
                 byte[] Build_Header(byte[] s, byte[] e, byte[] f, int len)

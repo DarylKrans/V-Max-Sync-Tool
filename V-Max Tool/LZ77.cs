@@ -124,7 +124,7 @@ namespace V_Max_Tool
             return numBytes;
         }
 
-        private static unsafe int _LZ_WriteVarSize(uint x, byte* buf)
+        private static unsafe int LZ_WriteVarSize(uint x, byte* buf)
         {
             uint y;
             int numBytes, i, b;
@@ -266,8 +266,8 @@ namespace V_Max_Tool
                     ((bestlength == 7) && (bestoffset <= 0x0fffffff)))
                 {
                     output[outpos++] = marker;
-                    outpos += (uint)_LZ_WriteVarSize(bestlength, output + outpos);
-                    outpos += (uint)_LZ_WriteVarSize(bestoffset, output + outpos);
+                    outpos += (uint)LZ_WriteVarSize(bestlength, output + outpos);
+                    outpos += (uint)LZ_WriteVarSize(bestoffset, output + outpos);
                     inpos += bestlength;
                     bytesleft -= bestlength;
                 }
@@ -388,8 +388,8 @@ namespace V_Max_Tool
                     ((bestlength == 7) && (bestoffset <= 0x0fffffff)))
                 {
                     output[outpos++] = marker;
-                    outpos += (uint)_LZ_WriteVarSize(bestlength, output + outpos);
-                    outpos += (uint)_LZ_WriteVarSize(bestoffset, output + outpos);
+                    outpos += (uint)LZ_WriteVarSize(bestlength, output + outpos);
+                    outpos += (uint)LZ_WriteVarSize(bestoffset, output + outpos);
                     inpos += bestlength;
                     bytesleft -= bestlength;
                 }

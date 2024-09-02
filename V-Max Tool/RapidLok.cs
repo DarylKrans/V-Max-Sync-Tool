@@ -18,44 +18,60 @@ namespace V_Max_Tool
         private readonly byte[,][] rl1_t18s9 = new byte[2, 2][];
         private readonly byte[] rl_nkey = new byte[54];
         private readonly int[] rl_7b = new int[35];
+        private bool Replace_RapidLok_Key = false;
 
 
-        void RL_Remove_Protection()
+        string RL_Remove_Protection()
         {
             byte[] f = new byte[0];
             if (NDS.cbm.Any(x => x == 7) && RL_Fix.Checked)
             {
                 int track = 17;
                 if (tracks > 43) track = 34;
-                (byte[] temp, string rem) = Patch_RapidLok(NDG.Track_Data[track], 0);
+                (byte[] temp, int rem) = Patch_RapidLok(NDG.Track_Data[track], 0);
                 Set_Dest_Arrays(temp, track);
+                switch (rem)
+                {
+                    case 0: return "Failed! Protection still intact";
+                    case 1: return "Success! Removed all protecion checks!";
+                    case 2: return "Protection already removed.";
+                }
             }
+            return null;
         }
 
-        (byte[], string) Patch_RapidLok(byte[] data, int start)
+        (byte[], int) Patch_RapidLok(byte[] data, int start)
         {
-            string status = " [!]";
-            string fixedStatus = " (Fixed)";
             byte[] sector = new byte[0];
             BitArray source = new BitArray(Flip_Endian(data));
 
-            bool cksm;
+            //bool cksm;
             bool[] rl6 = new bool[5];
             bool[] rl2 = new bool[2];
             bool[] rl1 = new bool[2];
 
-            if (TryPatchSector(3, rl6, true, rl6_t18s3, Patch_v6))
+            (bool chk, bool already) = TryPatchSector(3, rl6, true, rl6_t18s3, Patch_v6);
+            if (chk) return (data, 1);
+            if (already) return (data, 2);
+
+            (chk, already) = TryPatchSector(9, rl2, false, rl2_t18s9, Patch_v2);
+            if (chk)
             {
-                status = fixedStatus;
-            }
-            else if (TryPatchSector(9, rl2, false, rl2_t18s9, Patch_v2) || TryPatchSector(9, rl1, false, rl1_t18s9, Patch_v1))
-            {
-                status = fixedStatus;
                 data = Replace_CBM_Sector(data, 9, sector);
+                return (data, 1);
             }
+            else if (already) return (data, 2);
+
+            (chk, already) = TryPatchSector(9, rl1, false, rl1_t18s9, Patch_v1);
+            if (chk)
+            {
+                data = Replace_CBM_Sector(data, 9, sector);
+                return (data, 1);
+            }
+            else if (already) return (data, 2);
 
             LogSectorStatus(rl6, rl2, rl1);
-            return (data, status);
+            return (data, 0);
 
             void Patch_v2()
             {
@@ -72,21 +88,22 @@ namespace V_Max_Tool
                 PatchSector(rl6_t18s3);
                 data = Replace_CBM_Sector(data, 3, sector);
 
-                (bool exist, int pos) = Find_Sector(source, 6);
+                (bool exist, int pos, _, bool hdr_cksm) = Find_Sector(source, 6);
                 if (exist)
                 {
-                    (sector, cksm) = Decode_CBM_Sector(data, 6, true, source, pos);
+                    (sector, _) = Decode_CBM_Sector(data, 6, true, source, pos);
                     PatchSector(rl6_t18s6);
                     data = Replace_CBM_Sector(data, 6, sector, null, start);
                 }
             }
 
-            bool TryPatchSector(int sectorIndex, bool[] flags, bool decode, byte[,][] patterns, Action patchAction)
+            (bool, bool) TryPatchSector(int sectorIndex, bool[] flags, bool decode, byte[,][] patterns, Action patchAction)
             {
-                (bool exist, int pos) = Find_Sector(source, sectorIndex, start);
-                if (!exist) return false;
+                bool[] patched = new bool[flags.Length];
+                (bool exist, int pos, _, _) = Find_Sector(source, sectorIndex, start);
+                if (!exist) return (false, false);
 
-                (sector, cksm) = Decode_CBM_Sector(data, sectorIndex, decode, source, pos);
+                (sector, _) = Decode_CBM_Sector(data, sectorIndex, decode, source, pos);
                 for (int i = 0; i < sector.Length; i++)
                 {
                     for (int j = 0; j < patterns.GetLength(0); j++)
@@ -95,16 +112,25 @@ namespace V_Max_Tool
                         {
                             flags[j] = true;
                         }
+                        if (patterns[j, 1].SequenceEqual(sector.Skip(i).Take(patterns[j, 1].Length)))
+                        {
+                            patched[j] = true;
+                        }
                     }
                 }
 
                 if (flags.All(x => x))
                 {
                     patchAction();
-                    return true;
+                    return (true, false);
+                }
+                if (patched.All(x => x))
+                {
+                    patchAction();
+                    return (false, true);
                 }
 
-                return false;
+                return (false, false);
             }
 
             void PatchSector(byte[,][] patterns)
@@ -126,8 +152,6 @@ namespace V_Max_Tool
                 int r6 = rl_6.Count(x => x);
                 int r2 = rl_2.Count(x => x);
                 int r1 = rl_1.Count(x => x);
-                // Log sector status
-                //Invoke(new Action(() => Text = $"rl6 ({r6}) rl2 ({r2}) rl1 ({r1}) "));
             }
         }
 
@@ -140,7 +164,7 @@ namespace V_Max_Tool
             if (data[s] == 0x6b) s += 200;
             for (int i = s; i < data.Length; i++)
             {
-                if ((data[i] == 0x6b) && (i + 256) < data.Length) // && !blank.Any(x => x == data[i + 1])) && i + 256 < data.Length)
+                if ((data[i] == 0x6b) && (i + 256) < data.Length)
                 {
                     Buffer.BlockCopy(data, i, key, 0, 256);
                     break;
