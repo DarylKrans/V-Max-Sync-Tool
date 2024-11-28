@@ -43,7 +43,7 @@ namespace V_Max_Tool
             return fileType;
         }
 
-        string Get_DirectoryFileName(byte[] file)
+        string Get_DirectoryFileName(byte[] file, bool onlyname = false)
         {
             bool eof = false;
             string fName = "\"";
@@ -730,13 +730,13 @@ namespace V_Max_Tool
                 (byte[] sec_data, bool chksum) = Decode_CBM_Sector(data, sector, true, source, pos);
                 error = !chksum ? 5 : error;
                 error = (sec_data == null || sec_data?.Length != 256) ? 4 : error;
-                if (ID != null) error = (!Match(ID, id)) ? 8 : error;
+                if (ID != null) error = (!Match(ID, id)) ? 11 : error;
                 /* if Decode is set to true, Send back the un-altered sector data from the track */
                 if (!decode) (sec_data, _) = Decode_CBM_Sector(data, sector, false, source, pos);
                 return (sec_data, error, pos);
             }
             else error = 2;
-            error = (!hdr_cksm) ? 7 : error;
+            error = (!hdr_cksm) ? 9 : error;
             return (null, error, -1);
         }
 
@@ -836,15 +836,15 @@ namespace V_Max_Tool
             return b.ToString();
         }
 
-        //byte SetBit(byte data, int bitPosition)
-        //{
-        //    return (byte)(data | (1 << bitPosition));
-        //}
-        //
-        //byte ClearBit(byte data, int bitPosition)
-        //{
-        //    return (byte)(data & ~(1 << bitPosition));
-        //}
+        byte SetBit(byte data, int bitPosition)
+        {
+            return (byte)(data | (1 << bitPosition));
+        }
+
+        byte ClearBit(byte data, int bitPosition)
+        {
+            return (byte)(data & ~(1 << bitPosition));
+        }
 
         byte ToggleBit(byte data, int bitPosition)
         {
@@ -1081,6 +1081,9 @@ namespace V_Max_Tool
             byte[] gap = FastArray.Init(len, cbm_gap);
             if (cbm_gap == 0x55) gap[gap.Length - 1] = 0x56;
             return gap;
+            //byte[] gap = new byte[len];
+            //gap = Encode_CBM_GCR(gap);
+            //return gap;
         }
 
         byte[] Decode_CBM_GCR(byte[] gcr)

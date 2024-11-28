@@ -149,6 +149,9 @@
             this.Dir_ChgType = new System.Windows.Forms.CheckBox();
             this.Dir_Cancel = new System.Windows.Forms.Button();
             this.Dir_Apply = new System.Windows.Forms.Button();
+            this.label19 = new System.Windows.Forms.Label();
+            this.label18 = new System.Windows.Forms.Label();
+            this.Sec_Interleave = new System.Windows.Forms.ComboBox();
             this.Dir_Edit = new System.Windows.Forms.LinkLabel();
             this.Dir_screen = new System.Windows.Forms.RichTextBox();
             this.BlockMap = new System.Windows.Forms.TabPage();
@@ -188,6 +191,15 @@
             this.sl = new System.Windows.Forms.ListBox();
             this.ss = new System.Windows.Forms.ListBox();
             this.sf = new System.Windows.Forms.ListBox();
+            this.GB_NewDisk = new V_Max_Tool.Gbox();
+            this.S_Interleave = new System.Windows.Forms.ComboBox();
+            this.label23 = new System.Windows.Forms.Label();
+            this.SortBySize = new System.Windows.Forms.CheckBox();
+            this.NewDiskBtn = new System.Windows.Forms.Button();
+            this.label22 = new System.Windows.Forms.Label();
+            this.label20 = new System.Windows.Forms.Label();
+            this.ND_id = new System.Windows.Forms.TextBox();
+            this.ND_name = new System.Windows.Forms.TextBox();
             this.Import_File = new V_Max_Tool.Gbox();
             this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
             this.label5 = new System.Windows.Forms.Label();
@@ -237,6 +249,7 @@
             this.VPL_Advanced.SuspendLayout();
             this.Batch_Box.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).BeginInit();
+            this.GB_NewDisk.SuspendLayout();
             this.Import_File.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -1654,6 +1667,9 @@
             // tabPage3
             // 
             this.tabPage3.Controls.Add(this.groupBox3);
+            this.tabPage3.Controls.Add(this.label19);
+            this.tabPage3.Controls.Add(this.label18);
+            this.tabPage3.Controls.Add(this.Sec_Interleave);
             this.tabPage3.Controls.Add(this.Dir_Edit);
             this.tabPage3.Controls.Add(this.Dir_screen);
             this.tabPage3.Location = new System.Drawing.Point(4, 37);
@@ -1679,7 +1695,7 @@
             this.groupBox3.Controls.Add(this.Dir_ChgType);
             this.groupBox3.Controls.Add(this.Dir_Cancel);
             this.groupBox3.Controls.Add(this.Dir_Apply);
-            this.groupBox3.Location = new System.Drawing.Point(0, 0);
+            this.groupBox3.Location = new System.Drawing.Point(4, 4);
             this.groupBox3.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox3.Name = "groupBox3";
             this.groupBox3.Padding = new System.Windows.Forms.Padding(4);
@@ -1834,6 +1850,34 @@
             this.Dir_Apply.UseVisualStyleBackColor = true;
             this.Dir_Apply.Click += new System.EventHandler(this.Dir_Apply_Click);
             // 
+            // label19
+            // 
+            this.label19.AutoSize = true;
+            this.label19.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label19.Location = new System.Drawing.Point(513, 11);
+            this.label19.Name = "label19";
+            this.label19.Size = new System.Drawing.Size(598, 29);
+            this.label19.TabIndex = 41;
+            this.label19.Text = "Drag files into Directory window to add them to the disk";
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label18.Location = new System.Drawing.Point(9, 11);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(194, 29);
+            this.label18.TabIndex = 40;
+            this.label18.Text = "Sector Interleave";
+            // 
+            // Sec_Interleave
+            // 
+            this.Sec_Interleave.FormattingEnabled = true;
+            this.Sec_Interleave.Location = new System.Drawing.Point(218, 7);
+            this.Sec_Interleave.Name = "Sec_Interleave";
+            this.Sec_Interleave.Size = new System.Drawing.Size(238, 33);
+            this.Sec_Interleave.TabIndex = 39;
+            // 
             // Dir_Edit
             // 
             this.Dir_Edit.ActiveLinkColor = System.Drawing.Color.White;
@@ -1841,7 +1885,7 @@
             this.Dir_Edit.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(69)))), ((int)(((byte)(55)))), ((int)(((byte)(176)))));
             this.Dir_Edit.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Dir_Edit.LinkColor = System.Drawing.Color.White;
-            this.Dir_Edit.Location = new System.Drawing.Point(928, 8);
+            this.Dir_Edit.Location = new System.Drawing.Point(942, 80);
             this.Dir_Edit.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Dir_Edit.Name = "Dir_Edit";
             this.Dir_Edit.Size = new System.Drawing.Size(157, 29);
@@ -1856,11 +1900,11 @@
             this.Dir_screen.CausesValidation = false;
             this.Dir_screen.Cursor = System.Windows.Forms.Cursors.Default;
             this.Dir_screen.Font = new System.Drawing.Font("Comic Mono", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Dir_screen.Location = new System.Drawing.Point(4, 0);
+            this.Dir_screen.Location = new System.Drawing.Point(4, 63);
             this.Dir_screen.Margin = new System.Windows.Forms.Padding(4);
             this.Dir_screen.Name = "Dir_screen";
             this.Dir_screen.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
-            this.Dir_screen.Size = new System.Drawing.Size(1136, 1292);
+            this.Dir_screen.Size = new System.Drawing.Size(1136, 1229);
             this.Dir_screen.TabIndex = 38;
             this.Dir_screen.Text = "";
             // 
@@ -2329,6 +2373,98 @@
             this.sf.Size = new System.Drawing.Size(114, 1002);
             this.sf.TabIndex = 26;
             // 
+            // GB_NewDisk
+            // 
+            this.GB_NewDisk.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.GB_NewDisk.BorderColor = System.Drawing.Color.Black;
+            this.GB_NewDisk.Controls.Add(this.S_Interleave);
+            this.GB_NewDisk.Controls.Add(this.label23);
+            this.GB_NewDisk.Controls.Add(this.SortBySize);
+            this.GB_NewDisk.Controls.Add(this.NewDiskBtn);
+            this.GB_NewDisk.Controls.Add(this.label22);
+            this.GB_NewDisk.Controls.Add(this.label20);
+            this.GB_NewDisk.Controls.Add(this.ND_id);
+            this.GB_NewDisk.Controls.Add(this.ND_name);
+            this.GB_NewDisk.Location = new System.Drawing.Point(2225, 144);
+            this.GB_NewDisk.Name = "GB_NewDisk";
+            this.GB_NewDisk.Size = new System.Drawing.Size(417, 276);
+            this.GB_NewDisk.TabIndex = 38;
+            this.GB_NewDisk.TabStop = false;
+            this.GB_NewDisk.Text = "Create New Disk  ";
+            // 
+            // S_Interleave
+            // 
+            this.S_Interleave.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.S_Interleave.FormattingEnabled = true;
+            this.S_Interleave.Location = new System.Drawing.Point(196, 164);
+            this.S_Interleave.Name = "S_Interleave";
+            this.S_Interleave.Size = new System.Drawing.Size(194, 33);
+            this.S_Interleave.TabIndex = 7;
+            // 
+            // label23
+            // 
+            this.label23.AutoSize = true;
+            this.label23.Location = new System.Drawing.Point(16, 172);
+            this.label23.Name = "label23";
+            this.label23.Size = new System.Drawing.Size(174, 25);
+            this.label23.TabIndex = 6;
+            this.label23.Text = "Sector Interleave";
+            // 
+            // SortBySize
+            // 
+            this.SortBySize.AutoSize = true;
+            this.SortBySize.Location = new System.Drawing.Point(20, 124);
+            this.SortBySize.Name = "SortBySize";
+            this.SortBySize.Size = new System.Drawing.Size(276, 29);
+            this.SortBySize.TabIndex = 5;
+            this.SortBySize.Text = "Sort by size (ascending)";
+            this.SortBySize.UseVisualStyleBackColor = true;
+            // 
+            // NewDiskBtn
+            // 
+            this.NewDiskBtn.Location = new System.Drawing.Point(162, 219);
+            this.NewDiskBtn.Name = "NewDiskBtn";
+            this.NewDiskBtn.Size = new System.Drawing.Size(86, 40);
+            this.NewDiskBtn.TabIndex = 4;
+            this.NewDiskBtn.Text = "OK";
+            this.NewDiskBtn.UseVisualStyleBackColor = true;
+            // 
+            // label22
+            // 
+            this.label22.AutoSize = true;
+            this.label22.Location = new System.Drawing.Point(45, 79);
+            this.label22.Name = "label22";
+            this.label22.Size = new System.Drawing.Size(32, 25);
+            this.label22.TabIndex = 3;
+            this.label22.Text = "ID";
+            // 
+            // label20
+            // 
+            this.label20.AutoSize = true;
+            this.label20.Location = new System.Drawing.Point(9, 40);
+            this.label20.Name = "label20";
+            this.label20.Size = new System.Drawing.Size(68, 25);
+            this.label20.TabIndex = 2;
+            this.label20.Text = "Name";
+            // 
+            // ND_id
+            // 
+            this.ND_id.Location = new System.Drawing.Point(100, 76);
+            this.ND_id.MaxLength = 5;
+            this.ND_id.Name = "ND_id";
+            this.ND_id.Size = new System.Drawing.Size(100, 31);
+            this.ND_id.TabIndex = 1;
+            this.ND_id.Text = "00 2A";
+            // 
+            // ND_name
+            // 
+            this.ND_name.Location = new System.Drawing.Point(100, 37);
+            this.ND_name.MaxLength = 16;
+            this.ND_name.Name = "ND_name";
+            this.ND_name.Size = new System.Drawing.Size(280, 31);
+            this.ND_name.TabIndex = 0;
+            this.ND_name.Text = "NEW DISK";
+            // 
             // Import_File
             // 
             this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
@@ -2434,7 +2570,8 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(2285, 1406);
+            this.ClientSize = new System.Drawing.Size(2436, 1406);
+            this.Controls.Add(this.GB_NewDisk);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.Adv_ctrl);
             this.Controls.Add(this.Tabs);
@@ -2509,6 +2646,8 @@
             this.Batch_Box.ResumeLayout(false);
             this.Batch_Box.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).EndInit();
+            this.GB_NewDisk.ResumeLayout(false);
+            this.GB_NewDisk.PerformLayout();
             this.Import_File.ResumeLayout(false);
             this.Import_File.PerformLayout();
             this.ResumeLayout(false);
@@ -2683,5 +2822,17 @@
         private CustomLabel ErrorBlk;
         private CustomLabel AllocBlk;
         private CustomLabel CSTfmt;
+        private System.Windows.Forms.ComboBox Sec_Interleave;
+        private System.Windows.Forms.Label label19;
+        private System.Windows.Forms.Label label18;
+        private Gbox GB_NewDisk;
+        private System.Windows.Forms.Button NewDiskBtn;
+        private System.Windows.Forms.Label label22;
+        private System.Windows.Forms.Label label20;
+        private System.Windows.Forms.TextBox ND_id;
+        private System.Windows.Forms.TextBox ND_name;
+        private System.Windows.Forms.ComboBox S_Interleave;
+        private System.Windows.Forms.Label label23;
+        private System.Windows.Forms.CheckBox SortBySize;
     }
 }

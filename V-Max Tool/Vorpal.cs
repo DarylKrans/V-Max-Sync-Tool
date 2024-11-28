@@ -15,6 +15,72 @@ namespace V_Max_Tool
         readonly BitArray leadIn_alt = new BitArray(10);
         readonly int com = 20;
 
+        byte[] Vorpal_Test(byte[] data, int trk, byte[] ID)
+        {
+            if (data != null && data.Length > 6000)
+            {
+                trk = trk > 42 ? (trk / 2) + 1 : trk + 1;
+                int d = VPL_Density(data.Length);
+                BitArray source = new BitArray(Flip_Endian(data));
+                BitArray gap = NewBit(new byte[] { 0x55 }, 5);
+                BitArray gap2 = NewBit(new byte[] { 0x55 }, 3);
+                BitArray sync = NewBit(new byte[] { 0xff, 0xff, 0x55 });
+                BitArray sync2 = NewBit(new byte[] { 0xff, 0xff, 0x55 });
+                BitArray Sector0 = NewBit(new byte[] { 0xcc, 0xff, 0x54 }, 23); // 25
+                BitArray Sectora = NewBit(new byte[] { 0xbf, 0xd5 }, 17); // 17
+                int sectors = Get_VPL_Sectors(source);
+                BitArray[] s_data = new BitArray[sectors];
+                for (int i = 0; i < sectors; i++)
+                {
+                    s_data[i] = NewBit(Decode_Vorpal(source, i, false, 163), 1300);
+                }
+                BitArray outt = new BitArray((data.Length + 512) * 8);
+                int pos = 0;
+                for (int i = 0; i < sectors; i++)
+                {
+                    if (i == 0) BitCopy(sync);
+                    if ((i + 1) % 4 == 0 && ((trk < 18 && trk % 2 == 1) || trk > 18)) BitCopy(sync2);
+                    BitCopy(i > 0 ? Sectora : Sector0);
+                    BitCopy(s_data[i]);
+                    BitCopy(i == 0 ? gap : gap2);
+                    if (i == 0 && ((trk < 18 && trk != 5 && trk % 2 == 1) || (trk > 18 && trk != 21)))
+                    {
+                        BitCopy(NewBit(FastArray.Init(5, 0xff)));
+                        BitCopy(NewBit(Build_BlockHeader(trk, 0, ID)));
+                    }
+
+                }
+
+                byte[] tmp = Bit2Byte(outt, 0, pos);
+                byte[] output = FastArray.Init(tmp.Length < vpl_density[d] ? vpl_density[d] : tmp.Length, 0x55);
+                Buffer.BlockCopy(tmp, 0, output, 0, tmp.Length);
+                return output;
+
+                void BitCopy(BitArray src)
+                {
+                    for (int k = 0; k < src.Length; k++)
+                    {
+                        outt[pos++] = src[k];
+                    }
+                }
+            }
+            return null;
+        }
+
+        BitArray NewBit(byte[] bytes, int length = 0)
+        {
+            if (bytes == null || bytes.Length == 0) return null;
+            length = length > 0 ? length : bytes.Length << 3;
+            BitArray newbit = new BitArray(length);
+            BitArray temp = new BitArray(Flip_Endian(bytes));
+            int blen = newbit.Length > temp.Length ? temp.Length : newbit.Length;
+            for (int i = 0; i < blen; i++)
+            {
+                if (temp[i]) newbit.Set(i, true);
+            }
+            return newbit;
+        }
+
         void Vorpal_Rebuild()
         {
             bool p = false;
@@ -92,6 +158,7 @@ namespace V_Max_Tool
             int cur_sec = 0;
             int tlen = data.Length;
             if (VPL_auto_adj.Checked || VPL_rb.Checked) d = VPL_Density(tlen);
+            //d = VPL_Density(tlen);
             int tstart = 0;
             int tend = 0;
             BitArray source = new BitArray(Flip_Endian(data));
@@ -140,8 +207,11 @@ namespace V_Max_Tool
             if (VPL_lead.Checked) offset = Convert.ToInt32(Lead_In.Value) << 3;
             if (VPL_only_sectors.Checked)
             {
-                offset = 0;
-                output = new byte[len + 1];
+                //offset = 24;
+                output = FastArray.Init(len + 4 < vpl_density[d] ? vpl_density[d] : len + 4, 0x55);
+                output[0] = 0xff;
+                output[1] = 0xff;
+                output[2] = 0x55;
                 output_bits = new BitArray(Flip_Endian(output));
             }
             if ((VPL_auto_adj.Checked || VPL_rb.Checked) && !(VPL_only_sectors.Checked || VPL_lead.Checked))
@@ -241,10 +311,11 @@ namespace V_Max_Tool
             }
         }
 
-        byte[] Decode_Vorpal(BitArray source, int sector = -1, bool dec = true)
+        byte[] Decode_Vorpal(BitArray source, int sector = -1, bool dec = true, int bytes = -1)
         {
             int snc_cnt = 0, psec = 0, sub = dec ? 0 : 8 * 5;
-            BitArray sec_data = new BitArray(dec ? (160 * 8) : (165 * 8));
+            //BitArray sec_data = new BitArray(dec ? (160 * 8) : (165 * 8));
+            BitArray sec_data = new BitArray(dec ? (160 * 8) : (bytes == -1 ? 162 * 8 : bytes * 8));
 
             byte[] decoded = new byte[0];
 

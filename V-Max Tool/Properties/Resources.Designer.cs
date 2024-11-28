@@ -93,6 +93,16 @@ namespace ReMaster_Utility.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] fload {
+            get {
+                object obj = ResourceManager.GetObject("fload", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] msvcrt {
             get {
                 object obj = ResourceManager.GetObject("msvcrt", resourceCulture);

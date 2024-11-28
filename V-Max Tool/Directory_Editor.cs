@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
+using System.Text;
 using System.Windows.Forms;
 
 
@@ -258,36 +260,37 @@ namespace V_Max_Tool
                     mod.Add(i);
                     if (d_temp[i] != null && d_temp[i].Length > 2)
                     {
-                        d_temp[i][2] = Handle_Bits(d_temp[i][2]);
+                        d_temp[i][2] = Handle_Bits(d_temp[i][2], Dir_Ftype.SelectedIndex);
                         f_temp[i] = Get_FileName(d_temp[i]);
                     }
                 }
             }
             Update_List_Items(mod.ToArray(), f_temp);
-
-            byte Handle_Bits(byte data)
-            {
-                switch (Dir_Ftype.SelectedIndex)
-                {
-                    case 0:
-                        data = (byte)((data & 0xF0) | 0x02); // Clear bits 3, 2, 0 and set bit 1
-                        break;
-                    case 1:
-                        data = (byte)((data & 0xF0) | 0x01); // Clear bits 3, 2, 1 and set bit 0
-                        break;
-                    case 2:
-                        data = (byte)((data & 0xF0) | 0x03); // Clear bits 3, 2 and set bits 1, 0
-                        break;
-                    case 3:
-                        data = (byte)((data & 0xF0) | 0x04); // Clear bits 3, 1, 0 and set bit 2
-                        break;
-                    case 4:
-                        data = (byte)(data & 0xF0); // Clear bits 3, 2, 1, 0
-                        break;
-                }
-                return data;
-            }
         }
+
+        byte Handle_Bits(byte data, int fileType)
+        {
+            switch (fileType)
+            {
+                case 0:
+                    data = (byte)((data & 0xF0) | 0x02); // Clear bits 3, 2, 0 and set bit 1 (PRG)
+                    break;
+                case 1:
+                    data = (byte)((data & 0xF0) | 0x01); // Clear bits 3, 2, 1 and set bit 0 (SEQ)
+                    break;
+                case 2:
+                    data = (byte)((data & 0xF0) | 0x03); // Clear bits 3, 2 and set bits 1, 0 (USR)
+                    break;
+                case 3:
+                    data = (byte)((data & 0xF0) | 0x04); // Clear bits 3, 1, 0 and set bit 2 (REL)
+                    break;
+                case 4:
+                    data = (byte)(data & 0xF0); // Clear bits 3, 2, 1, 0 (DEL)
+                    break;
+            }
+            return data;
+        }
+
 
         string Get_FileName(byte[] data)
         {
@@ -295,6 +298,60 @@ namespace V_Max_Tool
             string fType = Get_DirectoryFileType(data[2]);
             string fName = Get_DirectoryFileName(data);
             return $"{sz}{fName}{fType}";
+        }
+
+        byte[] CreateFileEntry(string name, int blocks, int track, int sector)
+        {
+            if (name == null) return null;
+            int filetype = 0;
+            var fileTypeMap = new Dictionary<string, int>
+            {
+                { ".prg", 0 },
+                { ".seq", 1 },
+                { ".usr", 2 },
+                { ".rel", 3 },
+                { ".del", 4 }
+            };
+            foreach (var fileType in fileTypeMap)
+            {
+                if (name.ToLower().Contains(fileType.Key))
+                {
+                    filetype = fileType.Value;
+                    break;  // Exit once the file type is found
+                }
+            }
+            name = GetProperFileName(name);
+            MemoryStream buffer = new MemoryStream();
+            BinaryWriter write = new BinaryWriter(buffer);
+            byte[] filename = Encoding.UTF8.GetBytes(name);
+            byte[] nm = FastArray.Init(16, 0xa0);
+            Buffer.BlockCopy(filename, 0, nm, 0, filename.Length);
+            write.Write((byte)Handle_Bits(0x80, filetype));
+            write.Write((byte)track);
+            write.Write((byte)sector);
+            write.Write(nm);
+            int rem = 28 - (int)buffer.Length;
+            write.Write(FastArray.Init(rem, 0x00));
+            write.Write(Convert.ToInt16(blocks));
+            return buffer.ToArray();
+        }
+
+        string GetProperFileName(string rename)
+        {
+            // Split the filename by '.'
+            string[] parts = rename.Split('.');
+
+            // If there are more than one part (i.e., multiple extensions exist)
+            if (parts.Length > 1)
+            {
+                // Join all parts except the last one (which is the extension)
+                string renamed = string.Join(".", parts, 0, parts.Length - 1);
+                // Trim the new name if > than 16 characters and return the new filename
+                return renamed.Length > 16 ? renamed.Substring(0, 16) : renamed;
+            }
+
+            // If there's no extension, return the filename unchanged
+            return rename = rename.Length > 16 ? rename.Substring(0, 16) : rename;
         }
 
         void ReCopyArray()

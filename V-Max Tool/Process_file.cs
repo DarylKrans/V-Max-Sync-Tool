@@ -1010,13 +1010,14 @@ namespace V_Max_Tool
             void Process_CBM(int trk, bool acbm, bool bmc, bool cyn_ldr, int ctrack)
             {
                 bool ad = NDS.Adjust[trk] && !NDS.cbm.Any(x => x == 9);
+                //ad = false;
                 int htk = tracks > 42 ? 2 : 1;
                 int track = tracks > 42 ? (trk / 2) + 1 : trk + 1;
                 if ((track != NDS.Track_ID[trk] && track == NDS.Track_ID[trk] + 1) || (trk + htk < NDS.Track_ID.Length && track == NDS.Track_ID[trk + htk]))
                 {
                     NDG.Fat_Track[trk] = true;
                     if (fat_trk < 0) fat_trk = track;
-                    if (track != NDS.Track_ID[trk] && track >= 34 && !NDS.cbm.Any(x => x == 11)) end_track = trk + htk;
+                    //if (track != NDS.Track_ID[trk] && track >= 34 && !NDS.cbm.Any(x => x == 11)) end_track = trk + htk;
                 }
                 byte[] temp = new byte[0];
                 /// --- Handles a Protection found on Jordan vs Bird (EA) --------
@@ -1194,7 +1195,23 @@ namespace V_Max_Tool
                     Buffer.BlockCopy(NDG.Track_Data[trk], 0, Original.OT[trk], 0, NDG.Track_Data[trk].Length);
                 }
                 byte[] temp = new byte[0];
-                if (avp) temp = Rebuild_Vorpal(Original.OT[trk], trk, lead);
+                if (avp)
+                {
+                    temp = Rebuild_Vorpal(Original.OT[trk], trk, lead);
+                    //temp = Vorpal_Test(Original.OT[trk], trk, NDS.t18_ID);
+                }
+                else
+                {
+                    BitArray source = new BitArray(Flip_Endian(NDS.Track_Data[trk]));
+                    BitArray dest = new BitArray(NDS.Track_Length[trk]);
+                    int pos = NDS.Header_Len[trk];
+                    for (int i = 0; i < NDS.Track_Length[trk]; i++)
+                    {
+                        dest[i] = source[pos++];
+                        if (pos == NDS.D_End[trk]) pos = NDS.D_Start[trk];
+                    }
+                    temp = Bit2Byte(dest);
+                }
                 Set_Dest_Arrays(temp, trk);
             }
 
@@ -1575,6 +1592,7 @@ namespace V_Max_Tool
                     {
                         int[] kf = new int[] { 1, 5, 10 };
                         if (NDS.cbm[i] == 1) Disp_CBM(i, trk, false);
+                        //if (NDS.cbm[i] == 1) Disp_STD_GCR(i, trk);
                         if (NDS.cbm[i] == 5) Disp_VPL(i, trk);
                         if (NDS.cbm[i] == 10) Disp_CBM(i, trk, true);
                         if (!kf.Any(x => x == NDS.cbm[i]) && NDS.Track_Length[i] > 6000) Disp_STD_GCR(i, trk);
@@ -1876,8 +1894,5 @@ namespace V_Max_Tool
             for (int i = 0; i < data.Length; i++) if ((data[i] >= 0 && data[i] <= 31) || data[i] == 95 || data[i] >= 128) data[i] = 0x2e;
             return data;
         }
-
-
-
     }
 }

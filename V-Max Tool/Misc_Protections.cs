@@ -434,12 +434,8 @@ namespace V_Max_Tool
                         }
                         else
                         {
-                            byte[] temp = new byte[density[3]];
-                            int start = (8192 - density[3]) / 2;
-                            Buffer.BlockCopy(data, start, temp, 0, density[3]);
-                            temp = Add_Weak_Bit(temp);
-                            if (Check_Valid_Data(temp, true) < 500) return new byte[0];
-                            return temp;
+                            int p = density[3] >> 1;
+                            return ArrayConcat(FastArray.Init(p - 1, 0xac), new byte[] { 0xa0 }, FastArray.Init(density[3] - p, 0xca));
                         }
                     }
                 }

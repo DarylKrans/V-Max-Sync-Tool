@@ -85,6 +85,8 @@ namespace V_Max_Tool
             byte[] sync = FastArray.Init(5, 0xff);
             byte[] head_gap = SetSectorGap(sector_gap_density[t_density] - dif);
             byte[] tail_gap = SetSectorGap(sector_gap_density[t_density] + dif);
+            //byte[] head_gap = SetSectorGap(7);
+            //byte[] tail_gap = SetSectorGap(19);
             byte[] current_sector;
             byte[] block_header = new byte[10];
             start = !alt ? 0 : start;
@@ -103,10 +105,12 @@ namespace V_Max_Tool
                 if (i != sectors - 1) write.Write(tail_gap);
             }
             int rem = (int)(density[t_density] - buffer.Length);
+            //write.Write(new byte[] { 0x55, 0x55, 0x55, 0x50, 0x00, 0x05, 0x55, 0x55, 0x55 });
             if (rem > 0)
             {
                 write.Write(FastArray.Init(rem, cbm_gap));
             }
+
             return buffer.ToArray();
         }
 
@@ -219,7 +223,26 @@ namespace V_Max_Tool
                 {
                     for (int i = 1; i < sz.Length; i++) d[i] &= sz[i];
                     h = Hex_Val(d);
+                    //var hg = pos;
+                    //bool shit = false;
+                    //int ssinc = 0;
+                    //while (!shit)
+                    //{
+                    //    if (source[hg]) ssinc++;
+                    //    else
+                    //    {
+                    //        if (ssinc > 24)
+                    //        {
+                    //            shit = true;
+                    //            break;
+                    //        }
+                    //        ssinc = 0;
+                    //    }
+                    //    hg++;
+                    //}
+                    //hg -= ssinc;
                     dec_hdr = Decode_CBM_GCR(Bit2Byte(source, pos, 80));
+                    //dec_hdr = Decode_CBM_GCR(Bit2Byte(source, pos, hg - pos));
                     sect = Convert.ToInt32(dec_hdr[2]);
 
                     if (dec_hdr[2] < 21 && (dec_hdr[3] > 0 && dec_hdr[3] < 43))
@@ -255,7 +278,8 @@ namespace V_Max_Tool
                                 (byte[] s_dat, bool c) = Decode_CBM_Sector(data, sect, true, source);
                                 if (!c) sec_c = csm[1];
                             }
-                            if (!batch) headers.Add($"Sector ({sect}){sz} Checksum ({sec_c}) pos ({p / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})");
+                            //if (!batch) headers.Add($"Sector ({sect}){sz} Checksum ({sec_c}) pos ({p / 8}) Sync ({sync_count} bits) Header-ID [ {decoded_header.Substring(6, decoded_header.Length - 12)} ] Header ({hdr_c})");
+                            if (!batch) headers.Add($"Sector ({sect}){sz} Header-ID [ {decoded_header} ] Header ({hdr_c})");
                         }
                         else
                         {
@@ -792,9 +816,13 @@ namespace V_Max_Tool
                 NDS.Track_Data[i] = new byte[8192];
                 Buffer.BlockCopy(NDA.Track_Data[i], 0, NDS.Track_Data[i], 0, 8192);
             }
-            if (Worker_Alt != null) Worker_Alt?.Abort();
-            Worker_Alt = new Thread(new ThreadStart(() => Parse_Disk()));
-            Worker_Alt.Start();
+            if (!DontThread)
+            {
+                if (Worker_Alt != null) Worker_Alt?.Abort();
+                Worker_Alt = new Thread(new ThreadStart(() => Parse_Disk()));
+                Worker_Alt.Start();
+            }
+            else Parse_Disk();
 
             void Parse_Disk()
             {
@@ -826,6 +854,8 @@ namespace V_Max_Tool
                     else if (i - 18 < id.Length) title[i] = id[i - 18]; else title[i] = 0xa0;
                 }
                 byte[] bam = Create_BAM();
+                AllocBlock(bam, 17, 0, Set);
+                AllocBlock(bam, 17, 1, Set);
                 var buff = new MemoryStream();
                 var wrt = new BinaryWriter(buff);
                 wrt.Write((byte)0x07);
@@ -866,7 +896,7 @@ namespace V_Max_Tool
                 {
                     bf[i] = Available_Sectors[i];
                     used_sectors[i] = new byte[3];
-                    for (int j = 0; j < Available_Sectors[i]; j++) us[j] = (i == 17 && j < 2) ? false : true;
+                    for (int j = 0; j < Available_Sectors[i]; j++) us[j] = true;
                     used_sectors[i] = Flip_Endian(Bit2Byte(us));
                     wrt.Write(bf[i]);
                     wrt.Write(used_sectors[i]);
@@ -875,23 +905,69 @@ namespace V_Max_Tool
             }
         }
 
-        void Set_BlockMap()
+        void AllocBlock(byte[] bam, int track, int sector, bool set)
         {
-            ResetAllBlocks();
-            Blk_pan.Visible = false;
-            byte[] bam = new byte[140];
-            bool vbam = false;
-            string usedsec = string.Empty;
-            var tn = tracks > 42 ? 34 : 17;
-            if (NDS.cbm[tn] == 1)
+            if (track < 35 && sector < Available_Sectors[track])
             {
-                (byte[] temp, _) = Decode_CBM_Sector(NDG.Track_Data[tn], 0, true);
-                if (temp != null)
+                int getbyte = (sector / 8) + 1;
+                int getbit = sector % 8;
+                int pos = (track << 2) + getbyte;
+                if (BlockAllocStatus(bam, track, sector) != set)
                 {
-                    Buffer.BlockCopy(temp, 4, bam, 0, bam.Length);
-                    vbam = true;
+                    // Use the 'set' flag to either allocate (clear bit) or free (set bit)
+                    bam[pos] = set ? SetBit(bam[pos], getbit) : ClearBit(bam[pos], getbit);
+
+                    // Adjust the block count
+                    bam[track << 2] = (byte)(bam[track << 2] + (set ? 1 : -1));
                 }
             }
+        }
+
+        bool BlockAllocStatus(byte[] bam, int track, int sector)
+        {
+            if (track < 35 && sector < Available_Sectors[track])
+            {
+                int getbyte = (sector / 8) + 1;
+                int getbit = sector % 8;
+                int pos = (track << 2) + getbyte;
+                return GetBitStatus(bam[pos], getbit);
+            }
+            return true;
+        }
+
+        byte[] GetBam()
+        {
+            int dirtrack = tracks > 42 ? 34 : 17;
+            if (NDS.cbm[dirtrack] == 1)
+            {
+                (byte[] data, _) = Decode_CBM_Sector(NDG.Track_Data[dirtrack], 0, true);
+                byte[] bam = new byte[140];
+                Buffer.BlockCopy(data, 4, bam, 0, bam.Length);
+                return bam;
+            }
+            return null;
+        }
+
+        void UpdateBam(byte[] bam)
+        {
+            int dirtrack = tracks > 42 ? 34 : 17;
+            if (NDS.cbm[dirtrack] == 1)
+            {
+                (byte[] data, _) = Decode_CBM_Sector(NDG.Track_Data[dirtrack], 0, true);
+                Buffer.BlockCopy(bam, 0, data, 4, bam.Length);
+                byte[] temp = Replace_CBM_Sector(NDG.Track_Data[dirtrack], 0, data);
+                Set_Dest_Arrays(temp, dirtrack);
+                Buffer.BlockCopy(NDA.Track_Data[dirtrack], 0, NDS.Track_Data[dirtrack], 0, MAX_TRACK_SIZE);
+            }
+        }
+
+        void Set_BlockMap()
+        {
+            Blk_pan.Visible = false;
+            ResetAllBlocks();
+            byte[] bam = GetBam();
+            bool vbam = bam != null;
+            string usedsec = string.Empty;
             for (int i = 0; i < tracks; i++)
             {
                 int trk = tracks > 42 ? (i / 2) : i;
@@ -909,21 +985,15 @@ namespace V_Max_Tool
                     {
                         if (j < sectors)
                         {
-                            int getbyte = (j / 8) + 1;
-                            int getbit = j % 8;
                             bool valid = j < Available_Sectors[trk];
-                            bool used = false;
                             (_, int errorCode, _) = GetSectorWithErrorCode(data, j, true, null, tk, start);
                             bool error = errorCode > 1;
-                            if (vbam && trk < 35)
-                            {
-                                used = GetBitStatus(bam[(trk * 4) + getbyte], getbit);
-                                usedsec = !error ? !used ? "Block Allocated (Used)" : "Block Available (Free)" : "Block Error!";
-                            }
-                            //Color color = Color.FromArgb(valid && trk < 35 ? 255 : 100, error ? 200 : 30, error ? 30 : 200, !used && !error ? 200 : 30);
-                            Color color = Color.FromArgb(valid && trk < 35 ? 255 : 100, error ? 200 : 30, error ? 30 : !used ? 200 : 75, 30);
+                            bool available = BlockAllocStatus(bam, trk, j);
+                            usedsec = !available ? "Block Allocated (Used)" : "Block Available (Free)";
+                            usedsec += (error ? $"\nError {c1541error[errorCode]}" : string.Empty);
+                            Color color = Color.FromArgb(valid && trk < 35 ? 255 : 100, error ? 200 : 30, error ? 30 : !available ? 200 : 75, 30);
                             BlkMap_bam[trk][j].BackColor = color;
-                            tips.SetToolTip(BlkMap_bam[trk][j], $"Track {trk + 1} Sector {j + 1}\n{usedsec}\n{ErrorCodes[errorCode]}");
+                            tips.SetToolTip(BlkMap_bam[trk][j], $"Track {trk + 1} Sector {j + 1}\n{usedsec}" + (errorCode == 1 ? $"\n{ErrorCodes[errorCode]}" : ""));
                             BlkMap_bam[trk][j].Visible = true;
                         }
                         else
@@ -932,7 +1002,6 @@ namespace V_Max_Tool
                             tips.SetToolTip(BlkMap_bam[trk][j], string.Empty);
                             BlkMap_bam[trk][j].BackColor = color;
                             BlkMap_bam[trk][j].Visible = true;
-
                         }
                     }
                 }
@@ -941,15 +1010,16 @@ namespace V_Max_Tool
                     try
                     {
                         var fmt = NDS.cbm[i];
-                        int sec = Sectors_by_density[(Get_Density(NDG.Track_Data[i].Length))];
-                        for (int j = 0; j < 21; j++)
+                        if (fmt < secF.Length - 1)
                         {
-                            
-                            //Color color = fmt > 0 ? Color.FromArgb(30, 100, 100, 100) : Color.FromArgb(30, 100, 100, 100);
-                            Color color = fmt < 2 || j >= sec ? Color.FromArgb(30, 100, 100, 100) : Color.FromArgb(200, 100, 30, 100);
-                            BlkMap_bam[trk][j].Visible = true;
-                            BlkMap_bam[trk][j].BackColor = color;
-                            tips.SetToolTip(BlkMap_bam[trk][j], fmt > 0 ? j < sec ? $"Track {trk + 1} {secF[NDS.cbm[i]]}" : string.Empty: string.Empty);
+                            int sec = Sectors_by_density[(Get_Density(NDG.Track_Data[i].Length))];
+                            for (int j = 0; j < 21; j++)
+                            {
+                                Color color = fmt < 2 || fmt == secF.Length - 1 || j >= sec ? Color.FromArgb(30, 100, 100, 100) : Color.FromArgb(200, 100, 30, 100);
+                                BlkMap_bam[trk][j].Visible = true;
+                                BlkMap_bam[trk][j].BackColor = color;
+                                tips.SetToolTip(BlkMap_bam[trk][j], (fmt > 0 && fmt < secF.Length - 1) ? j < sec ? $"Track {trk + 1} {secF[NDS.cbm[i]]}" : string.Empty : string.Empty);
+                            }
                         }
                     }
                     catch { }
@@ -957,6 +1027,425 @@ namespace V_Max_Tool
                 if (tracks > 42) i++;
             }
             Blk_pan.Visible = true;
+        }
+
+        void AddFileToDisk(byte[] prg, string filename, byte[] bam, byte[][] freesec)
+        {
+            int blocks = prg.Length % 254 == 0 ? prg.Length / 254 : prg.Length / 254 + 1;
+            if (freesec != null)
+            {
+                blocks = blocks > freesec.Length ? freesec.Length : blocks;
+
+                if (blocks <= freesec.Length)
+                {
+                    List<int> ttrks = new List<int>();
+                    int prevTrack = -1;
+                    int curtrack = -1;
+                    byte[] temp = new byte[0];
+                    for (int i = 0; i < blocks; i++)
+                    {
+                        curtrack = tracks > 42 ? (freesec[i][0]) << 1 : freesec[i][0];
+                        if (prevTrack != curtrack)
+                        {
+                            if (!(prevTrack < 0)) Set_Dest_Arrays(temp, prevTrack);
+                            temp = new byte[NDG.Track_Data[curtrack].Length];
+                            Buffer.BlockCopy(NDG.Track_Data[curtrack], 0, temp, 0, temp.Length);
+                            prevTrack = curtrack;
+                        }
+                        if (!ttrks.Contains(curtrack)) ttrks.Add(curtrack);
+                        int track = freesec[i][0];
+                        int cursec = freesec[i][1];
+
+                        try
+                        {
+                            byte[] secData = FastArray.Init(256, 00);
+                            int len = (i + 1) * 254 > prg.Length ? prg.Length - (i * 254) : 254;
+                            Buffer.BlockCopy(prg, i * 254, secData, 2, len);
+                            secData[0] = i == blocks - 1 ? (byte)0x00 : (byte)(freesec[i + 1][0] + 1);
+                            secData[1] = i == blocks - 1 ? (byte)0xff : (byte)freesec[i + 1][1];
+                            temp = Replace_CBM_Sector(temp, cursec, secData);
+                            AllocBlock(bam, track, cursec, Set);
+                        }
+                        catch { }
+                    }
+                    Set_Dest_Arrays(temp, curtrack);
+                    foreach (int a in ttrks)
+                    {
+                        Buffer.BlockCopy(NDA.Track_Data[a], 0, NDS.Track_Data[a], 0, MAX_TRACK_SIZE);
+                    }
+                    UpdateBam(bam);
+                }
+            }
+        }
+
+        void AddEntryToDirectory(byte[] newfile)
+        {
+            int ht = tracks > 42 ? 2 : 1;
+            int dirtrack = 17 * ht;
+            int atrack = 17;
+            bool newsector = false;
+            bool added = false;
+            if (NDS.cbm[dirtrack] == 1)
+            {
+                int nexttrack = dirtrack;
+                int nextsector = 1;
+                int prevsector = 0;
+                int i = nextsector;
+                while (!newsector)
+                {
+                    int curtrack = nexttrack;
+                    int cursector = nextsector;
+                    (byte[] cursec, _) = Decode_CBM_Sector(NDG.Track_Data[curtrack], nextsector, true);
+                    if (cursec != null && cursec.Length == 256)
+                    {
+                        nexttrack = Convert.ToInt32(cursec[0] - 1);
+                        nextsector = cursec[1];
+                        if (nextsector == prevsector) newsector = true;
+                        else prevsector = nextsector;
+                        if (nexttrack == 0 || nexttrack > 35 || nextsector > Available_Sectors[atrack]) newsector = true;
+                        else
+                        {
+                            nexttrack *= ht;
+                            atrack = nexttrack + 1;
+                        }
+                        if (i > 0)
+                        {
+                            int pos = 2;
+                            for (int j = 0; j < 8; j++)
+                            {
+                                int tpos = pos + (j * 32);
+                                if (cursec[tpos] == 0x00 && !added)
+                                {
+                                    Buffer.BlockCopy(newfile, 0, cursec, tpos, 30);
+                                    byte[] temp = Replace_CBM_Sector(NDG.Track_Data[curtrack], cursector, cursec);
+                                    Set_Dest_Arrays(temp, curtrack);
+                                    Buffer.BlockCopy(NDA.Track_Data[curtrack], 0, NDS.Track_Data[curtrack], 0, MAX_TRACK_SIZE);
+                                    added = true;
+                                }
+                                if (added) break;
+                            }
+
+                        }
+                    }
+                    if (added) break;
+                    if (newsector)
+                    {
+                        int intlv = Sec_Interleave.SelectedIndex;
+                        byte[] tbam = GetBam();
+                        HashSet<int> processedSectors = new HashSet<int>();
+                        int tsec = Available_Sectors[17];
+                        int newsec = (cursector * sectorInterleave[intlv]) % tsec;
+                        for (int k = 1; k < tsec; k++)
+                        {
+                            while (processedSectors.Contains(newsec))
+                            {
+                                newsec = (newsec + 1) % tsec; // Increment sec and wrap around if needed
+                            }
+                            if (BlockAllocStatus(tbam, 17, newsec))
+                            {
+                                cursec[0] = (byte)(18);
+                                cursec[1] = (byte)(newsec);
+                                byte[] stemp = Replace_CBM_Sector(NDG.Track_Data[dirtrack], cursector, cursec);
+                                byte[] nsector = FastArray.Init(256, 0x00);
+                                nsector[1] = 0xff;
+                                Buffer.BlockCopy(newfile, 0, nsector, 2, 30);
+                                stemp = Replace_CBM_Sector(stemp, newsec, nsector);
+                                Set_Dest_Arrays(stemp, dirtrack);
+                                Buffer.BlockCopy(NDA.Track_Data[dirtrack], 0, NDS.Track_Data[dirtrack], 0, MAX_TRACK_SIZE);
+                                AllocBlock(tbam, 17, newsec, Set);
+                                UpdateBam(tbam);
+                                added = true;
+                            }
+                            if (added) break;
+                            processedSectors.Add(newsec);
+                        }
+                    }
+                    i++;
+                }
+            }
+        }
+
+        List<byte[]> Get_Directory_Entries()
+        {
+            int ht = tracks > 42 ? 2 : 1;
+            int dirtrack = 17 * ht;
+            int atrack = 17;
+            bool stop = false;
+            List<byte[]> entries = new List<byte[]>();
+            if (NDS.cbm[dirtrack] == 1)
+            {
+                int nexttrack = dirtrack;
+                int nextsector = 0;
+                int prevsector = 0;
+                int i = 0;
+                while (!stop)
+                {
+                    (byte[] cursec, _) = Decode_CBM_Sector(NDG.Track_Data[nexttrack], nextsector, true);
+                    if (cursec != null && cursec.Length == 256)
+                    {
+                        nexttrack = Convert.ToInt32(cursec[0] - 1);
+                        nextsector = cursec[1];
+                        if (nextsector == prevsector) stop = true;
+                        else prevsector = nextsector;
+                        if (nexttrack == 0 || nexttrack > 35 || nextsector > Available_Sectors[atrack]) stop = true;
+                        else
+                        {
+                            nexttrack *= ht;
+                            atrack = nexttrack + 1;
+                        }
+                        if (i > 0)
+                        {
+                            int pos = 2;
+                            for (int j = 0; j < 8; j++)
+                            {
+                                int tpos = pos + (j * 32);
+                                if (cursec[tpos] != 0x00)
+                                {
+                                    byte[] entry = new byte[30];
+                                    Buffer.BlockCopy(cursec, tpos, entry, 0, 30);
+                                    entries.Add(entry);
+                                }
+                            }
+
+                        }
+                    }
+                    if (stop) break;
+                    i++;
+                }
+                if (entries.Count > 0)
+                {
+                    return entries;
+                }
+            }
+            return entries;
+        }
+
+        (byte[], byte[][]) GetAvailableSectors(bool extra_sectors = false)
+        {
+            byte[] bam = GetBam();
+            int ht = tracks > 42 ? 2 : 1;
+            int intlv = Sec_Interleave.SelectedIndex;
+            bool rev = false;
+            int strk = rev ? 18 : 16;
+            int lastSector = 0; // Tracks the last sector processed
+            //int strk = 16;
+            List<byte[]> available = new List<byte[]>();
+            if (bam != null)
+            {
+                for (int i = 0; i < 35; i++)
+                {
+                    if (NDS.cbm[i * ht] == 1)
+                    {
+                        HashSet<int> processedSectors = new HashSet<int>();
+                        int max = Available_Sectors[strk];
+                        int sec = (lastSector + sectorInterleave[intlv]) % max; // Start from the interleave of the last sector
+
+                        for (int j = 0; j < Available_Sectors[strk]; j++)
+                        {
+                            while (processedSectors.Contains(sec))
+                            {
+                                sec = (sec + 1) % max; // Increment sec and wrap around if needed
+                            }
+
+                            if (BlockAllocStatus(bam, strk, sec))
+                            {
+                                available.Add(new byte[] { (byte)strk, (byte)sec });
+                            }
+
+                            processedSectors.Add(sec);
+                            lastSector = (sec - 1) % max; // Update the last processed sector
+                            sec = (sec + sectorInterleave[intlv]) % max; // Continue with the interleave for the next sector
+                        }
+                    }
+
+                    strk += rev ? 1 : -1;
+
+                    if (strk < 0)
+                    {
+                        strk = 18;
+                        rev = true;
+                    }
+
+                    if (strk > 34 && extra_sectors)
+                    {
+                        strk = 17;
+                    }
+                }
+                //for (int i = 0; i < 35; i++)
+                //{
+                //    if (NDS.cbm[i * ht] == 1)
+                //    {
+                //        HashSet<int> processedSectors = new HashSet<int>();
+                //        int max = Available_Sectors[strk];
+                //        for (int j = 0; j < Available_Sectors[strk]; j++)
+                //        {
+                //            int sec = (j * sectorInterleave[intlv]) % max;
+                //            while (processedSectors.Contains(sec))
+                //            {
+                //                sec = (sec + 1) % max; // Increment sec and wrap around if needed
+                //                if (sec > max) sec = 0;
+                //            }
+                //            if (BlockAllocStatus(bam, strk, sec))
+                //            {
+                //                available.Add(new byte[] { (byte)strk, (byte)sec });
+                //            }
+                //            processedSectors.Add(sec);
+                //        }
+                //    }
+                //    strk += rev ? 1 : -1;
+                //    if (strk < 0)
+                //    {
+                //        strk = 18;
+                //        rev = true;
+                //    }
+                //    //if (strk < 0)
+                //    //{
+                //    //    strk = 16;
+                //    //    rev = false;
+                //    //}
+                //    //if (i == 34 && extra_sectors) strk = 17;
+                //    if (strk > 34 && extra_sectors) strk = 17;
+                //}
+            }
+            if (available.Count > 0)
+            {
+                byte[][] freeSectors = new byte[available.Count][];
+                for (int i = 0; i < available.Count; i++)
+                {
+                    freeSectors[i] = new byte[2];
+                    freeSectors[i] = available[i];
+                }
+                return (bam, freeSectors);
+            }
+            return (bam, new byte[0][]);
+        }
+
+        void ProcessNewFiletoImage(string[] files)
+        {
+            bool fastload = true;
+            DontThread = true;
+            if (tracks == 0) RunBusy(Create_Blank_Disk);
+            DontThread = false;
+            bool refresh = false;
+            foreach (string file in files)
+            {
+                byte[] data = File.ReadAllBytes(file);
+                string filename = Path.GetFileName(file);
+                long length = new FileInfo(file).Length;
+                (byte[] bam, byte[][] freesec) = GetAvailableSectors(true);
+                List<string> frsec = new List<string>();
+                for (int i = 0; i < freesec.Length; i++)
+                {
+                    frsec.Add($"{Convert.ToInt32(freesec[i][0])}, {Convert.ToInt32(freesec[i][1])}");
+                }
+                File.WriteAllLines($@"c:\test\bamtest", frsec.ToArray());
+                length = length % 254 == 0 ? length / 254 : length / 254 + 1;
+                if (length <= freesec.Length)
+                {
+                    List<byte[]> entries = Get_Directory_Entries();
+                    if (entries == null || entries.Count < 144)
+                    {
+                        List<string> entNames = new List<string>();
+                        foreach (var entry in entries)
+                        {
+                            entNames.Add(ExtractFileName(entry));
+                        }
+                        int blocks = data.Length % 254 == 0 ? data.Length / 254 : data.Length / 254 + 1;
+                        byte[] newfile = CreateFileEntry(filename.ToUpper(), blocks, freesec[0][0] + 1, freesec[0][1]);
+                        string newfilename = ExtractFileName(newfile);
+
+                        if (!entNames.Contains(newfilename) && newfile != null)
+                        {
+                            if (fastload)
+                            {
+                                AddFastLoad(newfilename);
+                                (bam, freesec) = GetAvailableSectors(true);
+                                newfile = CreateFileEntry(filename.ToUpper(), blocks, freesec[0][0] + 1, freesec[0][1]);
+                            }
+                            AddFileToDisk(data, filename, bam, freesec);
+                            AddEntryToDirectory(newfile);
+
+                            refresh = true;
+                        }
+                        else
+                        {
+                            //MessageBox.Show($"File already exists in directory");
+                            using (Message_Center center = new Message_Center(this)) // center message box
+                            {
+                                string s = $"File {newfilename} already exists in directory";
+                                string t = "Error!";
+                                MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (entries.Count >= 144)
+                        {
+                            using (Message_Center center = new Message_Center(this)) // center message box
+                            {
+                                string t = "Error!";
+                                string s = $"Directory is FULL!";
+                                MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            break;
+                        }
+                    }
+
+                    void AddFastLoad(string newfilename)
+                    {
+                        byte[] fl = new byte[fastloader.Length];
+                        fastloader.CopyTo(fl, 0);
+                        for (int i = 0; i < newfilename.Length; i++) fl[fldOffset + i] = (byte)newfilename[i];
+                        fl[fldOffset + 16] = (byte)(newfilename.Length);
+                        string flname = $"BOOT.{newfilename}";
+                        if (newfilename.Length > 16) flname = flname.Substring(0, 16);
+                        byte[] fld = CreateFileEntry(flname, 5, freesec[0][0] + 1, freesec[0][1]);
+                        AddFileToDisk(fl, flname, bam, freesec);
+                        AddEntryToDirectory(fld);
+                    }
+                }
+                else
+                {
+                    using (Message_Center center = new Message_Center(this)) // center message box
+                    {
+                        string s = $"Not enough free space\nBlocks needed {length}\nBlocks free {freesec.Length}";
+                        string t = "Error!";
+                        MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+            }
+            if (refresh)
+            {
+                Clear_Out_Items();
+                Process_Nib_Data(true, false, false, true);
+                Default_Dir_Screen();
+                Get_Disk_Directory();
+                Set_BlockMap();
+                linkLabel1.Visible = false;
+                Save_Disk.Visible = true;
+                Source.Visible = Output.Visible = true;
+                label1.Text = $"{fname}{fext}";
+                M_render.Enabled = true;
+                Import_File.Visible = false;
+                Adv_ctrl.Enabled = true;
+                Blk_pan.Enabled = true;
+                Disable_Core_Controls(false);
+            }
+        }
+
+        string ExtractFileName(byte[] file)
+        {
+            string fName = "";
+            for (int k = 3; k < 19; k++)
+            {
+                if (file[k] != 0xa0)
+                {
+                    if (file[k] != 0x00) fName += Encoding.ASCII.GetString(file, k, 1);
+                    else fName += "@";
+                }
+            }
+            return fName;
         }
     }
 }

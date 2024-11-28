@@ -56,14 +56,18 @@ namespace V_Max_Tool
                         }
                         if (NDS.cbm[t] == 1 || (NDS.cbm[t] == 3)) // && NDS.sectors[t] < 16))
                         {
-                            if (Original.OT[t]?.Length != 0)
+                            if (Original.OT[t]?.Length != 0 || Original.OT[t] != null)
                             {
-                                NDG.Track_Data[t] = new byte[Original.OT[t].Length];
-                                Buffer.BlockCopy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
-                                Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
-                                Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, NDA.Track_Data[t].Length - Original.OT[t].Length);
-                                p = false;
-                                v = true;
+                                try
+                                {
+                                    NDG.Track_Data[t] = new byte[Original.OT[t].Length];
+                                    Buffer.BlockCopy(Original.OT[t], 0, NDG.Track_Data[t], 0, Original.OT[t].Length);
+                                    Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], 0, Original.OT[t].Length);
+                                    Buffer.BlockCopy(Original.OT[t], 0, NDA.Track_Data[t], Original.OT[t].Length, NDA.Track_Data[t].Length - Original.OT[t].Length);
+                                    p = false;
+                                    v = true;
+                                }
+                                catch { }
                             }
                             NDG.Track_Length[t] = NDG.Track_Data[t].Length;
                             NDA.Track_Length[t] = NDG.Track_Length[t] * 8;
@@ -82,7 +86,7 @@ namespace V_Max_Tool
         byte[] Rebuild_V3(byte[] data, int gap_sector, byte[] Disk_ID, int trk)
         {
             trk = tracks > 42 ? (trk / 2) + 1 : trk + 1;
-            int d = Get_Density(data.Length);
+            int d = trk < 18 ? 0 : Get_Density(data.Length);
             int sectors = 0;
             int fill = 0;
             byte[] header = FastArray.Init(3, 0x49);

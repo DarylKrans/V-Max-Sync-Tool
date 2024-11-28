@@ -1,29 +1,31 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolBar;
+
 
 
 namespace V_Max_Tool
 {
     public partial class Form1 : Form
     {
+        private Stopwatch fuck = new Stopwatch();
         //private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- original values used by ReMaster for faster writing RPM
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
-        private readonly string ver = " v1.0.2.0";
+        private readonly string ver = " v1.0.2.35";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
         private readonly byte loader_padding = 0x55;
         private readonly int[] CBM_Standard_Density = { 7692, 7142, 6666, 6250 }; // <- density zone capacity accoriding to CBM specifications
+        //private readonly int[] ReMaster_Adjusted_Density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
         private readonly int[] ReMaster_Adjusted_Density = { 7672, 7122, 6646, 6230 }; // <- adjusted capacity to account for minor RPM variation higher than 300
-        private readonly int[] vpl_density = { 7800, 6950, 6585, 6255 }; // <- Vorpal densities used to be more accurate to original disk-reads
-        private readonly int[] vpl_defaults = { 7800, 6950, 6585, 6255 };
+        private readonly int[] vpl_density = { 7750, 6950, 6585, 6255 }; // <- Vorpal densities used to be more accurate to original disk-reads
+        private readonly int[] vpl_defaults = { 7750, 6950, 6585, 6255 };
         private readonly int[] density = new int[4];
         private bool error = false;
         private bool cancel = false;
@@ -39,6 +41,8 @@ namespace V_Max_Tool
         private byte[] v24e64pal = new byte[0];
         private byte[] v26446ntsc = new byte[0];
         private byte[] v2644entsc = new byte[0];
+        private byte[] fastloader = new byte[0];
+        private readonly int fldOffset = 184;
         private readonly int min_t_len = 6000;
         private int end_track = -1;
         private int fat_trk = -1;
@@ -50,41 +54,92 @@ namespace V_Max_Tool
             this.Text = $"Re-Master {ver}";
             RunBusy(Init);
             Set_ListBox_Items(true, true);
-
         }
 
         private void Drag_Drop(object sender, DragEventArgs e)
         {
-            Source.Visible = Output.Visible = false;
-            f_load.Text = "Fix Loader";
-            Save_Disk.Visible = false;
-            sl.DataSource = null;
-            out_size.DataSource = null;
-            string[] File_List = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (File_List.Length > 1 || Directory.Exists(File_List[0]))
+            string[] fileList = (string[])e.Data.GetData(DataFormats.FileDrop);
+            int img = 0, prg = 0;
+
+            if (CBD_box.Visible)
             {
-                using (Message_Center center = new Message_Center(this)) // center message box
+                // File categorization
+                foreach (var file in fileList)
                 {
-                    string t = "Multiple Files Selected";
-                    string s = "Only .NIB/NBZ files will be processed\nand exported as .G64 with the\nAuto-Adjust options\n\nStart Batch-Processing?";
-                    DialogResult uc = MessageBox.Show(s, t, MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
-                    if (uc.ToString() == "OK")
+                    if (System.IO.File.Exists(file))
                     {
-                        Worker_Main = new Thread(new ThreadStart(() => Batch_Get_File_List(File_List)));
-                        Worker_Main.Start();
+                        bool isSupported = supported.Any(x => x == Path.GetExtension(file).ToLower());
+                        if (isSupported) img++;
+                        else if (new FileInfo(file).Length / 254 < 664) prg++;
                     }
+                }
+
+                // Handle non-image files
+                if (prg > img)
+                {
+                    if (tracks == 0)
+                    {
+                        if (ShowConfirmation("Build a new Disk image?", "Non-Image file has been selected!\nWould you like to build a NEW disk image?"))
+                        {
+                            NewDiskBtn.Click += (senderr, ee) => NewDiskBtn_Click(sender, e, fileList);
+                            GB_NewDisk.Visible = true;
+                        }
+                    }
+                    else
+                    {
+                        if (ShowConfirmation("Confirmation", "Add file(s) to current Disk?"))
+                        {
+                            ProcessNewFiletoImage(fileList);
+                        }
+                    }
+                }
+            }
+
+            // Batch processing for multiple files or directories
+            if ((fileList.Length > 1 && img > 1) || Directory.Exists(fileList[0]))
+            {
+                if (ShowConfirmation("Multiple Files Selected", "Only .NIB/NBZ files will be processed\nand exported as .G64 with the\nAuto-Adjust options\n\nStart Batch-Processing?"))
+                {
+                    ClearInfo();
+                    Worker_Main = new Thread(new ThreadStart(() => Batch_Get_File_List(fileList)));
+                    Worker_Main.Start();
                 }
             }
             else
             {
-                if (System.IO.File.Exists(File_List[0]))
+                ProcessSingleFile(fileList[0]);
+            }
+
+            bool ShowConfirmation(string title, string message)
+            {
+                using (Message_Center center = new Message_Center(this))
                 {
-                    fname = Path.GetFileNameWithoutExtension(File_List[0]).Replace("_ReMaster", "");
-                    fext = Path.GetExtension(File_List[0]);
-                    Process_New_Image(File_List[0]);
+                    return MessageBox.Show(message, title, MessageBoxButtons.OKCancel, MessageBoxIcon.Information) == DialogResult.OK;
                 }
             }
+
+            void ProcessSingleFile(string filePath)
+            {
+                if (System.IO.File.Exists(filePath) && supported.Any(s => s == Path.GetExtension(filePath).ToLower()))
+                {
+                    fname = Path.GetFileNameWithoutExtension(filePath).Replace("_ReMaster", "");
+                    fext = Path.GetExtension(filePath);
+                    ClearInfo();
+                    Process_New_Image(filePath);
+                }
+            }
+
+            void ClearInfo()
+            {
+                Source.Visible = Output.Visible = false;
+                f_load.Text = "Fix Loader";
+                Save_Disk.Visible = false;
+                sl.DataSource = null;
+                out_size.DataSource = null;
+            }
+
         }
+
 
         void Process_New_Image(string file)
         {
@@ -259,8 +314,10 @@ namespace V_Max_Tool
                             bool isHeaderMissing = codes[psec] == 2;
                             bool isDataMissing = codes[psec] == 4;
                             bool badDataChecksum = codes[psec] == 5;
-                            bool badHeaderChecksum = codes[psec] == 7;
-                            bool idMismatch = codes[psec] == 8;
+                            //bool badHeaderChecksum = codes[psec] == 7;
+                            bool badHeaderChecksum = codes[psec] == 9;
+                            //bool idMismatch = codes[psec] == 8;
+                            bool idMismatch = codes[psec] == 11;
 
                             write.Write(isHeaderMissing ? nosync : sync);
                             write.Write(isHeaderMissing ? noheader : Build_BlockHeader(i + 1, j, idMismatch ? ID_MisMatch : ID, badHeaderChecksum));
@@ -747,7 +804,7 @@ namespace V_Max_Tool
             if (a >= 0 && a < Batch_List_Box.Items.Count)
             {
                 string argument = "/select, \"" + LB_File_List[a].Replace(@"\\", @"\") + "\"";
-                if (File.Exists(LB_File_List[a])) Process.Start("explorer.exe", argument);
+                if (System.IO.File.Exists(LB_File_List[a])) Process.Start("explorer.exe", argument);
             }
         }
 
@@ -786,7 +843,7 @@ namespace V_Max_Tool
             Save_Dialog.FileName = $"{fname}{Style}{fext.ToLower().Replace('.', '(')})";
             Save_Dialog.ShowDialog();
             string fs = Save_Dialog.FileName;
-            if (fs != "" || fs != null) File.WriteAllText(fs, Data_Box.Text);
+            if (fs != "" || fs != null) System.IO.File.WriteAllText(fs, Data_Box.Text);
         }
 
         private void RL_ChangeKey_CheckedChanged(object sender, EventArgs e)
@@ -838,6 +895,76 @@ namespace V_Max_Tool
                 tips.Hide(lastHoveredButton);
                 lastHoveredButton = null;
             }
+        }
+
+        private void Panel_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                if (sender is Panel clickedPanel && clickedPanel.Tag != null)
+                {
+                    // Retrieve the track and sector from the Tag property
+                    var tag = (dynamic)clickedPanel.Tag;
+                    int track = tag.Track;
+                    int sector = tag.Sector;
+                    int actualTrack = tracks > 42 ? track << 1 : track;
+                    if (NDS.cbm[actualTrack] == 1 && (track < 35 && sector < Available_Sectors[track]))
+                    {
+                        Color used = Color.FromArgb(255, 30, 200, 30);
+                        Color avail = Color.FromArgb(255, 30, 75, 30);
+                        byte[] bam = GetBam();
+                        if (bam != null)
+                        {
+                            bool status = !BlockAllocStatus(bam, track, sector);
+                            AllocBlock(bam, track, sector, !BlockAllocStatus(bam, track, sector));
+                            BlkMap_bam[track][sector].BackColor = status ? avail : used;
+                            string text = tips.GetToolTip(BlkMap_bam[track][sector]);
+
+                            if (text.Contains("Block Allocated (Used)"))
+                            {
+                                tips.SetToolTip(BlkMap_bam[track][sector], text.Replace("Block Allocated (Used)", "Block Available (Free)"));
+                            }
+                            else if (text.Contains("Block Available (Free)"))
+                            {
+                                tips.SetToolTip(BlkMap_bam[track][sector], text.Replace("Block Available (Free)", "Block Allocated (Used)"));
+                            }
+                            UpdateBam(bam);
+                            Default_Dir_Screen();
+                            Get_Disk_Directory();
+                        }
+                    }
+                }
+            }
+        }
+
+        private void Dir_Screen_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.Copy;  // Allow the file to be dropped
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;  // Disallow other types of drops
+            }
+        }
+
+        private void Dir_Screen_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            Array.Sort(files, (x, y) => new FileInfo(x).Length.CompareTo(new FileInfo(y).Length));
+            ProcessNewFiletoImage(files);
+            //ProcessNewFiletoImage((string[])e.Data.GetData(DataFormats.FileDrop));
+        }
+
+        private void NewDiskBtn_Click(object sender, EventArgs e, string[] File_List)
+        {
+            BD_name.Text = ND_name.Text;
+            BD_id.Text = ND_id.Text;
+            Sec_Interleave.SelectedIndex = S_Interleave.SelectedIndex;
+            GB_NewDisk.Visible = false;
+            if (SortBySize.Checked) Array.Sort(File_List, (x, y) => new FileInfo(x).Length.CompareTo(new FileInfo(y).Length));
+            ProcessNewFiletoImage(File_List);
         }
     }
 }

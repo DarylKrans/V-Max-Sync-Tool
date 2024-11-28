@@ -137,6 +137,7 @@
     <None Include="Properties\C64_Pro_Mono-STYLE.ttf" />
     <None Include="Properties\cpp_extf.bin" />
     <None Include="Properties\cyan.bin" />
+    <None Include="Properties\fload.bin" />
     <None Include="Properties\msvcrt.bin" />
     <None Include="Properties\rak1.bin" />
     <None Include="Properties\rlnk.bin" />

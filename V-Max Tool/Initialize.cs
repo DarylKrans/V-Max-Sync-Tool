@@ -30,6 +30,9 @@ namespace V_Max_Tool
         private int pan_defw;
         private int pan_defh;
         private bool manualRender;
+        private bool DontThread = false;
+        private const bool Set = false;
+        private const bool Free = true;
         private readonly Gbox outbox = new Gbox();
         private readonly Gbox inbox = new Gbox();
         private readonly Color C64_screen = Color.FromArgb(69, 55, 176);   //(44, 41, 213);
@@ -45,6 +48,7 @@ namespace V_Max_Tool
 
         private readonly byte[] sector_gap_length =
             {
+                //10, 10, 10, 10, 10, 10, 10, 10, 10, 10,	/*  1 - 10 */
                 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,	/*  1 - 10 */
             	10, 10, 10, 10, 10, 10, 10, 14, 14, 14,	/* 11 - 20 */
             	14, 14, 14, 14, 11, 11, 11, 11, 11, 11,	/* 21 - 30 */
@@ -125,15 +129,40 @@ namespace V_Max_Tool
         private readonly string[] ErrorCodes =
             {
                 "null",
-                "Sector OK",
-                "Header not Found",
-                "Sync not found",
-                "Data not found",
-                "Bad data checksum",
-                "Bad GCR",
-                "Bad header checksum",
-                "ID mismatch"
+                "Sector OK",            // 01
+                "Header not Found",     // 02
+                "Sync not found",       // 03
+                "Data not found",       // 04
+                "Bad data checksum",    // 05
+                "Bad GCR",              // 06
+                "Bad header checksum",  // 09
+                "ID mismatch"           // 0b (11)
             };
+
+        private readonly string[] c1541error =
+        {
+            "",
+            "0, Sector OK",
+            "20, Block header not found",
+            "21, Sync not found",
+            "22, Data block not found",
+            "23, Checksum error in data",
+            "24, Byte decoding error",
+            "",
+            "",
+            "27, Checksum error in header",
+            "",
+            "29, Disk ID mismatch"
+        };
+
+        //private readonly int[] sectorInterleave =
+        //{
+        //    10, 7, 5
+        //};
+        private readonly int[] sectorInterleave =
+       {
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+        };
 
         void Reset_to_Defaults(bool clear_batch_list = true)
         {
@@ -259,6 +288,18 @@ namespace V_Max_Tool
 
         void Init()
         {
+            /// Remove Create Blank Disk and Directory Editor functions
+            CBD_box.Visible = false;
+            Dir_Edit.Visible = false;
+            label19.Visible = label18.Visible = Sec_Interleave.Visible = CBD_box.Visible;
+            Dir_screen.Top = CBD_box.Visible ? Dir_screen.Top : 0;
+            Dir_screen.Height = tabPage3.Height;
+            /// Don't allow files to be added to disk images (comment out the following lines)
+            //Dir_screen.AllowDrop = true;
+            //Dir_screen.DragEnter += new DragEventHandler(Dir_Screen_DragEnter);
+            //Dir_screen.DragDrop += new DragEventHandler(Dir_Screen_DragDrop);
+
+
             byte[] fontData = Resources.C64_Pro_Mono_STYLE;
             FontFamily customFontFamily = LoadFontFromResource(fontData);
             Font customFont = GetCustomFont(12.0f, FontStyle.Regular);
@@ -299,6 +340,10 @@ namespace V_Max_Tool
             scrollTimer.Tick += new EventHandler(ScrollTimer_Tick);
             groupBox3.BringToFront();
             groupBox3.Visible = false;
+            GB_NewDisk.BringToFront();
+            GB_NewDisk.Visible = false;
+            GB_NewDisk.Top = ((this.Height - GB_NewDisk.Height) / 2) - 100;
+            GB_NewDisk.Left = ((this.Width - GB_NewDisk.Width) / 2) - 100;
             Dir_Ftype.Enabled = Dir_ChgType.Checked;
             Dir_Ftype.DataSource = new string[] { "PRG", "SEQ", "USR", "REL", "DEL" };
             /// ----------------------------
@@ -386,6 +431,9 @@ namespace V_Max_Tool
             vm2_ver[1][6] = "A5-A3"; vm2_ver[1][10] = "A9-A3";
             V2_swap.DataSource = new string[] { "64-4E (newer)", "64-46 (weak bits)", "4E-64 (alt)" };
             V2_swap.Enabled = V2_swap_headers.Checked;
+            string[] interleave_select = new string[] { "1", "2", "3", "4", "5", "6", "7 JiffyDos 1571", "8 Fastloader", "9", "10 Standard", "11", "12" };
+            Sec_Interleave.DataSource = interleave_select; // new string[] { "Standard (10)", "JiffyDos 1571 (7)", "Custom (5)" };
+            S_Interleave.DataSource = interleave_select; //new string[] { "Standard (10)", "JiffyDos 1571 (7)", "Custom (5)" };
             /// Loads V-Max Loader track replacements into byte[] arrays
             v2ldrcbm = Decompress(XOR(Resources.v2cbmla, 0xcb)); // V-Max CBM sectors (DotC, Into the Eagles Nest, Paperboy, etc..)
             v24e64pal = Decompress(XOR(Resources.v24e64p, 0x64)); // V-Max Custom sectors (PAL Loader)
@@ -394,6 +442,7 @@ namespace V_Max_Tool
             /// these loaders are guaranteed to work and the loader code has not been modified from original. (these are not "cracked" loaders)
             rak1 = Decompress(XOR(Resources.rak1, 0xab));
             cldr_id = Decompress(XOR(Resources.cyan, 0xc1));
+            fastloader = Decompress(XOR(Resources.fload, 0xf1));
             byte[] rlnk = Decompress(XOR(Resources.rlnk, 0x7b));
             Buffer.BlockCopy(rlnk, 0, rl_nkey, 0, rl_nkey.Length);
             for (int i = 54; i < rlnk.Length; i++) rl_7b[i - 54] = Convert.ToInt32(rlnk[i]);
@@ -466,6 +515,8 @@ namespace V_Max_Tool
             Cores = Get_Cores();
             Set_Cores();
             Set_Tool_Tips();
+            //out_size.BringToFront();
+            //Output.Height = 12;
             tips.ShowAlways = true;
             manualRender = M_render.Visible = Cores <= 3;
             if (Cores < 2) Img_Q.SelectedIndex = 0;
@@ -481,6 +532,7 @@ namespace V_Max_Tool
             Build_BitReverseTable();
             try
             {
+                //File.WriteAllBytes($@"c:\test\compressed\fload.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\fload")), 0xf1));
                 //File.WriteAllBytes($@"c:\test\compressed\cpp_extf.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\DrawArc.dll")), 0xda));
                 //File.WriteAllBytes($@"c:\test\compressed\msvcrt.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\msvcrt")), 0x24));
                 //File.WriteAllBytes($@"c:\test\compressed\rlnk.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\rlnk")), 0x7b));
@@ -497,6 +549,7 @@ namespace V_Max_Tool
             void Set_Boxes()
             {
                 outbox.BackColor = Color.Gainsboro;
+                outbox.BringToFront();
                 panel1.Controls.Remove(this.out_weak);
                 panel1.Controls.Remove(this.Out_density);
                 panel1.Controls.Remove(this.out_rpm);
@@ -536,6 +589,7 @@ namespace V_Max_Tool
                 inbox.Controls.Add(this.sf);
                 inbox.Controls.Add(this.ss);
                 inbox.Controls.Add(this.sl);
+                inbox.BringToFront();
                 w = 5;
                 strack.Location = new Point(w, 15); w += strack.Width - 1;
                 sl.Location = new Point(w, 15); w += sl.Width - 1;
@@ -702,7 +756,6 @@ namespace V_Max_Tool
                     {
                         bool valid = (j < Available_Sectors[i] && i < 35);
                         BlkMap_bam[i][j] = new Panel();
-                        //BlkMap_bam[i][j].FlatStyle = FlatStyle.Flat;
                         Blk_pan.Controls.Add(BlkMap_bam[i][j]);
                         BlkMap_bam[i][j].Location = new Point(left + (w_spc * j), top + (h_spc * i));
                         BlkMap_bam[i][j].Size = new Size(20, 12);
@@ -710,9 +763,10 @@ namespace V_Max_Tool
                         BlkMap_bam[i][j].BackColor = Color.FromArgb(valid ? active : inactive, 30, 200, 30);
                         BlkMap_bam[i][j].BringToFront();
                         BlkMap_bam[i][j].Visible = false;
-                        //BlkMap_bam[i][j].Enabled = false;
                         BlkMap_bam[i][j].MouseEnter += Panel_MouseEnter;
                         BlkMap_bam[i][j].MouseLeave += Button_MouseLeave;
+                        BlkMap_bam[i][j].MouseClick += Panel_MouseClick;
+                        BlkMap_bam[i][j].Tag = new { Track = i, Sector = j };
                     }
                 }
             }
