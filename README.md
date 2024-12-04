@@ -4,15 +4,25 @@ If you are here for ReMaster Utilities executable, there are 3 here.  Please use
 Protection methods currently handled by ReMaster include..
 
 V-Max (all versions)
+
 RapidLok
+
 Vorpal (EPYX -- California Games, Legend of Blacksilver, Wrestling, The Games - Summer/Winter Edition)
+
 Pirate Slayer (EA)
+
 Fat Tracks (EA/Activision)
+
 Micro Prose (custom format)
+
 Cyan Loader
+
 Radwar
+
 Rainbow Arts/Magic Bytes
+
 GMA/Securispeed
+
 .. and some images with special signatures on the inner tracks.
 
 Note: 
