@@ -207,11 +207,15 @@ namespace V_Max_Tool
             if (VPL_lead.Checked) offset = Convert.ToInt32(Lead_In.Value) << 3;
             if (VPL_only_sectors.Checked)
             {
-                //offset = 24;
-                output = FastArray.Init(len + 4 < vpl_density[d] ? vpl_density[d] : len + 4, 0x55);
-                output[0] = 0xff;
-                output[1] = 0xff;
-                output[2] = 0x55;
+                int asize = (tend - tstart + 7) >> 3;
+                int size = sectors > 44 ? 7728 : density[d];
+                int tsize = size > density[d] ? size : density[d];
+                int offset_adj = (tsize - asize) / 2;
+                offset = offset_adj >= 60 ? 60 << 3 : offset_adj << 3;
+                output = new byte[tsize];
+                Write_Lead(offset + 5);
+                if (VPL_presync.Checked) Add_Pre_Sync();
+                output[output.Length - 1] = 0x55;
                 output_bits = new BitArray(Flip_Endian(output));
             }
             if ((VPL_auto_adj.Checked || VPL_rb.Checked) && !(VPL_only_sectors.Checked || VPL_lead.Checked))
@@ -243,17 +247,17 @@ namespace V_Max_Tool
             }
             catch { }
             int total_size = offset + (tend - tstart);
-            if (!VPL_only_sectors.Checked)
+            //if (!VPL_only_sectors.Checked)
+            //{
+            int leadout_len = (((output.Length << 3) - total_size) >> 3);
+            byte[] leadout = FastArray.Init(leadout_len, endbyte);
+            if (leadptn == 0) leadout[leadout.Length - 1] = 0xbd;
+            BitArray leadout_bits = new BitArray(Flip_Endian(leadout));
+            for (int i = 0; i < leadout_bits.Length; i++)
             {
-                int leadout_len = (((output.Length << 3) - total_size) >> 3);
-                byte[] leadout = FastArray.Init(leadout_len, endbyte);
-                if (leadptn == 0) leadout[leadout.Length - 1] = 0xbd;
-                BitArray leadout_bits = new BitArray(Flip_Endian(leadout));
-                for (int i = 0; i < leadout_bits.Length; i++)
-                {
-                    output_bits[total_size + i] = leadout_bits[i];
-                }
+                output_bits[total_size + i] = leadout_bits[i];
             }
+            //}
             output = Bit2Byte(output_bits);
             Check_Sync();
             return output;
@@ -304,10 +308,13 @@ namespace V_Max_Tool
 
             void Add_Pre_Sync()
             {
-                output[0] = 0xff;
-                output[1] = 0xff;
-                output[2] = 0x55;
-                output[3] = 0x55;
+                output[(offset / 8) - 3] = 0xff;
+                output[(offset / 8) - 2] = 0xff;
+                output[(offset / 8) - 1] = 0x55;
+                //output[0] = 0xff;
+                //output[1] = 0xff;
+                //output[2] = 0x55;
+                //output[3] = 0x55;
             }
         }
 

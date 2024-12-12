@@ -156,11 +156,19 @@
             this.Dir_screen = new System.Windows.Forms.RichTextBox();
             this.BlockMap = new System.Windows.Forms.TabPage();
             this.BlkMap_Panel = new System.Windows.Forms.Panel();
+            this.CSTfmt = new V_Max_Tool.CustomLabel();
+            this.ErrorBlk = new V_Max_Tool.CustomLabel();
+            this.AllocBlk = new V_Max_Tool.CustomLabel();
+            this.FreeBlk = new V_Max_Tool.CustomLabel();
             this.label21 = new System.Windows.Forms.Label();
             this.Blk_pan = new System.Windows.Forms.Panel();
             this.label17 = new System.Windows.Forms.Label();
+            this.track_label = new V_Max_Tool.CustomLabel();
             this.Save_Dialog = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.Import_File = new V_Max_Tool.Gbox();
+            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
+            this.label5 = new System.Windows.Forms.Label();
             this.RPL_Advanced = new System.Windows.Forms.GroupBox();
             this.RL_success = new System.Windows.Forms.Label();
             this.label15 = new System.Windows.Forms.Label();
@@ -200,14 +208,6 @@
             this.label20 = new System.Windows.Forms.Label();
             this.ND_id = new System.Windows.Forms.TextBox();
             this.ND_name = new System.Windows.Forms.TextBox();
-            this.Import_File = new V_Max_Tool.Gbox();
-            this.Import_Progress_Bar = new System.Windows.Forms.ProgressBar();
-            this.label5 = new System.Windows.Forms.Label();
-            this.CSTfmt = new V_Max_Tool.CustomLabel();
-            this.ErrorBlk = new V_Max_Tool.CustomLabel();
-            this.AllocBlk = new V_Max_Tool.CustomLabel();
-            this.FreeBlk = new V_Max_Tool.CustomLabel();
-            this.track_label = new V_Max_Tool.CustomLabel();
             ((System.ComponentModel.ISupportInitialize)(this.V2_hlen)).BeginInit();
             this.Tabs.SuspendLayout();
             this.Main.SuspendLayout();
@@ -243,6 +243,7 @@
             this.BlockMap.SuspendLayout();
             this.BlkMap_Panel.SuspendLayout();
             this.panel1.SuspendLayout();
+            this.Import_File.SuspendLayout();
             this.RPL_Advanced.SuspendLayout();
             this.V2_Advanced.SuspendLayout();
             this.V3_Advanced.SuspendLayout();
@@ -250,7 +251,6 @@
             this.Batch_Box.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).BeginInit();
             this.GB_NewDisk.SuspendLayout();
-            this.Import_File.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -1050,9 +1050,9 @@
             this.VPL_only_sectors.Location = new System.Drawing.Point(6, 81);
             this.VPL_only_sectors.Margin = new System.Windows.Forms.Padding(4);
             this.VPL_only_sectors.Name = "VPL_only_sectors";
-            this.VPL_only_sectors.Size = new System.Drawing.Size(328, 29);
+            this.VPL_only_sectors.Size = new System.Drawing.Size(334, 29);
             this.VPL_only_sectors.TabIndex = 65;
-            this.VPL_only_sectors.Text = "No Lead-in/out (experimental)";
+            this.VPL_only_sectors.Text = "Fastest possible writing speed";
             this.VPL_only_sectors.UseVisualStyleBackColor = true;
             this.VPL_only_sectors.CheckedChanged += new System.EventHandler(this.VPL_only_sectors_CheckedChanged);
             // 
@@ -1935,6 +1935,58 @@
             this.BlkMap_Panel.Size = new System.Drawing.Size(1135, 1289);
             this.BlkMap_Panel.TabIndex = 0;
             // 
+            // CSTfmt
+            // 
+            this.CSTfmt.AutoSize = true;
+            this.CSTfmt.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.CSTfmt.ForeColor = System.Drawing.Color.MediumOrchid;
+            this.CSTfmt.Location = new System.Drawing.Point(20, 284);
+            this.CSTfmt.Name = "CSTfmt";
+            this.CSTfmt.NewText = "";
+            this.CSTfmt.RotateAngle = 0;
+            this.CSTfmt.Size = new System.Drawing.Size(177, 29);
+            this.CSTfmt.TabIndex = 12;
+            this.CSTfmt.Text = "Custom Format";
+            // 
+            // ErrorBlk
+            // 
+            this.ErrorBlk.AutoSize = true;
+            this.ErrorBlk.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.ErrorBlk.ForeColor = System.Drawing.Color.Crimson;
+            this.ErrorBlk.Location = new System.Drawing.Point(20, 488);
+            this.ErrorBlk.Name = "ErrorBlk";
+            this.ErrorBlk.NewText = "";
+            this.ErrorBlk.RotateAngle = 0;
+            this.ErrorBlk.Size = new System.Drawing.Size(133, 29);
+            this.ErrorBlk.TabIndex = 11;
+            this.ErrorBlk.Text = "Block Error";
+            // 
+            // AllocBlk
+            // 
+            this.AllocBlk.AutoSize = true;
+            this.AllocBlk.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.AllocBlk.ForeColor = System.Drawing.Color.Cyan;
+            this.AllocBlk.Location = new System.Drawing.Point(18, 655);
+            this.AllocBlk.Name = "AllocBlk";
+            this.AllocBlk.NewText = "";
+            this.AllocBlk.RotateAngle = 0;
+            this.AllocBlk.Size = new System.Drawing.Size(179, 29);
+            this.AllocBlk.TabIndex = 10;
+            this.AllocBlk.Text = "Allocated Block";
+            // 
+            // FreeBlk
+            // 
+            this.FreeBlk.AutoSize = true;
+            this.FreeBlk.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.FreeBlk.ForeColor = System.Drawing.Color.Lime;
+            this.FreeBlk.Location = new System.Drawing.Point(18, 871);
+            this.FreeBlk.Name = "FreeBlk";
+            this.FreeBlk.NewText = "";
+            this.FreeBlk.RotateAngle = 0;
+            this.FreeBlk.Size = new System.Drawing.Size(130, 29);
+            this.FreeBlk.TabIndex = 9;
+            this.FreeBlk.Text = "Free Block";
+            // 
             // label21
             // 
             this.label21.AutoSize = true;
@@ -1964,6 +2016,19 @@
             this.label17.Size = new System.Drawing.Size(93, 31);
             this.label17.TabIndex = 1;
             this.label17.Text = "Sector";
+            // 
+            // track_label
+            // 
+            this.track_label.AutoSize = true;
+            this.track_label.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.track_label.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.track_label.Location = new System.Drawing.Point(2, 82);
+            this.track_label.Name = "track_label";
+            this.track_label.NewText = null;
+            this.track_label.RotateAngle = 0;
+            this.track_label.Size = new System.Drawing.Size(215, 37);
+            this.track_label.TabIndex = 0;
+            this.track_label.Text = "customLabel1";
             // 
             // panel1
             // 
@@ -1995,6 +2060,42 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(1022, 1123);
             this.panel1.TabIndex = 37;
+            // 
+            // Import_File
+            // 
+            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
+            this.Import_File.BorderColor = System.Drawing.Color.Black;
+            this.Import_File.Controls.Add(this.Import_Progress_Bar);
+            this.Import_File.Controls.Add(this.label5);
+            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
+            this.Import_File.Location = new System.Drawing.Point(15, 951);
+            this.Import_File.Margin = new System.Windows.Forms.Padding(4);
+            this.Import_File.Name = "Import_File";
+            this.Import_File.Padding = new System.Windows.Forms.Padding(4);
+            this.Import_File.Size = new System.Drawing.Size(1004, 108);
+            this.Import_File.TabIndex = 59;
+            this.Import_File.TabStop = false;
+            this.Import_File.Text = "Parsing Image Data";
+            // 
+            // Import_Progress_Bar
+            // 
+            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
+            this.Import_Progress_Bar.Margin = new System.Windows.Forms.Padding(4);
+            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
+            this.Import_Progress_Bar.Size = new System.Drawing.Size(992, 29);
+            this.Import_Progress_Bar.TabIndex = 39;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Location = new System.Drawing.Point(6, 67);
+            this.label5.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(137, 25);
+            this.label5.TabIndex = 38;
+            this.label5.Text = "Processing...";
             // 
             // RPL_Advanced
             // 
@@ -2465,107 +2566,6 @@
             this.ND_name.TabIndex = 0;
             this.ND_name.Text = "NEW DISK";
             // 
-            // Import_File
-            // 
-            this.Import_File.BackColor = System.Drawing.Color.Gainsboro;
-            this.Import_File.BorderColor = System.Drawing.Color.Black;
-            this.Import_File.Controls.Add(this.Import_Progress_Bar);
-            this.Import_File.Controls.Add(this.label5);
-            this.Import_File.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.Import_File.ForeColor = System.Drawing.Color.DarkBlue;
-            this.Import_File.Location = new System.Drawing.Point(15, 951);
-            this.Import_File.Margin = new System.Windows.Forms.Padding(4);
-            this.Import_File.Name = "Import_File";
-            this.Import_File.Padding = new System.Windows.Forms.Padding(4);
-            this.Import_File.Size = new System.Drawing.Size(1004, 108);
-            this.Import_File.TabIndex = 59;
-            this.Import_File.TabStop = false;
-            this.Import_File.Text = "Parsing Image Data";
-            // 
-            // Import_Progress_Bar
-            // 
-            this.Import_Progress_Bar.Location = new System.Drawing.Point(6, 37);
-            this.Import_Progress_Bar.Margin = new System.Windows.Forms.Padding(4);
-            this.Import_Progress_Bar.Name = "Import_Progress_Bar";
-            this.Import_Progress_Bar.Size = new System.Drawing.Size(992, 29);
-            this.Import_Progress_Bar.TabIndex = 39;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.875F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(6, 67);
-            this.label5.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(137, 25);
-            this.label5.TabIndex = 38;
-            this.label5.Text = "Processing...";
-            // 
-            // CSTfmt
-            // 
-            this.CSTfmt.AutoSize = true;
-            this.CSTfmt.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.CSTfmt.ForeColor = System.Drawing.Color.MediumOrchid;
-            this.CSTfmt.Location = new System.Drawing.Point(20, 284);
-            this.CSTfmt.Name = "CSTfmt";
-            this.CSTfmt.NewText = "";
-            this.CSTfmt.RotateAngle = 0;
-            this.CSTfmt.Size = new System.Drawing.Size(177, 29);
-            this.CSTfmt.TabIndex = 12;
-            this.CSTfmt.Text = "Custom Format";
-            // 
-            // ErrorBlk
-            // 
-            this.ErrorBlk.AutoSize = true;
-            this.ErrorBlk.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ErrorBlk.ForeColor = System.Drawing.Color.Crimson;
-            this.ErrorBlk.Location = new System.Drawing.Point(20, 488);
-            this.ErrorBlk.Name = "ErrorBlk";
-            this.ErrorBlk.NewText = "";
-            this.ErrorBlk.RotateAngle = 0;
-            this.ErrorBlk.Size = new System.Drawing.Size(133, 29);
-            this.ErrorBlk.TabIndex = 11;
-            this.ErrorBlk.Text = "Block Error";
-            // 
-            // AllocBlk
-            // 
-            this.AllocBlk.AutoSize = true;
-            this.AllocBlk.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.AllocBlk.ForeColor = System.Drawing.Color.Cyan;
-            this.AllocBlk.Location = new System.Drawing.Point(18, 655);
-            this.AllocBlk.Name = "AllocBlk";
-            this.AllocBlk.NewText = "";
-            this.AllocBlk.RotateAngle = 0;
-            this.AllocBlk.Size = new System.Drawing.Size(179, 29);
-            this.AllocBlk.TabIndex = 10;
-            this.AllocBlk.Text = "Allocated Block";
-            // 
-            // FreeBlk
-            // 
-            this.FreeBlk.AutoSize = true;
-            this.FreeBlk.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.FreeBlk.ForeColor = System.Drawing.Color.Lime;
-            this.FreeBlk.Location = new System.Drawing.Point(18, 871);
-            this.FreeBlk.Name = "FreeBlk";
-            this.FreeBlk.NewText = "";
-            this.FreeBlk.RotateAngle = 0;
-            this.FreeBlk.Size = new System.Drawing.Size(130, 29);
-            this.FreeBlk.TabIndex = 9;
-            this.FreeBlk.Text = "Free Block";
-            // 
-            // track_label
-            // 
-            this.track_label.AutoSize = true;
-            this.track_label.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.track_label.ForeColor = System.Drawing.SystemColors.ButtonFace;
-            this.track_label.Location = new System.Drawing.Point(2, 82);
-            this.track_label.Name = "track_label";
-            this.track_label.NewText = null;
-            this.track_label.RotateAngle = 0;
-            this.track_label.Size = new System.Drawing.Size(215, 37);
-            this.track_label.TabIndex = 0;
-            this.track_label.Text = "customLabel1";
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
@@ -2635,6 +2635,8 @@
             this.BlkMap_Panel.PerformLayout();
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
+            this.Import_File.ResumeLayout(false);
+            this.Import_File.PerformLayout();
             this.RPL_Advanced.ResumeLayout(false);
             this.RPL_Advanced.PerformLayout();
             this.V2_Advanced.ResumeLayout(false);
@@ -2648,8 +2650,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.Drag_pic)).EndInit();
             this.GB_NewDisk.ResumeLayout(false);
             this.GB_NewDisk.PerformLayout();
-            this.Import_File.ResumeLayout(false);
-            this.Import_File.PerformLayout();
             this.ResumeLayout(false);
 
         }

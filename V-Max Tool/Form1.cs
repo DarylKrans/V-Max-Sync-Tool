@@ -16,7 +16,7 @@ namespace V_Max_Tool
         private Stopwatch fuck = new Stopwatch();
         //private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- original values used by ReMaster for faster writing RPM
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
-        private readonly string ver = " v1.0.2.35";
+        private readonly string ver = " v1.0.3.0";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
