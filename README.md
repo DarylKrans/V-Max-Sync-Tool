@@ -1,5 +1,5 @@
 If you are here for ReMaster Utilities executable, there are 3 here.  Please use the most recent upload if you want the most current version.  
--- note, .Net 3.5 version for Windows XP will no longer be receiving updates due to compiler errors on the more recent code.
+-- note, .Net 3.5 version for Windows XP has been removed.  It is an older version and doesn't build with the newer functions added.
 
 Protection methods currently handled by ReMaster include..
 
