@@ -447,7 +447,8 @@ namespace V_Max_Tool
                             Track_Info.Items.Add(new LineColor { Color = Color.Blue, Text = $"{tr} {t} {fm} : {secF[NDS.cbm[i]]}" });
                             for (int j = 0; j < f[i].Length; j++)
                             {
-                                Track_Info.Items.Add(new LineColor { Color = Color.DarkBlue, Text = f[i][j] });
+                                Color color1 = f[i][j].Contains("(Failed!)") ? Color.FromArgb(190, 0, 0) : Color.DarkBlue;
+                                Track_Info.Items.Add(new LineColor { Color = color1, Text = f[i][j] });
                             }
                             Track_Info.Items.Add(new LineColor { Color = Color.Black, Text = $"Track Length : ({(NDS.D_End[i] - NDS.D_Start[i] >> 3)}) Sectors ({NDS.sectors[i]})" });
                             Track_Info.Items.Add(" ");
@@ -1198,17 +1199,16 @@ namespace V_Max_Tool
                 if (avp)
                 {
                     temp = Rebuild_Vorpal(Original.OT[trk], trk, lead);
-                    //temp = Vorpal_Test(Original.OT[trk], trk, NDS.t18_ID);
                 }
                 else
                 {
                     BitArray source = new BitArray(Flip_Endian(NDS.Track_Data[trk]));
-                    BitArray dest = new BitArray(NDS.Track_Length[trk]);
+                    BitArray dest = new BitArray(NDS.Track_Length[trk] + 1);
                     int pos = NDS.Header_Len[trk];
-                    for (int i = 0; i < NDS.Track_Length[trk]; i++)
+                    for (int i = 0; i < NDS.Track_Length[trk] + 1; i++)
                     {
                         dest[i] = source[pos++];
-                        if (pos == NDS.D_End[trk]) pos = NDS.D_Start[trk];
+                        if (pos == NDS.D_End[trk] + 1) pos = NDS.D_Start[trk];
                     }
                     temp = Bit2Byte(dest);
                 }
@@ -1805,7 +1805,11 @@ namespace V_Max_Tool
 
             void Disp_VPL(int t, double track)
             {
+                string ok = "(OK)";
+                string fail = "(Failed!)";
                 byte[][] temp = new byte[NDS.sectors[t]][];
+                bool[] cksm = new bool[NDS.sectors[t]];
+                byte[] ID = new byte[NDS.sectors[t]];
                 jt[(int)trk] = db_Text.Length;
                 if (DV_dec.Checked)
                 {
@@ -1816,16 +1820,22 @@ namespace V_Max_Tool
                     int current = 0;
                     int s = 0;
                     int total = 0;
+                    //bool cksm = false;
                     for (int ii = 0; ii < NDS.sectors[t]; ii++)
                     {
-                        temp[ii] = Decode_Vorpal(tdata, ii);
+                        //byte[] getid;
+                        //(temp[ii], cksm[ii], getid) = Decode_Vorpal(tdata, ii);
+                        //ID[ii] = getid[0];
+                        (temp[ii], cksm[ii], _) = Decode_Vorpal(tdata, ii);
                         total += temp[ii].Length;
                     }
                     if (tr) db_Text.Append($"\n\nTrack ({track}) {secF[NDS.cbm[t]]} Sectors ({NDS.sectors[t]}) Length ({total}) bytes\n\n");
                     for (int ii = 0; ii < NDS.sectors[t]; ii++)
                     {
+                        string ck = cksm[current] ? ok : fail;
                         StringBuilder temp2 = new StringBuilder();
-                        if (se) db_Text.Append($"\n\nSector ({current}) Length ({temp[ii].Length}) bytes\n\n");
+                        //if (se) db_Text.Append($"\n\nSector ({current}) Length ({temp[current].Length}) bytes. Checksum {ck} ID {Hex_Val(ID, current, 1)}\n\n");
+                        if (se) db_Text.Append($"\n\nSector ({current}) Length ({temp[current].Length}) bytes. Checksum {ck}\n\n");
                         if (VS_dat.Checked) db_Text.Append(Encoding.ASCII.GetString(Fix_Stops(temp[current])));
                         if (VS_hex.Checked)
                         {

@@ -804,6 +804,20 @@ namespace V_Max_Tool
             else return new byte[0];
         }
 
+        BitArray NewBit(byte[] bytes, int length = 0)
+        {
+            if (bytes == null || bytes.Length == 0) return null;
+            length = length > 0 ? length : bytes.Length << 3;
+            BitArray newbit = new BitArray(length);
+            BitArray temp = new BitArray(Flip_Endian(bytes));
+            int blen = newbit.Length > temp.Length ? temp.Length : newbit.Length;
+            for (int i = 0; i < blen; i++)
+            {
+                if (temp[i]) newbit.Set(i, true);
+            }
+            return newbit;
+        }
+
         BitArray BitCopy(BitArray bits, int start = 0, int length = -1)
         {
             if (length < 0) length = bits.Length - start;
@@ -823,15 +837,19 @@ namespace V_Max_Tool
             return sb.ToString();
         }
 
-        public String Byte_to_Binary(Byte[] data)  // (use this for .NET 3.5 build) Note: only 100ms longer
+        public String Byte_to_Binary(Byte[] data, bool vorpal = false)  // (use this for .NET 3.5 build) Note: only 100ms longer
         {
             BitArray bits = new BitArray(Flip_Endian(data));
             StringBuilder b = new StringBuilder();
+            int spc = vorpal ? 2 : 8;
             for (int counter = 0; counter < bits.Length; counter++)
             {
                 b.Append((bits[counter] ? "1" : "0"));
-                if ((counter + 1) % 8 == 0)
+                if ((counter + 1) % spc == 0)
+                {
                     b.Append(" ");
+                    spc = spc < 8 ? 10 : 8;
+                }
             }
             return b.ToString();
         }
@@ -1139,6 +1157,7 @@ namespace V_Max_Tool
         byte[] Decode_Vorpal_GCR(byte[] gcr)
         {
             byte[] plain = new byte[(gcr.Length / 5) << 2];
+            //if (gcr.Length == 162) plain = new byte[131];
             for (int i = 0; i < gcr.Length / 5; i++)
             {
                 int baseIndex = i * 5;
@@ -1155,14 +1174,27 @@ namespace V_Max_Tool
                 b2 = gcr[baseIndex + 4];
                 plain[(i << 2) + 3] = CombineNibbles(VPL_decode_high[((b1 << 3) | (b2 >> 5)) & 0x1f], VPL_decode_low[b2 & 0x1f]);
             }
+            //if ((plain.Length >> 8) * 10 < gcr.Length)
+            //{
+            //    byte b1 = gcr[gcr.Length - 2];
+            //    byte b2 = gcr[gcr.Length - 1];
+            //    plain[128] = CombineNibbles(VPL_decode_high[b1 >> 3], VPL_decode_low[((b1 << 2) | (b2 >> 6)) & 0x1f]);
+            //    int cks = 0;
+            //    for (int i = 0; i < 128; i++)
+            //    {
+            //        cks ^= (plain[i]);
+            //    }
+            //    plain[129] = (byte)cks;
+            //    plain[130] = gcr[162];
+            //}
             return plain;
 
+        }
             byte CombineNibbles(byte highNibble, byte lowNibble)
             {
                 if (highNibble == 0xff || lowNibble == 0xff) return 0x00;
                 else return (byte)(highNibble | lowNibble);
             }
-        }
 
         byte[] Build_BlockHeader(int track, int sector, byte[] ID, bool badChecksum = false, bool ID_Mismatch = false)
         {
