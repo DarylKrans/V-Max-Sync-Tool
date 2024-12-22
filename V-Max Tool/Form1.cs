@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using System.Xml.Linq;
 
 
 
@@ -17,7 +16,7 @@ namespace V_Max_Tool
     {
         //private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- original values used by ReMaster for faster writing RPM
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
-        private readonly string ver = " v1.0.3.3";
+        private readonly string ver = " v1.0.3.9";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
@@ -60,44 +59,46 @@ namespace V_Max_Tool
         private void Drag_Drop(object sender, DragEventArgs e)
         {
             string[] fileList = (string[])e.Data.GetData(DataFormats.FileDrop);
-            int img = 0, prg = 0;
-
-            if (CBD_box.Visible)
-            {
-                // File categorization
-                foreach (var file in fileList)
-                {
-                    if (System.IO.File.Exists(file))
-                    {
-                        bool isSupported = supported.Any(x => x == Path.GetExtension(file).ToLower());
-                        if (isSupported) img++;
-                        else if (new FileInfo(file).Length / 254 < 664) prg++;
-                    }
-                }
-
-                // Handle non-image files
-                if (prg > img)
-                {
-                    if (tracks == 0)
-                    {
-                        if (ShowConfirmation("Build a new Disk image?", "Non-Image file has been selected!\nWould you like to build a NEW disk image?"))
-                        {
-                            NewDiskBtn.Click += (senderr, ee) => NewDiskBtn_Click(sender, e, fileList);
-                            GB_NewDisk.Visible = true;
-                        }
-                    }
-                    else
-                    {
-                        if (ShowConfirmation("Confirmation", "Add file(s) to current Disk?"))
-                        {
-                            ProcessNewFiletoImage(fileList);
-                        }
-                    }
-                }
-            }
+            //int img = 0, prg = 0;
+            //
+            //if (CBD_box.Visible)
+            //{
+            //    // File categorization
+            //    foreach (var file in fileList)
+            //    {
+            //        if (System.IO.File.Exists(file))
+            //        {
+            //            bool isSupported = supported.Any(x => x == Path.GetExtension(file).ToLower());
+            //            if (isSupported) img++;
+            //            else if (new FileInfo(file).Length / 254 < 664) prg++;
+            //            //Text = $"{prg} {img}";
+            //        }
+            //    }
+            //
+            //    // Handle non-image files
+            //    if (prg > img)
+            //    {
+            //        if (tracks == 0)
+            //        {
+            //            if (ShowConfirmation("Build a new Disk image?", "Non-Image file has been selected!\nWould you like to build a NEW disk image?"))
+            //            {
+            //                NewDiskBtn.Click += (senderr, ee) => NewDiskBtn_Click(sender, e, fileList);
+            //                GB_NewDisk.Visible = true;
+            //            }
+            //        }
+            //        else
+            //        {
+            //            if (ShowConfirmation("Confirmation", "Add file(s) to current Disk?"))
+            //            {
+            //                ProcessNewFiletoImage(fileList);
+            //            }
+            //        }
+            //    }
+            //}
 
             // Batch processing for multiple files or directories
-            if ((fileList.Length > 1 && img > 1) || Directory.Exists(fileList[0]))
+            //if ((fileList.Length > 1 && img > 1) || Directory.Exists(fileList[0]))
+            if ((fileList.Length > 1) || Directory.Exists(fileList[0]))
             {
                 if (ShowConfirmation("Multiple Files Selected", "Only .NIB/NBZ files will be processed\nand exported as .G64 with the\nAuto-Adjust options\n\nStart Batch-Processing?"))
                 {
@@ -451,6 +452,18 @@ namespace V_Max_Tool
                                 MessageBox.Show(s, t, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             }
                             Reset_to_Defaults();
+                        }
+                    }
+                    if (!batch && ErrorList.Count > 0)
+                    {
+                        string s = "";// "- The following error(s) were found -\n\n";
+                        foreach (string err in ErrorList) { s += $"{err}\n"; }
+                        s += "\n Would you like to (attempt) repairing?";
+                        using (Message_Center center = new Message_Center(this)) // center message box
+                        {
+                            string t = "File Integrity Warning!";
+                            DialogResult result = MessageBox.Show(s, t, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                            if (result == DialogResult.Yes) Fix_Errors();
                         }
                     }
                 }));
@@ -966,6 +979,125 @@ namespace V_Max_Tool
             GB_NewDisk.Visible = false;
             if (SortBySize.Checked) Array.Sort(File_List, (x, y) => new FileInfo(x).Length.CompareTo(new FileInfo(y).Length));
             ProcessNewFiletoImage(File_List);
+        }
+
+        private void Fix_Errors()
+        {
+            Stopwatch sw = Stopwatch.StartNew();
+            for (int i = 0; i < tracks; i++)
+            {
+                if (NDS.cbm[i] == 5)
+                {
+                    BitArray source = new BitArray(Flip_Endian(NDG.Track_Data[i]));
+                    for (int j = 0; j < NDS.sectors[i]; j++)
+                    {
+                        (byte[] sector, bool cksm, bool isone, int pos) = Decode_Vorpal(source, j);
+                        if (!cksm)
+                        {
+                            (byte[] rawsector, _, _, _) = Decode_Vorpal(source, j, false);
+                            BitArray newsec = Encode_Vorpal_GCR(sector, true, isone);
+                            for (int k = 0; k < newsec.Length; k++)
+                            {
+                                source[pos + k] = newsec[k];
+                            }
+                        }
+                    }
+                    byte[] temp = Bit2Byte(source);
+                    Set_Dest_Arrays(temp, i);
+                }
+            }
+            sw.Stop();
+            Text = $"{sw.Elapsed.TotalMilliseconds}";
+        }
+
+
+        private void Button1_Click(object sender, EventArgs e)
+        {
+            Stopwatch sw = Stopwatch.StartNew();
+            for (int i = 0; i < tracks; i++)
+            {
+                if (NDS.cbm[i] == 5)
+                {
+                    BitArray source = new BitArray(Flip_Endian(NDG.Track_Data[i]));
+                    for (int j = 0; j < NDS.sectors[i]; j++)
+                    {
+                        (byte[] sector, bool cksm, bool isone, int pos) = Decode_Vorpal(source, j);
+
+                        (byte[] rawsector, _, _, _) = Decode_Vorpal(source, j, false);
+                        BitArray newsec = Encode_Vorpal_GCR(sector, true, isone);
+                        for (int k = 0; k < newsec.Length; k++)
+                        {
+                            source[pos + k] = newsec[k];
+                        }
+                        byte[] temp = Bit2Byte(source);
+
+                        byte[] newsector = Bit2Byte(newsec, 0, 1290);
+                        rawsector = Bit2Byte(NewBit(rawsector, 1290));
+                        for (int k = 0; k < rawsector.Length; k++)
+                        {
+                            if (rawsector[k] != newsector[k])
+                            {
+                                byte g = 0;
+                                for (int k2 = 0; k2 < sector.Length; k2++) g ^= sector[k2];
+                                File.WriteAllBytes($@"c:\test\cg\Raw_Cg_t{i + 1}-s{j}.bin", rawsector);
+                                File.WriteAllBytes($@"c:\test\cg\New_Cg_t{i + 1}-s{j}.bin", newsector);
+                                break;
+                            }
+                        }
+                        Set_Dest_Arrays(temp, i);
+                    }
+                }
+            }
+            sw.Stop();
+            Text = $"{sw.Elapsed.TotalMilliseconds}";
+
+            //var trk = tracks > 42 ? 64 : 32;
+            //var sec = 14;
+            //if (NDS.cbm[trk] == 5)
+            //{
+            //    BitArray source = new BitArray(Flip_Endian(NDG.Track_Data[trk]));
+            //
+            //    //void Dump()
+            //    //{
+            //    (byte[] sector, _, bool isone, int pos) = Decode_Vorpal(source, sec);
+            //    if (sector != null)
+            //    {
+            //        File.WriteAllBytes($@"c:\test\cgintro_t33-s14", sector);
+            //        if (File.Exists($@"c:\test\cgintro_t33-s14.bin"))
+            //        {
+            //            byte[] newsector = File.ReadAllBytes($@"c:\test\cgintro_t33-s14.bin");
+            //
+            //            BitArray newsec = Encode_Vorpal_GCR(newsector, true, isone);
+            //
+            //            for (int i = 0; i < newsec.Length; i++)
+            //            {
+            //                source[pos + i] = newsec[i];
+            //            }
+            //            byte[] temp = Bit2Byte(source);
+            //            Set_Dest_Arrays(temp, trk);
+            //        }
+            //    }
+            //    sec = 17;
+            //    (sector, _, isone, pos) = Decode_Vorpal(source, sec);
+            //    if (sector != null)
+            //    {
+            //        File.WriteAllBytes($@"c:\test\cgintro_t33-s17", sector);
+            //        if (File.Exists($@"c:\test\cgintro_t33-s17.bin"))
+            //        {
+            //            byte[] newsector = File.ReadAllBytes($@"c:\test\cgintro_t33-s17.bin");
+            //
+            //            BitArray newsec = Encode_Vorpal_GCR(newsector, true, isone);
+            //
+            //            for (int i = 0; i < newsec.Length; i++)
+            //            {
+            //                source[pos + i] = newsec[i];
+            //            }
+            //            byte[] temp = Bit2Byte(source);
+            //            Set_Dest_Arrays(temp, trk);
+            //        }
+            //    }
+            //    //}
+            //}
         }
     }
 }

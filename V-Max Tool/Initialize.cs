@@ -1,5 +1,6 @@
 ﻿using ReMaster_Utility.Properties;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Text;
@@ -45,16 +46,16 @@ namespace V_Max_Tool
         private Label[] BlkMap_sector = new Label[21];
         //private Button[][] BlkMap_bam = new Button[41][];
         private Panel[][] BlkMap_bam = new Panel[41][];
+        private ConcurrentBag<string> ErrorList = new ConcurrentBag<string>();
 
         private readonly byte[] sector_gap_length =
-            {
-                //10, 10, 10, 10, 10, 10, 10, 10, 10, 10,	/*  1 - 10 */
-                10, 10, 10, 10, 10, 10, 10, 10, 10, 10,	/*  1 - 10 */
-            	10, 10, 10, 10, 10, 10, 10, 14, 14, 14,	/* 11 - 20 */
-            	14, 14, 14, 14, 11, 11, 11, 11, 11, 11,	/* 21 - 30 */
-            	8, 8, 8, 8, 8,					    	/* 31 - 35 */
-            	8, 8, 8, 8, 8, 8, 8		        		/* 36 - 42 (non-standard) */
-            };
+        {
+            10, 10, 10, 10, 10, 10, 10, 10, 10, 10,	/*  1 - 10 */
+        	10, 10, 10, 10, 10, 10, 10, 14, 14, 14,	/* 11 - 20 */
+        	14, 14, 14, 14, 11, 11, 11, 11, 11, 11,	/* 21 - 30 */
+        	8, 8, 8, 8, 8,					    	/* 31 - 35 */
+        	8, 8, 8, 8, 8, 8, 8		        		/* 36 - 42 (non-standard) */
+        };
 
         private readonly byte[] sector_gap_density =
         {
@@ -62,85 +63,131 @@ namespace V_Max_Tool
         };
 
         private readonly byte[] Available_Sectors =
-            {
-                21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
-                19, 19, 19, 19, 19, 19, 19,
-                18, 18, 18, 18, 18, 18,
-                17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
+        {
+            21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+            19, 19, 19, 19, 19, 19, 19,
+            18, 18, 18, 18, 18, 18,
+            17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
 
-            };
+        };
 
-        private readonly byte[] density_map = {
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/*  1 - 10 */
-            	0, 0, 0, 0, 0, 0, 0, 1, 1, 1,	/* 11 - 20 */
-            	1, 1, 1, 1, 2, 2, 2, 2, 2, 2,	/* 21 - 30 */
-            	3, 3, 3, 3, 3,					/* 31 - 35 */
-            	3, 3, 3, 3, 3, 3, 3				/* 36 - 42 (non-standard) */
-            };
+        private readonly byte[] density_map =
+        {
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/*  1 - 10 */
+        	0, 0, 0, 0, 0, 0, 0, 1, 1, 1,	/* 11 - 20 */
+        	1, 1, 1, 1, 2, 2, 2, 2, 2, 2,	/* 21 - 30 */
+        	3, 3, 3, 3, 3,					/* 31 - 35 */
+        	3, 3, 3, 3, 3, 3, 3				/* 36 - 42 (non-standard) */
+        };
 
         private readonly int[] Sectors_by_density = { 21, 19, 18, 17 };
 
-        private readonly byte[] GCR_encode = {
-                0x0a, 0x0b, 0x12, 0x13,
-                0x0e, 0x0f, 0x16, 0x17,
-                0x09, 0x19, 0x1a, 0x1b,
-                0x0d, 0x1d, 0x1e, 0x15
-            };
+        private readonly byte[] GCR_encode =
+        {
+            0x0a, 0x0b, 0x12, 0x13,
+            0x0e, 0x0f, 0x16, 0x17,
+            0x09, 0x19, 0x1a, 0x1b,
+            0x0d, 0x1d, 0x1e, 0x15
+        };
+
 
         private readonly byte[] GCR_decode_high =
-            {
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                0xff, 0x80, 0x00, 0x10, 0xff, 0xc0, 0x40, 0x50,
-                0xff, 0xff, 0x20, 0x30, 0xff, 0xf0, 0x60, 0x70,
-                0xff, 0x90, 0xa0, 0xb0, 0xff, 0xd0, 0xe0, 0xff
-            };
+        {
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0x80, 0x00, 0x10, 0xff, 0xc0, 0x40, 0x50,
+            0xff, 0xff, 0x20, 0x30, 0xff, 0xf0, 0x60, 0x70,
+            0xff, 0x90, 0xa0, 0xb0, 0xff, 0xd0, 0xe0, 0xff
+        };
 
         private readonly byte[] GCR_decode_low =
-            {
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                0xff, 0x08, 0x00, 0x01, 0xff, 0x0c, 0x04, 0x05,
-                0xff, 0xff, 0x02, 0x03, 0xff, 0x0f, 0x06, 0x07,
-                0xff, 0x09, 0x0a, 0x0b, 0xff, 0x0d, 0x0e, 0xff
-            };
+        {
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0x08, 0x00, 0x01, 0xff, 0x0c, 0x04, 0x05,
+            0xff, 0xff, 0x02, 0x03, 0xff, 0x0f, 0x06, 0x07,
+            0xff, 0x09, 0x0a, 0x0b, 0xff, 0x0d, 0x0e, 0xff
+        };
 
-        // 0    1     2     3     4     5    6     7
-        // 8    9     0a    0b    0c    0d   0e    0f
-        // 10   11    12    13    14    15   16    17
-        // 18   19    1a    1b    1c    1d   1e    1f
+        private static readonly byte[] VPL_encode = new byte[16]
+        {
+            0x09, 0x0A, 0x0B, 0x0D,
+            0x0E, 0x0F, 0x12, 0x13,
+            0x15, 0x16, 0x17, 0x19,
+            0x1A, 0x1B, 0x1D, 0x1E
+        };
+
         private readonly byte[] VPL_decode_low =
-           {
-                //0xff, 0xff, 0xff, 0xff, 0xff, 0x06, 0x0f, 0xff,
-                0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff,
-                
-                0xff, 0x00, 0x01, 0x02, 0x05, 0x03, 0x04, 0x05,
-                0xff, 0xff, 0x06, 0x07, 0x0a, 0x08, 0x09, 0x0a,
-                0xff, 0x0b, 0x0c, 0x0d, 0xff, 0x0e, 0x0f, 0xff,
-            };
+        {
+            0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff,
+            0xff, 0x00, 0x01, 0x02, 0x05, 0x03, 0x04, 0x05,
+            0xff, 0xff, 0x06, 0x07, 0x0a, 0x08, 0x09, 0x0a,
+            0xff, 0x0b, 0x0c, 0x0d, 0xff, 0x0e, 0x0f, 0xff,
+        };
 
         private readonly byte[] VPL_decode_high =
-            {
-                //0xff, 0xff, 0xff, 0xff, 0xff, 0x60, 0xf0, 0xff,
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0xf0, 0xff,
+        {
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0xf0, 0xff,
+            0xff, 0x00, 0x10, 0x20, 0x50, 0x30, 0x40, 0x50,
+            0xff, 0xff, 0x60, 0x70, 0xa0, 0x80, 0x90, 0xa0,
+            0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
+        };
 
-                0xff, 0x00, 0x10, 0x20, 0x50, 0x30, 0x40, 0x50,
-                0xff, 0xff, 0x60, 0x70, 0xa0, 0x80, 0x90, 0xa0,
-                
-                //0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0x70, 0xff,
-                0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
-            };
+        //Dictionary<string, string> VPL_GCR = new Dictionary<string, string>
+        //{
+        //    { "01001", "0" }, { "01010", "1" }, { "01011", "2" }, { "01101", "3" },
+        //    { "01110", "4" }, { "01111", "5" }, { "10010", "6" }, { "10011", "7" },
+        //    { "10101", "8" }, { "10110", "9" }, { "10111", "A" }, { "11001", "B" },
+        //    { "11010", "C" }, { "11011", "D" }, { "11101", "E" }, { "11110", "F" }
+        //};
+
+        //string[] Vorpal_StdGCR = new string[16] 
+        //{
+        //    "01001", "01010", "01011", "01101",
+        //    "01110", "01111", "10010", "10011",
+        //    "10101", "10110", "10111", "11001",
+        //    "11010", "11011", "11101", "11110" 
+        //};
+
+        //Dictionary<string, string> Vorpal_AltGCR = new Dictionary<string, string>
+        //{
+        //    { "5", "01100" }, { "A", "10100" }, { "E", "00101" }, { "F", "00110" }
+        //};
+
+        //private readonly byte[] VPL_decode_low =
+        //{
+        //    0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff, // 0x00 - 0x07
+        //    0xff, 0x00, 0x01, 0x02, 0x05, 0x03, 0x04, 0x05, // 0x08 - 0x0F
+        //    0xff, 0xff, 0x06, 0x07, 0xff, 0x08, 0x09, 0x0a, // 0x10 - 0x17
+        //    0xff, 0x0b, 0x0c, 0x0d, 0xff, 0x0e, 0x0f, 0xff  // 0x18 - 0x1F
+        //};
+        //
+        //private readonly byte[] VPL_decode_high =
+        //{
+        //    0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff, // 0x00 - 0x07
+        //    0xff, 0x00, 0x10, 0x20, 0x50, 0x30, 0x40, 0x50, // 0x08 - 0x0F
+        //    0xff, 0xff, 0x60, 0x70, 0xff, 0x80, 0x90, 0xa0, // 0x10 - 0x17
+        //    0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff  // 0x18 - 0x1F
+        //};
+
+        //private static readonly byte[] VPL_encode_alt = new byte[16]
+        //{
+        //    0xff, 0xff, 0xff, 0xff,
+        //    0xff, 0x0c, 0xff, 0xff,
+        //    0xff, 0xff, 0x14, 0xff,
+        //    0xff, 0x1e, 0x06, 0xff
+        //};
 
         private readonly string[] ErrorCodes =
-            {
-                "null",
-                "Sector OK",            // 01
-                "Header not Found",     // 02
-                "Sync not found",       // 03
-                "Data not found",       // 04
-                "Bad data checksum",    // 05
-                "Bad GCR",              // 06
-                "Bad header checksum",  // 09
-                "ID mismatch"           // 0b (11)
-            };
+        {
+            "null",
+            "Sector OK",            // 01
+            "Header not Found",     // 02
+            "Sync not found",       // 03
+            "Data not found",       // 04
+            "Bad data checksum",    // 05
+            "Bad GCR",              // 06
+            "Bad header checksum",  // 09
+            "ID mismatch"           // 0b (11)
+        };
 
         private readonly string[] c1541error =
         {
@@ -158,12 +205,8 @@ namespace V_Max_Tool
             "29, Disk ID mismatch"
         };
 
-        //private readonly int[] sectorInterleave =
-        //{
-        //    10, 7, 5
-        //};
         private readonly int[] sectorInterleave =
-       {
+        {
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
         };
 

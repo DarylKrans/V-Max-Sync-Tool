@@ -87,6 +87,7 @@ namespace V_Max_Tool
 
         void Make_G64(string fname, int l_trk, bool compress = false)
         {
+            fname = fname.Replace($"\\\\", $"\\");
             if (l_trk < 0) l_trk = tracks;
             if (!Directory.Exists(Path.GetDirectoryName(fname))) Directory.CreateDirectory(Path.GetDirectoryName(fname));
             var buffer = new MemoryStream();
@@ -113,6 +114,7 @@ namespace V_Max_Tool
             for (int i = 0; i < tp.Length; i++) write.Write(tp[i]);
             for (int i = 0; i < td.Length; i++) write.Write(td[i]);
             write.Write(watermark);
+            List<string> type = new List<string>();
             for (int i = 0; i < l_trk; i++)
             {
                 if (NDG.Track_Length[i] > 6000 && NDS.cbm[i] >= 0 && NDS.cbm[i] < secF.Length - 1)

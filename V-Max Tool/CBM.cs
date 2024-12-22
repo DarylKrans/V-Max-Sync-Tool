@@ -18,8 +18,8 @@ using System.Windows.Forms;
 /// byte 3          Track #
 /// byte 4          Disk ID byte 2
 /// byte 5          Disk ID byte 1
-/// byte 6          0x0f (filler to make full GCR chunk)
-/// byte 7          0x0f (filler to make full GCR chunk)
+/// byte 6          0x0f (filler to make full GCR chunk) not used
+/// byte 7          0x0f (filler to make full GCR chunk) not used
 ///
 /// CBM Block Data structure
 /// 
@@ -1446,6 +1446,56 @@ namespace V_Max_Tool
                 }
             }
             return fName;
+        }
+
+        byte[] Decode_CBM_GCR(byte[] gcr)
+        {
+            byte[] plain = new byte[(gcr.Length / 5) << 2];
+            for (int i = 0; i < gcr.Length / 5; i++)
+            {
+                int baseIndex = i * 5;
+                byte b1 = gcr[baseIndex];
+                byte b2 = gcr[baseIndex + 1];
+                plain[(i << 2) + 0] = CombineNibbles((byte)(b1 >> 3), (byte)(((b1 << 2) | (b2 >> 6)) & 0x1f));
+                b1 = gcr[baseIndex + 1];
+                b2 = gcr[baseIndex + 2];
+                plain[(i << 2) + 1] = CombineNibbles((byte)((b1 >> 1) & 0x1f), (byte)(((b1 << 4) | (b2 >> 4)) & 0x1f));
+                b1 = gcr[baseIndex + 2];
+                b2 = gcr[baseIndex + 3];
+                plain[(i << 2) + 2] = CombineNibbles((byte)(((b1 << 1) | (b2 >> 7)) & 0x1f), (byte)((b2 >> 2) & 0x1f));
+                b1 = gcr[baseIndex + 3];
+                b2 = gcr[baseIndex + 4];
+                plain[(i << 2) + 3] = CombineNibbles((byte)(((b1 << 3) | (b2 >> 5)) & 0x1f), (byte)(b2 & 0x1f));
+            }
+            return plain;
+
+            byte CombineNibbles(byte hnib, byte lnib)
+            {
+                hnib = GCR_decode_high[hnib];
+                lnib = GCR_decode_low[lnib];
+                if (hnib == 0xff || lnib == 0xff) return 0x00;
+                else return (byte)(hnib | lnib);
+            }
+        }
+
+        byte[] Encode_CBM_GCR(byte[] plain)
+        {
+            int l = plain.Length >> 2;
+            byte[] gcr = new byte[l * 5];
+            for (int i = 0; i < l; i++)
+            {
+                int baseIndex = i << 2;
+                byte p1 = plain[baseIndex];
+                byte p2 = plain[baseIndex + 1];
+                byte p3 = plain[baseIndex + 2];
+                byte p4 = plain[baseIndex + 3];
+                gcr[0 + (i * 5)] = (byte)((GCR_encode[p1 >> 4] << 3) | (GCR_encode[p1 & 0x0f] >> 2));
+                gcr[1 + (i * 5)] = (byte)((GCR_encode[p1 & 0x0f] << 6) | (GCR_encode[p2 >> 4] << 1) | (GCR_encode[p2 & 0x0f] >> 4));
+                gcr[2 + (i * 5)] = (byte)((GCR_encode[p2 & 0x0f] << 4) | (GCR_encode[p3 >> 4] >> 1));
+                gcr[3 + (i * 5)] = (byte)((GCR_encode[p3 >> 4] << 7) | (GCR_encode[p3 & 0x0f] << 2) | (GCR_encode[p4 >> 4] >> 3));
+                gcr[4 + (i * 5)] = (byte)((GCR_encode[p4 >> 4] << 5) | GCR_encode[p4 & 0x0f]);
+            }
+            return gcr;
         }
     }
 }

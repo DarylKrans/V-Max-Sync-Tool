@@ -119,6 +119,7 @@
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.Track_Info = new System.Windows.Forms.ListBox();
             this.Data_View = new System.Windows.Forms.TabPage();
+            this.button1 = new System.Windows.Forms.Button();
             this.linkLabel3 = new System.Windows.Forms.LinkLabel();
             this.DV_pbar = new System.Windows.Forms.ProgressBar();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -1444,6 +1445,7 @@
             // Data_View
             // 
             this.Data_View.BackColor = System.Drawing.Color.Silver;
+            this.Data_View.Controls.Add(this.button1);
             this.Data_View.Controls.Add(this.linkLabel3);
             this.Data_View.Controls.Add(this.DV_pbar);
             this.Data_View.Controls.Add(this.groupBox1);
@@ -1458,6 +1460,16 @@
             this.Data_View.Size = new System.Drawing.Size(1144, 1307);
             this.Data_View.TabIndex = 3;
             this.Data_View.Text = "Data View";
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(824, 25);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(94, 41);
+            this.button1.TabIndex = 8;
+            this.button1.Text = "NO!";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.Button1_Click);
             // 
             // linkLabel3
             // 
@@ -2834,5 +2846,6 @@
         private System.Windows.Forms.ComboBox S_Interleave;
         private System.Windows.Forms.Label label23;
         private System.Windows.Forms.CheckBox SortBySize;
+        private System.Windows.Forms.Button button1;
     }
 }

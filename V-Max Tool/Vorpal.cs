@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace V_Max_Tool
 {
@@ -16,6 +20,20 @@ namespace V_Max_Tool
         readonly BitArray leadIn_std = new BitArray(10);
         readonly BitArray leadIn_alt = new BitArray(10);
         readonly int com = 20;
+
+        //Dictionary<byte, string> Vorpal_primaryGCR = new Dictionary<byte, string>
+        //    {
+        //        { 0x0, "01001" }, { 0x1, "01010" }, { 0x2, "01011" }, { 0x3, "01101" },
+        //        { 0x4, "01110" }, { 0x5, "01111" }, { 0x6, "10010" }, { 0x7, "10011" },
+        //        { 0x8, "10101" }, { 0x9, "10110" }, { 0xA, "10111" }, { 0xB, "11001" },
+        //        { 0xC, "11010" }, { 0xD, "11011" }, { 0xE, "11101" }, { 0xF, "11110" }
+        //    };
+        //
+        //// Alternate encodings for specific scenarios
+        //Dictionary<byte, string> Vorpal_alternateGCR = new Dictionary<byte, string>
+        //    {
+        //        { 0x5, "01100" }, { 0xA, "10100" }, { 0xE, "00101" }, { 0xF, "00110" }
+        //    };
 
         void Vorpal_Rebuild()
         {
@@ -229,7 +247,7 @@ namespace V_Max_Tool
             }
         }
 
-        (byte[] data, bool checksum, byte[] ID) Decode_Vorpal(BitArray source, int sector = -1, bool dec = true, int bytes = -1)
+        (byte[] data, bool checksum, bool isone, int Position) Decode_Vorpal(BitArray source, int sector = -1, bool dec = true, int bytes = -1)
         {
             int snc_cnt = 0, psec = 0, sub = dec ? 0 : 8 * 5;
             BitArray sec_data = new BitArray(dec ? (162 * 8) : (bytes == -1 ? 162 * 8 : bytes * 8));
@@ -251,12 +269,11 @@ namespace V_Max_Tool
                                 {
                                     sec_data[i] = source[dep + i];
                                 }
-                                byte[] ID = Bit2Byte(source, dep + (160 * 8) + 11, 8);
-                                byte[] id = new byte[] { DecodeSectorID(ID[0]) };
+                                bool isone = source[dep + 1290];
                                 byte[] decoded = Decode_Vorpal_GCR(Bit2Byte(sec_data));
                                 bool pass = GetVorpal_Checksum(decoded, Bit2Byte(sec_data, 160 * 8));
                                 // get more red-pepper flakes
-                                return dec ? (decoded, pass, ID) : (Bit2Byte(sec_data), pass, ID);
+                                return dec ? (decoded, pass, isone, dep) : (Bit2Byte(sec_data), pass, isone, dep);
                             }
                             catch { }
                         }
@@ -266,33 +283,22 @@ namespace V_Max_Tool
                     snc_cnt = 0;
                 }
             }
-            return (new byte[0], false, new byte[0]);
-        }
-
-        byte DecodeSectorID(byte encodedID)
-        {
-            BitArray f = new BitArray(encodedID);
-            BitArray e = new BitArray(8);
-            int pos = 0;
-            for (int i = 0; i < 8; i++)
-            {
-                if (i % 3 != 0) e[pos++] = f[i];
-            }
-            byte[] ID = new byte[1];
-            e.CopyTo(ID, 0);
-            ID = Flip_Endian(ID);
-            return ID[0];
+            return (new byte[0], false, false, 0);
         }
 
         //byte DecodeSectorID(byte encodedID)
         //{
-        //    // Decode the 6-bit sector ID by removing every third bit (bit positions 2, 5, 8)
-        //    return (byte)(((encodedID & 0b10000000) >> 2) | // Extract bit 1
-        //                  ((encodedID & 0b00100000) >> 3) | // Extract bit 2
-        //                  ((encodedID & 0b00001000) >> 4) | // Extract bit 3
-        //                  ((encodedID & 0b00000010) >> 5) | // Extract bit 4
-        //                  ((encodedID & 0b01000000) >> 4) | // Extract bit 5
-        //                  ((encodedID & 0b00010000) >> 5)); // Extract bit 6
+        //    BitArray f = new BitArray(encodedID);
+        //    BitArray e = new BitArray(8);
+        //    int pos = 0;
+        //    for (int i = 0; i < 8; i++)
+        //    {
+        //        if (i % 3 != 0) e[pos++] = f[i];
+        //    }
+        //    byte[] ID = new byte[1];
+        //    e.CopyTo(ID, 0);
+        //    ID = Flip_Endian(ID);
+        //    return ID[0];
         //}
 
         bool GetVorpal_Checksum(byte[] data, byte[] GCR_value)
@@ -303,15 +309,9 @@ namespace V_Max_Tool
             return ck == cksm;
         }
 
-        //byte DecodeSectorID(byte input)
-        //{
-        //    return (byte)(((input & 0b11000000) >> 2) | // Extract A and B
-        //                  ((input & 0b00110000) >> 3) | // Extract D and E
-        //                  ((input & 0b00001100) >> 4)); // Extract G and H
-        //}
-
         (byte[], int, int, int, int, int, int[], string[]) Get_Vorpal_Track_Length(byte[] data, int trk = -1)
         {
+            List<int> err = new List<int>();
             int numbering = 0;
             string ok = "(OK)";
             string fail = "(Failed!)";
@@ -351,14 +351,16 @@ namespace V_Max_Tool
                                     sec_header.Add(sid);
                                     sec_pos.Add(k >> 3);
                                     string vcksm = "";
-                                    if (!batch && sec_size >> 3 > 0)
+                                    if (sec_size >> 3 > 0)
                                     {
                                         byte[] sector = new byte[0];
                                         int q = k + 7;
                                         if (q + (162 * 8) < source.Length)
                                         {
-                                            sector = Decode_Vorpal_GCR(Bit2Byte(source, q, 160 * 8));
-                                            vcksm = GetVorpal_Checksum(sector, Bit2Byte(source, q + (160 * 8), 16)) ? ok : fail;
+                                            sector = Decode_Vorpal_GCR(Bit2Byte(source, q, 160 << 3));
+                                            bool ckm = GetVorpal_Checksum(sector, Bit2Byte(source, q + (160 << 3), 16));
+                                            vcksm = ckm ? ok : fail;
+                                            if (!ckm) err.Add(sectors);
                                         }
                                         try { sec_hdr.Add($"pos ({k >> 3}) Header [{sid2}] Checksum {vcksm}"); }
                                         catch { }
@@ -446,6 +448,11 @@ namespace V_Max_Tool
                 if (strt == sectors) strt = 0;
             }
             if (headers.Length > sectors) headers[headers.Length - 1] = sec_hdr[sec_hdr.Count - 1];
+            if (!batch && err.Count > 0)
+            {
+                int errtk = tracks > 42 ? (trk / 2) + 1 : trk + 1;
+                foreach (int s in err) ErrorList.Add($"Checksum failed on track {errtk}");
+            }
             return (tdata, data_start, data_end, track_len, track_lead_in, sectors, sec_pos.ToArray(), headers);
 
             (bool, int) Get_LeadIn_Position(int position)
@@ -532,26 +539,6 @@ namespace V_Max_Tool
             }
         }
 
-        //bool Check_Vorpal_Sectors(BitArray source, int pos)
-        //{
-        //    pos += 1200;
-        //    int snc = 0;
-        //    while (pos < source.Length)
-        //    {
-        //        if (source[pos]) snc++;
-        //        else
-        //        {
-        //            if (snc == 8)
-        //            {
-        //                if (!source[pos] && source[pos + 1] && !source[pos + 2] && source[pos + 3] && !source[pos + 4] && source[pos + 5] && !source[pos + 6]) return true;
-        //            }
-        //            snc = 0;
-        //        }
-        //        pos++;
-        //    }
-        //    return false;
-        //}
-
         void Density_Reset()
         {
             VPL_density_reset.Visible = false;
@@ -570,6 +557,62 @@ namespace V_Max_Tool
                 }
             });
             Vorpal_Rebuild();
+        }
+
+        byte CombineNibbles(byte highNibble, byte lowNibble)
+        {
+            if (highNibble == 0xff || lowNibble == 0xff) return 0x00;
+            else return (byte)(highNibble | lowNibble);
+        }
+
+        byte[] Decode_Vorpal_GCR(byte[] gcr)
+        {
+            byte[] plain = new byte[(gcr.Length / 5) << 2];
+            for (int i = 0; i < gcr.Length / 5; i++)
+            {
+                int baseIndex = i * 5;
+                byte b1 = gcr[baseIndex];
+                byte b2 = gcr[baseIndex + 1];
+                plain[(i << 2) + 0] = CombineNibbles(VPL_decode_high[b1 >> 3], VPL_decode_low[((b1 << 2) | (b2 >> 6)) & 0x1f]);
+                b1 = gcr[baseIndex + 1];
+                b2 = gcr[baseIndex + 2];
+                plain[(i << 2) + 1] = CombineNibbles(VPL_decode_high[(b1 >> 1) & 0x1f], VPL_decode_low[((b1 << 4) | (b2 >> 4)) & 0x1f]);
+                b1 = gcr[baseIndex + 2];
+                b2 = gcr[baseIndex + 3];
+                plain[(i << 2) + 2] = CombineNibbles(VPL_decode_high[((b1 << 1) | (b2 >> 7)) & 0x1f], VPL_decode_low[(b2 >> 2) & 0x1f]);
+                b1 = gcr[baseIndex + 3];
+                b2 = gcr[baseIndex + 4];
+                plain[(i << 2) + 3] = CombineNibbles(VPL_decode_high[((b1 << 3) | (b2 >> 5)) & 0x1f], VPL_decode_low[b2 & 0x1f]);
+            }
+            return plain;
+        }
+
+        BitArray Encode_Vorpal_GCR(byte[] sector, bool Calculate_Checksum, bool nextBit)
+        {
+            if (sector == null) return null;
+            int index = 0, checksum = 0;
+            if (Calculate_Checksum)
+            {
+                foreach (byte b in sector) checksum ^= b;
+                sector = ArrayConcat(sector, new byte[] { (byte)checksum });
+            }
+            byte[] nybl = new byte[sector.Length << 1];
+            for (int i = 0; i < sector.Length; i++)
+            {
+                nybl[index++] = VPL_encode[(sector[i] >> 4) & 0x0F];
+                nybl[index++] = VPL_encode[sector[i] & 0x0F];
+            }
+            BitArray encoded = new BitArray(sector.Length * 10);
+            for (int i = 0; i < nybl.Length; i++)
+            {
+                index = i * 5;
+                if (nybl[i] == 0x0f && (i < nybl.Length - 1 && (nybl[i + 1] & 0x10) != 0 || i == nybl.Length - 1 && nextBit)) nybl[i] = 0x0c;
+                if (nybl[i] == 0x17 && (i < nybl.Length - 1 && (nybl[i + 1] & 0x10) != 0 || i == nybl.Length - 1 && nextBit)) nybl[i] = 0x14;
+                if (nybl[i] == 0x1d && i > 0 && (nybl[i - 1] & 0x01) != 0) nybl[i] = 0x05;
+                if (nybl[i] == 0x1e && i > 0 && (nybl[i - 1] & 0x01) != 0) nybl[i] = 0x06;
+                for (int j = 0; j < 5; j++) encoded[index + (4 - j)] = (nybl[i] & (1 << j)) != 0;
+            }
+            return encoded;
         }
     }
 }

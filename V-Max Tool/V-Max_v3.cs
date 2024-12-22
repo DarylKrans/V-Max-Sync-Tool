@@ -86,7 +86,7 @@ namespace V_Max_Tool
         byte[] Rebuild_V3(byte[] data, int gap_sector, byte[] Disk_ID, int trk)
         {
             trk = tracks > 42 ? (trk / 2) + 1 : trk + 1;
-            int d = trk < 18 ? 0 : Get_Density(data.Length);
+            int d = trk < 18 ? 0 : Get_Density(data.Length) < 1 ? 1 : Get_Density(data.Length);
             int sectors = 0;
             int fill = 0;
             byte[] header = FastArray.Init(3, 0x49);
@@ -325,6 +325,7 @@ namespace V_Max_Tool
                 {
                     if (data_start > 500) data_start = 0;
                     data_end = de + 200;
+                    data_end = 7800;
                 }
                 if (start_found && end_found && (data_end - data_start) < 7000)
                 {

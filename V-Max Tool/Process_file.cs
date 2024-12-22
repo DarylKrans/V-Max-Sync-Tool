@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -243,6 +244,7 @@ namespace V_Max_Tool
                     {
                         try
                         {
+                            //ErrorList = new ConcurrentBag<string>();
                             Stopwatch parse = Parse_Nib_Data();
                             if (!error)
                             {
@@ -262,6 +264,7 @@ namespace V_Max_Tool
 
         Stopwatch Parse_Nib_Data()
         {
+            ErrorList = new ConcurrentBag<string>();
             Stopwatch sw = new Stopwatch();
             sw.Start();
             Invoke(new Action(() =>
@@ -641,6 +644,9 @@ namespace V_Max_Tool
                 }
                 if (NDS.cbm[trk] == 3)
                 {
+                    //byte[] n = FastArray.Init(3, 0x49);
+                    //int r = Find_Data(NDS.Track_Data[trk], n).Item2;
+                    //if (r > 0) NDS.Track_Data[trk] = Rotate_Left(NDS.Track_Data[trk], r);
                     vmx++;
                     int len;
                     (f[trk],
@@ -1202,6 +1208,7 @@ namespace V_Max_Tool
                 }
                 else
                 {
+                    //temp = NDG.Track_Data[trk];
                     BitArray source = new BitArray(Flip_Endian(NDS.Track_Data[trk]));
                     BitArray dest = new BitArray(NDS.Track_Length[trk] + 1);
                     int pos = NDS.Header_Len[trk];
@@ -1826,7 +1833,7 @@ namespace V_Max_Tool
                         //byte[] getid;
                         //(temp[ii], cksm[ii], getid) = Decode_Vorpal(tdata, ii);
                         //ID[ii] = getid[0];
-                        (temp[ii], cksm[ii], _) = Decode_Vorpal(tdata, ii);
+                        (temp[ii], cksm[ii], _, _) = Decode_Vorpal(tdata, ii);
                         total += temp[ii].Length;
                     }
                     if (tr) db_Text.Append($"\n\nTrack ({track}) {secF[NDS.cbm[t]]} Sectors ({NDS.sectors[t]}) Length ({total}) bytes\n\n");
