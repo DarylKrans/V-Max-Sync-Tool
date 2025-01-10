@@ -24,6 +24,7 @@ namespace V_Max_Tool
         private readonly byte[] VM2_Valid = { 0xa5, 0xa4, 0xa9, 0xaC, 0xad, 0xb4, 0xbc };
         private readonly byte[] vv2n = { 0x64, 0xa5, 0xa5, 0xa5 };
         private readonly byte[] vv2p = { 0x4e, 0xa5, 0xa5, 0xa5 };
+        private byte[] v2_dec_table1 = new byte[0];
 
         void GetNewHeaders()
         {

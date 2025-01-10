@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -16,7 +17,7 @@ namespace V_Max_Tool
     {
         //private readonly int[] vpl_density = { 7750, 7106, 6635, 6230 }; // <- original values used by ReMaster for faster writing RPM
         private bool Auto_Adjust = true; // <- Sets the Auto Adjust feature for V-Max and Vorpal images (for best remastering results)
-        private readonly string ver = " v1.0.3.9";
+        private readonly string ver = " v1.0.4.7";
         private readonly string fix = "_ReMaster";
         private readonly string mod = "_ReMaster"; // _(modified)";
         private readonly string vorp = "_ReMaster"; //(aligned)";
@@ -54,6 +55,52 @@ namespace V_Max_Tool
             this.Text = $"Re-Master {ver}";
             RunBusy(Init);
             Set_ListBox_Items(true, true);
+
+            // debugging buttons
+            button1.Visible = button2.Visible = false;
+        }
+
+        void Test_RLD()
+        {
+            byte[] sector = File.ReadAllBytes($@"c:\test\rlsec11.bin");
+            int ck = 0;
+            for (int i = 1; i < sector.Length; i++) ck ^= sector[i];
+            ck ^= sector[sector.Length - 1];
+            ck ^= sector[sector.Length - 2];
+
+            byte x = (byte)(sector[sector.Length - 2] << 3);
+            byte b24 = (byte)(ck & 0x03); // a;
+            b24 ^= (byte)(ck & 0x0c); // a;
+            b24 ^= (byte)(x & 0xc0);
+            b24 ^= (byte)((x & 0x18) << 1);
+            Text = $"{Hex_Val(new byte[] { (byte)ck, b24})}";
+        }
+
+        void Test_RL1()
+        {
+            byte[] sector = File.ReadAllBytes($@"c:\test\rlsec1.bin");
+            
+            byte and1 = 0;
+            byte and2 = 0;
+            byte a = 0, x = 0;
+            byte stk1 = 0;
+            byte g1 = 0, g2 = 0, g3 = 0;
+            byte d1 = 0, d2 = 0;
+            byte b0 = 0, b1 = 0;
+            int pos = 1;
+            //
+            while (pos < sector.Length)
+            {
+                g1 = sector[pos++];
+                g2 = sector[pos++];
+                g3 = sector[pos++];
+                and1 = (byte)(g1 << 1);
+                and2 = ROR(g1, 3);
+                stk1 = ROR(g2, 1);
+                a = (byte)(stk1 >> 3);
+                x = 0x02;
+            
+            }
         }
 
         private void Drag_Drop(object sender, DragEventArgs e)
@@ -456,13 +503,16 @@ namespace V_Max_Tool
                     }
                     if (!batch && ErrorList.Count > 0)
                     {
+                        bool norepair = NDS.cbm.Any(x => x == 6);
                         string s = "";// "- The following error(s) were found -\n\n";
-                        foreach (string err in ErrorList) { s += $"{err}\n"; }
-                        s += "\n Would you like to (attempt) repairing?";
+                        List<string> list = new List<string>(ErrorList);
+                        list.Sort();
+                        foreach (string err in list) { s += $"{err}\n"; }
+                        s += norepair ? "\nThis image cannot be repaired (yet)\nOutput image may not work" : "\n Would you like to (attempt) repairing?";
                         using (Message_Center center = new Message_Center(this)) // center message box
                         {
                             string t = "File Integrity Warning!";
-                            DialogResult result = MessageBox.Show(s, t, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                            DialogResult result = MessageBox.Show(s, t, norepair ? MessageBoxButtons.OK : MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                             if (result == DialogResult.Yes) Fix_Errors();
                         }
                     }
@@ -1007,7 +1057,7 @@ namespace V_Max_Tool
                 }
             }
             sw.Stop();
-            Text = $"{sw.Elapsed.TotalMilliseconds}";
+            //Text = $"{sw.Elapsed.TotalMilliseconds}";
         }
 
 
@@ -1098,6 +1148,11 @@ namespace V_Max_Tool
             //    }
             //    //}
             //}
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            Test_RLD();
         }
     }
 }

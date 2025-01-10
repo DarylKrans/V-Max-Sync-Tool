@@ -3,7 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
+using System.Threading;
+using System.Security.Cryptography;
+using System.Linq.Expressions;
 
 namespace V_Max_Tool
 {
@@ -185,6 +189,7 @@ namespace V_Max_Tool
         (byte[], int, int, int, int, int, string[]) RapidLok_Track_Info(byte[] data, int trk, bool build, byte[] track_ID, int rl_7b_len = 0)
         {
             int track = trk;
+            int errors = 0;
             if (tracks > 42) track = (trk / 2) + 1; else track += 1;
             int rl_seclen = 583;
             int d_start = 0;
@@ -244,8 +249,18 @@ namespace V_Max_Tool
             }
             catch { }
             if (build) Rebuild_RapidLok_Track();
-            //File.WriteAllBytes($@"c:\test\track{track}", adata);
-            a_headers.Add($"track length {adata.Length} start {d_start / 8} end {d_end / 8} pos {pos} {start_found} {end_found} dif {diff}");
+            if ((track < 18 && sectors < 12) || track > 18 && sectors < 11)
+            {
+                int needed = track < 18 ? 12 : 11;
+                string msg = $"Track ({track}) is missing {needed - sectors} sector(s)";
+                if (!ErrorList.Contains(msg)) ErrorList.Add(msg);
+            }
+            if (!batch && errors > 0)
+            {
+                string msg = $"Track ({track}) checksum failed on {errors} sector(s)";
+                if (!ErrorList.Contains(msg)) ErrorList.Add(msg);
+            }
+            //a_headers.Add($"track length {adata.Length} start {d_start / 8} end {d_end / 8} pos {pos}");
             return (adata, d_start, d_end, d_end - d_start, sectors, rl_7b_len, a_headers.ToArray());
 
             void Rebuild_RapidLok_Track()
@@ -323,7 +338,7 @@ namespace V_Max_Tool
                     if (c[0] == 0x52 && tid.Length == 0)
                     {
                         tid = Bit2Byte(source, pos, 12 * 8);
-                        a_headers.Add($"pos ({pos >> 3}) Track ID {Hex_Val(Decode_CBM_GCR(tid))}");
+                        //a_headers.Add($"pos ({pos >> 3}) Track ID {Hex_Val(Decode_CBM_GCR(tid))}");
                     }
                 }
                 if (c[0] == 0x75 && (c[4] == 0xd6 || c[5] == 0xed)) HandleC0x75(c);
@@ -375,7 +390,8 @@ namespace V_Max_Tool
                         if (tsnc >= 16)
                         {
                             sb_sec = (sl - tsnc - 8) >> 3;
-                            a_headers.Add($"pos ({pos >> 3}) 0x7B sector Length {sb_sec} First sector = {first_sector + 1}");
+                            //a_headers.Add($"pos ({pos >> 3}) 0x7B sector Length {sb_sec} First sector = {first_sector + 1}");
+                            a_headers.Add($"pos ({pos >> 3}) 0x7B sector Length {sb_sec}");
                             break;
                         }
                         tsnc = 0;
@@ -391,10 +407,29 @@ namespace V_Max_Tool
                     start_found = true;
                     d_start = pos;
                 }
+                string hdr = "";
+                try { hdr = Hex_Val(Decode_RL_Data(CopyFrom(d, 1)).Item1); } catch { }  
                 string head = Hex_Val(d, 0, 7); //6
                 if (!headers.Any(x => x == head))
                 {
-                    a_headers.Add($"pos ({pos / 8}) {head}");
+                    if (!batch)
+                    {
+                        int ckm = VerifySectorData();
+                        string cksm = string.Empty;
+                        switch (ckm)
+                        {
+                            case 0: cksm = "Failed!"; break;
+                            case 1: cksm = "OK"; break;
+                            case 2: cksm = "Empty Sector, No Data"; break;
+                        }
+                        a_headers.Add($"sector ({headers.Count}) Header ID [ {hdr} ] Checksum ({cksm})");
+                        if (ckm < 1) errors++;
+                        //if (!batch && ckm < 1)
+                        //{
+                        //    //int errtk = tracks > 42 ? (trk / 2) + 1 : trk + 1;
+                        //    if (!ErrorList.Contains($"Checksum failed on track {track}")) ErrorList.Add($"Checksum failed on track {track}");
+                        //}
+                    }
                     sectors++;
                     if (build) BuildSectorData();
                 }
@@ -404,7 +439,7 @@ namespace V_Max_Tool
                     {
                         end_found = true;
                         d_end = pos;
-                        a_headers.Add($"pos ({pos / 8}) {head} ** Repeat **");
+                        a_headers.Add($"pos ({pos / 8}) {hdr} ** Repeat **");
                     }
                 }
                 headers.Add(Hex_Val(d, 0, 7)); //6
@@ -412,6 +447,33 @@ namespace V_Max_Tool
                 Buffer.BlockCopy(d, 0, shd, 0, 7);
                 sec_head.Add(shd);
                 sec_pos.Add(pos);
+            }
+
+            int VerifySectorData()
+            {
+                int tpos = pos;
+                int tsnc = 0;
+                while (tpos < source.Length - 16)
+                {
+                    if (source[tpos]) tsnc++;
+                    else
+                    {
+                        if (tsnc > 24)
+                        {
+                            byte[] cc = Bit2Byte(source, tpos, 16);
+                            byte[] sdt = DetermineSectorData(cc, tpos);
+                            if (sdt != null)
+                            {
+                                if (sdt[0] == 0x55 && sdt[1] == 0x55) return 2;
+                                bool valid_Checksum = Decode_RL_Data(sdt).Item2;
+                                return valid_Checksum ? 1 : 0;
+                            }
+                        }
+                        tsnc = 0;
+                    }
+                    tpos++;
+                }
+                return 0;
             }
 
             void BuildSectorData()
@@ -486,6 +548,102 @@ namespace V_Max_Tool
                     }
                 }
                 return sdt;
+            }
+        }
+
+        (byte[] data, bool checksum) Decode_Rapidlok_GCR(byte[] sector, bool just_the_sector = false)
+        {
+            if (sector == null) return (new byte[0], false);
+
+            int pos = sector[0] == 0x6b ? 1 : 0;
+            //(byte[] decoded, bool cksm) = sector[195 + pos] == 0xa4 ? RL_newer(sector) : RL_newer(sector);
+            (byte[] decoded, bool cksm) = Decode_RL_Data(sector);
+            RL_Decrypt(decoded);
+            if (!just_the_sector) return (decoded, cksm);
+            return (decoded.Length > 10 ? CopyFrom(decoded, 10) : decoded, cksm);
+
+        }
+
+        byte[] RL_Decrypt(byte[] data)
+        {
+            for (int i = 10; i < data.Length; i++)
+            {
+                data[i] = (byte)(RapidLok_Decode_High[(byte)(data[i] >> 4)] | RapidLok_Decode_Low[(byte)(data[i] & 0x0f)]);
+            }
+            return data;
+        }
+
+        (byte[], bool) Decode_RL_Data(byte[] sector)
+        {
+            if (sector == null) return (new byte[0], false);
+            int pos = sector[0] == 0x6b ? 1 : 0;
+            bool rl_ver = sector[195 + pos] == 0xa4;
+            byte GCR_a, GCR_b, GCR_c;
+            byte dec0 = 0, dec1;
+            List<byte> output = new List<byte>();
+            while (pos < sector.Length)
+            {
+                if (pos < 300 && sector[pos] == 0xa4) pos++;
+                GCR_a = sector[pos++];
+                GCR_b = sector[pos++];
+                GCR_c = pos < sector.Length ? sector[pos++] : (byte)0;
+                dec0 = (byte)((0xb6 & GCR_b) + (GCR_a & 0x49));
+                if (GCR_c != 0)
+                {
+                    dec1 = (byte)((0xdb & GCR_c) + (GCR_a & 0x24));
+                    output.Add(dec0);
+                    output.Add(dec1);
+                }
+            }
+            return (output.ToArray(), rl_ver ? RL2_7_Checksum(output.ToArray(), dec0) : RL1_Checksum(sector));
+
+            bool RL2_7_Checksum(byte[] data, byte value)
+            {
+                int ck = 0;
+                foreach (byte b in data) ck ^= b;
+                ck ^= value;
+                return value == ck;
+            }
+
+            bool RL1_Checksum(byte[] data)
+            {
+                int ck = 0;
+                for (int i = 1; i < data.Length - 2; i++) ck ^= data[i];
+                byte x = (byte)(data[data.Length - 2] << 3);
+                byte value = (byte)(ck & 0x03 ^ ck & 0x0c ^ x & 0xc0 ^ (x & 0x18) << 1);
+                return ck == value;
+            }
+        }
+
+        byte[] Encode_RLK(byte[] data)
+        {
+            int cksm = 0;
+            RL_Decrypt(data);
+            foreach (byte d in data) cksm ^= d; 
+            MemoryStream buffer = new MemoryStream();
+            BinaryWriter write = new BinaryWriter(buffer);
+            int pos = 0;
+            write.Write((byte)0x6b);
+            while (pos < data.Length)
+            {
+                write.Write(Encode(data[pos++], data[pos++]));
+                if (buffer.Length == 196) write.Write((byte)0xa4);
+            }
+            write.Write(CopyFrom(Encode((byte)cksm, 0), 0, 2));
+            return buffer.ToArray();
+
+            byte[] Encode(byte b1, byte b2)
+            {
+                byte GCR_a = (byte)(0x92 | ((byte)((b1 & 0x49) | (b2 & 0x24))));
+                byte GCR_b = (byte)(0x49 | (b1 & 0xb6));
+                byte GCR_c = (byte)(0x24 | (b2 & 0xdb));
+                /// Check to make sure GCR is valid (can't have too many '1' bits in a row)
+                if ((GCR_a & 0x03) == 0x03 && (GCR_b & 0xE0) == 0xE0) GCR_b &= 0xBF;
+                if ((GCR_c & 0x80) == 0x80 && (GCR_b & 0x07) == 0x07) GCR_b &= 0xFE;
+                if ((GCR_a & 0xF8) == 0xF8) GCR_a &= 0xEF;
+                if ((GCR_a & 0x3F) == 0x3F && (GCR_b & 0xC0) == 0xC0) GCR_a &= 0xFE;
+                if ((GCR_c & 0x3E) == 0x3E) GCR_c &= 0xFB;
+                return new byte[] {  GCR_a, GCR_b, GCR_c };
             }
         }
     }

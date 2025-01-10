@@ -131,50 +131,22 @@ namespace V_Max_Tool
             0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff,
         };
 
-        //Dictionary<string, string> VPL_GCR = new Dictionary<string, string>
-        //{
-        //    { "01001", "0" }, { "01010", "1" }, { "01011", "2" }, { "01101", "3" },
-        //    { "01110", "4" }, { "01111", "5" }, { "10010", "6" }, { "10011", "7" },
-        //    { "10101", "8" }, { "10110", "9" }, { "10111", "A" }, { "11001", "B" },
-        //    { "11010", "C" }, { "11011", "D" }, { "11101", "E" }, { "11110", "F" }
-        //};
 
-        //string[] Vorpal_StdGCR = new string[16] 
-        //{
-        //    "01001", "01010", "01011", "01101",
-        //    "01110", "01111", "10010", "10011",
-        //    "10101", "10110", "10111", "11001",
-        //    "11010", "11011", "11101", "11110" 
-        //};
+        private readonly byte[] RapidLok_Decode_Low =
+        {
+            0x0f, 0x07, 0x0d, 0x05,
+            0x0b, 0x03, 0x09, 0x01,
+            0x0e, 0x06, 0x0c, 0x04,
+            0x0a, 0x02, 0x08, 0x00
+        };
 
-        //Dictionary<string, string> Vorpal_AltGCR = new Dictionary<string, string>
-        //{
-        //    { "5", "01100" }, { "A", "10100" }, { "E", "00101" }, { "F", "00110" }
-        //};
-
-        //private readonly byte[] VPL_decode_low =
-        //{
-        //    0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff, // 0x00 - 0x07
-        //    0xff, 0x00, 0x01, 0x02, 0x05, 0x03, 0x04, 0x05, // 0x08 - 0x0F
-        //    0xff, 0xff, 0x06, 0x07, 0xff, 0x08, 0x09, 0x0a, // 0x10 - 0x17
-        //    0xff, 0x0b, 0x0c, 0x0d, 0xff, 0x0e, 0x0f, 0xff  // 0x18 - 0x1F
-        //};
-        //
-        //private readonly byte[] VPL_decode_high =
-        //{
-        //    0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x0f, 0xff, // 0x00 - 0x07
-        //    0xff, 0x00, 0x10, 0x20, 0x50, 0x30, 0x40, 0x50, // 0x08 - 0x0F
-        //    0xff, 0xff, 0x60, 0x70, 0xff, 0x80, 0x90, 0xa0, // 0x10 - 0x17
-        //    0xff, 0xb0, 0xc0, 0xd0, 0xff, 0xe0, 0xf0, 0xff  // 0x18 - 0x1F
-        //};
-
-        //private static readonly byte[] VPL_encode_alt = new byte[16]
-        //{
-        //    0xff, 0xff, 0xff, 0xff,
-        //    0xff, 0x0c, 0xff, 0xff,
-        //    0xff, 0xff, 0x14, 0xff,
-        //    0xff, 0x1e, 0x06, 0xff
-        //};
+        private readonly byte[] RapidLok_Decode_High =
+        {
+            0xf0, 0x70, 0xd0, 0x50,
+            0xb0, 0x30, 0x90, 0x10,
+            0xe0, 0x60, 0xc0, 0x40,
+            0xa0, 0x20, 0x80, 0x00
+        };
 
         private readonly string[] ErrorCodes =
         {
@@ -485,6 +457,7 @@ namespace V_Max_Tool
             v24e64pal = Decompress(XOR(Resources.v24e64p, 0x64)); // V-Max Custom sectors (PAL Loader)
             v26446ntsc = Decompress(XOR(Resources.v26446n, 0x46)); // V-Max Custom sectors (NTSC Loader) Older version, headers have weak bits and may be incompatible with some 1541's
             v2644entsc = Decompress(XOR(Resources.v2644En, 0x4e)); // V-Max Custom sectors (NTSC Loader) Newer version, headers are compatible with all 1541 versions.
+            v2_dec_table1 = Decompress(XOR(Resources.vmv2dt1, 0x4e));
             /// these loaders are guaranteed to work and the loader code has not been modified from original. (these are not "cracked" loaders)
             rak1 = Decompress(XOR(Resources.rak1, 0xab));
             cldr_id = Decompress(XOR(Resources.cyan, 0xc1));
@@ -588,6 +561,7 @@ namespace V_Max_Tool
                 //File.WriteAllBytes($@"c:\test\compressed\v24e64p.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\4e64")), 0x64));
                 //File.WriteAllBytes($@"c:\test\compressed\v26446n.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\6446")), 0x46));
                 //File.WriteAllBytes($@"c:\test\compressed\v2644en.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\644e")), 0x4e));
+                //File.WriteAllBytes($@"c:\test\compressed\vmv2dt1.bin", XOR(Compress(File.ReadAllBytes($@"c:\test\loaders\vmv2dt1")), 0x4e));
             }
             catch { }
             DB_g64.Checked = true;

@@ -702,7 +702,7 @@ namespace V_Max_Tool
         {
             if (data != null)
             {
-                if (end == -1) end = data.Length;
+                if (end == -1) end = data.Length - start;
                 return BitConverter.ToString(data, start, end);
             }
             else return string.Empty;
@@ -802,6 +802,16 @@ namespace V_Max_Tool
                 return (ret);
             }
             else return new byte[0];
+        }
+
+        byte ROR(byte value, int count)
+        {
+            return (byte)((value >> count) | (value << (8 - count)));
+        }
+
+        byte ROL(byte value, int count)
+        {
+            return (byte)((value << count) | (value >> (8 - count)));
         }
 
         BitArray NewBit(byte[] bytes, int length = 0)

@@ -155,6 +155,7 @@
     <None Include="Properties\v2644En.bin" />
     <None Include="Properties\v2cbmla.bin" />
     <None Include="Properties\v2h.bin" />
+    <None Include="Properties\vmv2dt1.bin" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
