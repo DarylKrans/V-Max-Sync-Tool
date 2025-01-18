@@ -36,3 +36,7 @@ Some c64 games use very short synchronization signals that sometimes don't get p
 length or the data becomes bit-shifted from improper framing, the image will not work when in emulators or when written back to disk.  ReMaster Utility will analyze V-Max and Vorpal protected
 NIB images and correct the syncing lengths and/or re-frame the track data to it's proper orientation and output a G64 image that will work in an emulator or when written back to disk for use
 on a real c64 with 1541/71 disk drive
+
+
+For Nibtools-GUI, click here
+https://github.com/DarylKrans/nibtools-gui/releases/tag/01132025
